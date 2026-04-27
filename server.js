@@ -73,18 +73,15 @@ function parseDate(dateStr) {
   return today.toISOString().split('T')[0];
 }
 
-// Parse natural language event
-app.post('/api/events/parse', async (req, res) => {
-  const { text } = req.body;
-
-  try {
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
-      messages: [
-        {
-          role: 'user',
-          content: `You are a calendar event parser. Parse this event description: "${text}"
+// Parse event with a specific model
+async function parseEventWithModel(text, model) {
+  const response = await client.messages.create({
+    model: model,
+    max_tokens: 500,
+    messages: [
+      {
+        role: 'user',
+        content: `You are a calendar event parser. Parse this event description: "${text}"
 
 IMPORTANT: Always return valid JSON. Do not include markdown code blocks.
 
@@ -115,44 +112,73 @@ Return ONLY this JSON format with no extra text:
   "date": "YYYY-MM-DD",
   "time": "HH:mm" or null
 }`
-        }
-      ]
-    });
-
-    const content = response.content[0].text.trim();
-    console.log('Claude response:', content);
-
-    // Try to extract JSON from response
-    let parsed;
-    try {
-      parsed = JSON.parse(content);
-    } catch (e) {
-      // Try to find JSON in the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
-      } else {
-        console.error('Could not parse JSON from:', content);
-        return res.status(400).json({ error: true });
       }
-    }
+    ]
+  });
 
-    if (parsed.error || !parsed.title || !parsed.date) {
-      console.error('Missing required fields:', parsed);
-      return res.status(400).json({ error: true });
-    }
+  const content = response.content[0].text.trim();
+  console.log(`${model} response:`, content);
 
-    // Validate and clean up date
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(parsed.date)) {
-      parsed.date = parseDate(parsed.date);
+  // Try to extract JSON from response
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (e) {
+    // Try to find JSON in the response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error(`Could not parse JSON from ${model}`);
     }
+  }
 
-    // Validate time format
-    if (parsed.time) {
-      const timeRegex = /^\d{2}:\d{2}$/;
-      if (!timeRegex.test(parsed.time)) {
-        parsed.time = null;
+  // Validate required fields
+  if (!parsed.title || !parsed.date) {
+    throw new Error(`Missing required fields from ${model}`);
+  }
+
+  // Validate and clean up date
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(parsed.date)) {
+    parsed.date = parseDate(parsed.date);
+  }
+
+  // Validate time format
+  if (parsed.time) {
+    const timeRegex = /^\d{2}:\d{2}$/;
+    if (!timeRegex.test(parsed.time)) {
+      parsed.time = null;
+    }
+  }
+
+  return parsed;
+}
+
+// Parse natural language event with fallback
+app.post('/api/events/parse', async (req, res) => {
+  const { text } = req.body;
+
+  try {
+    let parsed;
+    let usedModel = 'sonnet';
+
+    // Try Sonnet first (fast, cheap)
+    try {
+      console.log('Trying Sonnet...');
+      parsed = await parseEventWithModel(text, 'claude-sonnet-4-20250514');
+      console.log('Sonnet succeeded!');
+    } catch (sonnetErr) {
+      console.log('Sonnet failed, trying Opus...', sonnetErr.message);
+      
+      // Fallback to Opus (slower, more powerful)
+      try {
+        parsed = await parseEventWithModel(text, 'claude-opus-4-1-20250805');
+        usedModel = 'opus';
+        console.log('Opus succeeded!');
+      } catch (opusErr) {
+        console.error('Both models failed:', opusErr);
+        return res.status(400).json({ error: true, message: 'Could not parse event' });
       }
     }
 
@@ -163,11 +189,12 @@ Return ONLY this JSON format with no extra text:
       date: parsed.date,
       time: parsed.time || null,
       endTime: null,
-      description: ''
+      description: '',
+      parsedBy: usedModel
     };
     
     await saveEvent(newEvent);
-    console.log('Event saved:', newEvent);
+    console.log(`Event saved (${usedModel}):`, newEvent);
 
     res.json(newEvent);
   } catch (err) {
