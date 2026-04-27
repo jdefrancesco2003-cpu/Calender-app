@@ -14,40 +14,76 @@ const client = new Anthropic();
 const mongoUri = process.env.MONGODB_URI;
 let eventsCollection;
 
-// Connect to MongoDB
-MongoClient.connect(mongoUri, { useUnifiedTopology: true })
-  .then(connection => {
-    const db = connection.db('calendar');
+// Connect to MongoDB BEFORE starting server
+async function connectMongoDB() {
+  try {
+    const mongoClient = new MongoClient(mongoUri, { useUnifiedTopology: true });
+    await mongoClient.connect();
+    const db = mongoClient.db('calendar');
     eventsCollection = db.collection('events');
-    console.log('Connected to MongoDB');
-  })
-  .catch(err => console.error('MongoDB connection failed:', err));
+    console.log('✓ Connected to MongoDB');
+    return mongoClient;
+  } catch (err) {
+    console.error('✗ MongoDB connection failed:', err);
+    process.exit(1);
+  }
+}
 
 // Load events from database
 async function loadEvents() {
-  if (!eventsCollection) return [];
-  return await eventsCollection.find({}).toArray();
+  if (!eventsCollection) {
+    console.error('MongoDB not connected');
+    return [];
+  }
+  try {
+    const events = await eventsCollection.find({}).toArray();
+    return events;
+  } catch (err) {
+    console.error('Error loading events:', err);
+    return [];
+  }
 }
 
 // Save event to database
 async function saveEvent(event) {
-  if (!eventsCollection) return;
-  await eventsCollection.insertOne(event);
+  if (!eventsCollection) {
+    console.error('MongoDB not connected');
+    return;
+  }
+  try {
+    await eventsCollection.insertOne(event);
+  } catch (err) {
+    console.error('Error saving event:', err);
+  }
 }
 
 // Update events
 async function updateEvent(id, updates) {
-  if (!eventsCollection) return;
-  await eventsCollection.updateOne(
-    { id },
-    { $set: updates }
-  );
+  if (!eventsCollection) {
+    console.error('MongoDB not connected');
+    return;
+  }
+  try {
+    await eventsCollection.updateOne(
+      { id },
+      { $set: updates }
+    );
+  } catch (err) {
+    console.error('Error updating event:', err);
+  }
 }
 
 // Delete event
 async function deleteEvent(id) {
-  if (!eventsCollection) return;
-  await eventsCollection.deleteOne({ id });
+  if (!eventsCollection) {
+    console.error('MongoDB not connected');
+    return;
+  }
+  try {
+    await eventsCollection.deleteOne({ id });
+  } catch (err) {
+    console.error('Error deleting event:', err);
+  }
 }
 
 // Helper: Get today's date string
@@ -70,13 +106,14 @@ async function parseEvent(text) {
   const today = getTodayString();
   const tomorrow = getTomorrowString();
 
-  const response = await client.messages.create({
-    model: 'claude-opus-4-1-20250805',
-    max_tokens: 500,
-    messages: [
-      {
-        role: 'user',
-        content: `You are a calendar event parser. Today is April 27, 2026. Parse this event: "${text}"
+  try {
+    const response = await client.messages.create({
+      model: 'claude-opus-4-1-20250805',
+      max_tokens: 500,
+      messages: [
+        {
+          role: 'user',
+          content: `You are a calendar event parser. Today is April 27, 2026. Parse this event: "${text}"
 
 Return ONLY valid JSON. No markdown, no extra text.
 
@@ -107,46 +144,46 @@ JSON format only:
   "date": "YYYY-MM-DD",
   "time": "HH:mm" or null
 }`
+        }
+      ]
+    });
+
+    const content = response.content[0].text.trim();
+    console.log('Claude response:', content);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('Could not parse JSON');
       }
-    ]
-  });
-
-  const content = response.content[0].text.trim();
-  console.log('Claude response:', content);
-
-  // Try to extract JSON
-  let parsed;
-  try {
-    parsed = JSON.parse(content);
-  } catch (e) {
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      parsed = JSON.parse(jsonMatch[0]);
-    } else {
-      throw new Error('Could not parse JSON');
     }
-  }
 
-  // Validate
-  if (!parsed.title || !parsed.date) {
-    throw new Error('Missing required fields');
-  }
-
-  // Validate date format
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(parsed.date)) {
-    throw new Error(`Invalid date format: ${parsed.date}`);
-  }
-
-  // Validate time format
-  if (parsed.time) {
-    const timeRegex = /^\d{2}:\d{2}$/;
-    if (!timeRegex.test(parsed.time)) {
-      parsed.time = null;
+    if (!parsed.title || !parsed.date) {
+      throw new Error('Missing required fields');
     }
-  }
 
-  return parsed;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(parsed.date)) {
+      throw new Error(`Invalid date format: ${parsed.date}`);
+    }
+
+    if (parsed.time) {
+      const timeRegex = /^\d{2}:\d{2}$/;
+      if (!timeRegex.test(parsed.time)) {
+        parsed.time = null;
+      }
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error('Parse error:', err);
+    throw err;
+  }
 }
 
 // Parse natural language event
@@ -155,8 +192,6 @@ app.post('/api/events/parse', async (req, res) => {
 
   try {
     const parsed = await parseEvent(text);
-
-    // Add to database
     const newEvent = {
       id: Date.now().toString(),
       title: parsed.title,
@@ -167,19 +202,24 @@ app.post('/api/events/parse', async (req, res) => {
     };
     
     await saveEvent(newEvent);
-    console.log('Event saved:', newEvent);
-
+    console.log('✓ Event saved:', newEvent);
     res.json(newEvent);
   } catch (err) {
-    console.error('Parse error:', err);
+    console.error('✗ Parse error:', err.message);
     res.status(400).json({ error: true });
   }
 });
 
 // Get all events
 app.get('/api/events', async (req, res) => {
-  const events = await loadEvents();
-  res.json(events);
+  try {
+    const events = await loadEvents();
+    console.log('✓ Loaded', events.length, 'events');
+    res.json(events);
+  } catch (err) {
+    console.error('✗ Error loading events:', err);
+    res.status(500).json([]);
+  }
 });
 
 // Add event
@@ -202,7 +242,6 @@ app.post('/api/events', async (req, res) => {
 // Update event
 app.put('/api/events/:id', async (req, res) => {
   const { title, date, time, endTime, description } = req.body;
-  
   await updateEvent(req.params.id, {
     title, date, time: time || null, endTime: endTime || null, description: description || ''
   });
@@ -217,6 +256,12 @@ app.delete('/api/events/:id', async (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(PORT, () => {
-  console.log(`Calendar API running on port ${PORT}`);
-});
+// Start server AFTER MongoDB is connected
+async function startServer() {
+  await connectMongoDB();
+  app.listen(PORT, () => {
+    console.log(`✓ Calendar API running on port ${PORT}`);
+  });
+}
+
+startServer();
