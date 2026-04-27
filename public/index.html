@@ -190,6 +190,8 @@
       justify-content: center;
       -webkit-appearance: none;
       appearance: none;
+      position: relative;
+      overflow: hidden;
     }
 
     .btn-primary {
@@ -199,6 +201,20 @@
 
     .btn-primary:active {
       background: var(--primary-dark);
+    }
+
+    .btn-primary.loading::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      animation: loadingBar 2s ease-in-out forwards;
+    }
+
+    .btn-primary.loading {
+      pointer-events: none;
     }
 
     .btn-secondary {
@@ -569,11 +585,6 @@
       border-color: var(--primary);
     }
 
-    .loading {
-      display: inline-block;
-      animation: spin 1s linear infinite;
-    }
-
     .empty-state {
       text-align: center;
       padding: 32px 16px;
@@ -604,9 +615,13 @@
       }
     }
 
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    @keyframes loadingBar {
+      0% {
+        width: 0%;
+      }
+      100% {
+        width: 100%;
+      }
     }
 
     ::-webkit-scrollbar {
@@ -681,7 +696,7 @@
           <div class="input-group">
             <textarea id="event-input" placeholder="e.g., lunch tomorrow at noon"></textarea>
           </div>
-          <button class="btn-primary" onclick="parseEvent()">Add Event</button>
+          <button class="btn-primary" id="parse-btn" onclick="parseEvent()">Add Event</button>
 
           <div class="divider"></div>
 
@@ -802,7 +817,7 @@
     let isWeekView = false;
     let editingEventId = null;
     let notificationsEnabled = false;
-    let notificationTiming = 15; // minutes
+    let notificationTiming = 15;
 
     async function init() {
       await loadEvents();
@@ -938,9 +953,9 @@
         return;
       }
 
-      const btn = event.target;
+      const btn = document.getElementById('parse-btn');
       btn.disabled = true;
-      btn.innerHTML = '<span class="loading">⏳</span>';
+      btn.classList.add('loading');
 
       try {
         const response = await fetch('/api/events/parse', {
@@ -959,7 +974,7 @@
             const confirmed = confirm(`⚠️ You have "${overlap.title}" at a similar time. Add anyway?`);
             if (!confirmed) {
               btn.disabled = false;
-              btn.innerHTML = 'Add Event';
+              btn.classList.remove('loading');
               return;
             }
           }
@@ -975,7 +990,7 @@
         showStatus('Error adding event', 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = 'Add Event';
+        btn.classList.remove('loading');
       }
     }
 
