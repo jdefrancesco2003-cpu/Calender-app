@@ -257,7 +257,7 @@
 
     .day-cell {
       aspect-ratio: 1;
-      border: 1px solid var(--border-color);
+      border: 2px solid var(--border-color);
       border-radius: 8px;
       padding: 6px;
       background: var(--bg-light);
@@ -282,6 +282,13 @@
     }
 
     .day-cell.today {
+      border: 2px solid var(--primary);
+      background: var(--bg-light);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .day-cell.selected {
       background: var(--primary);
       border-color: var(--primary);
       color: white;
@@ -294,7 +301,7 @@
       color: var(--text-primary);
     }
 
-    .day-cell.today .day-number {
+    .day-cell.selected .day-number {
       color: white;
     }
 
@@ -304,7 +311,7 @@
       margin-top: 2px;
     }
 
-    .day-cell.today .day-events {
+    .day-cell.selected .day-events {
       color: rgba(255,255,255,0.9);
     }
 
@@ -535,6 +542,7 @@
   <script>
     let currentDate = new Date();
     let allEvents = [];
+    let selectedDate = null;
 
     async function init() {
       await loadEvents();
@@ -648,6 +656,15 @@
       }
     }
 
+    function formatTimeEastern(timeStr) {
+      if (!timeStr) return '';
+      const [hours, minutes] = timeStr.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${minutes} ${ampm}`;
+    }
+
     function renderCalendar() {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
@@ -678,10 +695,11 @@
         const date = new Date(year, month, day);
         const dateStr = date.toISOString().split('T')[0];
         const isToday = dateStr === today.toISOString().split('T')[0];
+        const isSelected = dateStr === selectedDate;
         
         const dayEvents = allEvents.filter(e => e.date === dateStr);
 
-        html += `<div class="day-cell ${isToday ? 'today' : ''}" onclick="filterByDate('${dateStr}')">
+        html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="selectDate('${dateStr}')">
           <div class="day-number">${day}</div>
           ${dayEvents.length > 0 ? `<div class="day-events">•</div>` : ''}
         </div>`;
@@ -711,12 +729,13 @@
         upcoming.forEach(event => {
           const date = new Date(event.date);
           const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const timeStr = event.time ? formatTimeEastern(event.time) : '';
           
           html += `
             <div class="event-item">
               <div class="event-details">
                 <div class="event-title">${event.title}</div>
-                <div class="event-meta">${dateStr}${event.time ? ` • ${event.time}` : ''}</div>
+                <div class="event-meta">${dateStr}${timeStr ? ` • ${timeStr}` : ''}</div>
               </div>
               <button class="btn-danger" onclick="deleteEvent('${event.id}')">Delete</button>
             </div>
@@ -737,16 +756,23 @@
       renderCalendar();
     }
 
+    function selectDate(dateStr) {
+      selectedDate = dateStr;
+      renderCalendar();
+      filterByDate(dateStr);
+    }
+
     function filterByDate(dateStr) {
       const dayEvents = allEvents.filter(e => e.date === dateStr);
       if (dayEvents.length > 0) {
         let html = '<div class="events-title">' + new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + '</div>';
         dayEvents.forEach(event => {
+          const timeStr = event.time ? formatTimeEastern(event.time) : 'All day';
           html += `
             <div class="event-item">
               <div class="event-details">
                 <div class="event-title">${event.title}</div>
-                <div class="event-meta">${event.time ? event.time : 'All day'}${event.description ? ' • ' + event.description : ''}</div>
+                <div class="event-meta">${timeStr}${event.description ? ' • ' + event.description : ''}</div>
               </div>
               <button class="btn-danger" onclick="deleteEvent('${event.id}')">Delete</button>
             </div>
