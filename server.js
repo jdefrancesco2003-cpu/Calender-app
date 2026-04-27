@@ -34,17 +34,39 @@ app.post('/api/events/parse', async (req, res) => {
   try {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 200,
+      max_tokens: 300,
       messages: [
         {
           role: 'user',
-          content: `Parse this event: "${text}". Return ONLY valid JSON: {"title":"event name","date":"YYYY-MM-DD","time":"HH:mm or null"}. Be smart about dates (tomorrow, next week, etc). If you can't parse it, return {"error":true}`
+          content: `Parse this event description: "${text}"
+
+Return ONLY valid JSON with no markdown or extra text.
+
+Rules:
+- Extract event title (short, clear name)
+- Infer date relative to today (tomorrow, next Friday, etc)
+- Extract time if mentioned (HH:mm format, 24-hour)
+- If time not mentioned, set to null
+- Handle today, tomorrow, next week, specific days, dates
+- Be flexible - "lunch tmrw" should parse
+
+Return ONLY this JSON format:
+{
+  "title": "event name",
+  "date": "YYYY-MM-DD",
+  "time": "HH:mm" or null
+}
+
+If you cannot parse it, return: {"error": true}`
         }
       ]
     });
 
-    const content = response.content[0].text;
-    const parsed = JSON.parse(content);
+    const content = response.content[0].text.trim();
+    
+    // Clean up markdown if present
+    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const parsed = JSON.parse(cleanContent);
 
     if (parsed.error) {
       return res.status(400).json({ error: true });
