@@ -50,6 +50,29 @@ async function deleteEvent(id) {
   await eventsCollection.deleteOne({ id });
 }
 
+// Helper: Parse date naturally
+function parseDate(dateStr) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const lower = dateStr.toLowerCase().trim();
+
+  if (lower === 'today') return today.toISOString().split('T')[0];
+  if (lower === 'tomorrow') return tomorrow.toISOString().split('T')[0];
+
+  // Try to parse as date
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed)) {
+    parsed.setHours(0, 0, 0, 0);
+    return parsed.toISOString().split('T')[0];
+  }
+
+  return today.toISOString().split('T')[0];
+}
+
 // Parse natural language event
 app.post('/api/events/parse', async (req, res) => {
   const { text } = req.body;
@@ -57,50 +80,94 @@ app.post('/api/events/parse', async (req, res) => {
   try {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 300,
+      max_tokens: 500,
       messages: [
         {
           role: 'user',
-          content: `Parse this event description: "${text}"
+          content: `You are a calendar event parser. Parse this event description: "${text}"
 
-Return ONLY valid JSON with no markdown or extra text.
+IMPORTANT: Always return valid JSON. Do not include markdown code blocks.
 
-Rules:
-- Extract event title (short, clear name)
-- Infer date relative to today (tomorrow, next Friday, etc)
-- Extract time if mentioned (HH:mm format, 24-hour)
-- If time not mentioned, set to null
-- Handle today, tomorrow, next week, specific days, dates
-- Be flexible - "lunch tmrw" should parse
+Extract:
+1. title: The event name (required)
+2. date: The date in YYYY-MM-DD format (required)
+3. time: The time in HH:mm 24-hour format, or null if not mentioned (optional)
 
-Return ONLY this JSON format:
+Instructions for date:
+- "tomorrow" = next day
+- "today" = today
+- "Monday", "Friday", etc = next occurrence of that day
+- "next week" = 7 days from today
+- Specific dates like "April 25" = 2025-04-25
+- If no date mentioned, use today
+
+Instructions for time:
+- "noon" or "12pm" = 12:00
+- "morning" or "am" = 09:00 (estimate)
+- "afternoon" = 14:00 (estimate)
+- "evening" = 18:00 (estimate)
+- Specific times like "2pm" or "14:00" = exact time
+- If no time mentioned, return null
+
+Return ONLY this JSON format with no extra text:
 {
   "title": "event name",
   "date": "YYYY-MM-DD",
   "time": "HH:mm" or null
-}
-
-If you cannot parse it, return: {"error": true}`
+}`
         }
       ]
     });
 
     const content = response.content[0].text.trim();
-    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const parsed = JSON.parse(cleanContent);
+    console.log('Claude response:', content);
 
-    if (parsed.error) {
+    // Try to extract JSON from response
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      // Try to find JSON in the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        console.error('Could not parse JSON from:', content);
+        return res.status(400).json({ error: true });
+      }
+    }
+
+    if (parsed.error || !parsed.title || !parsed.date) {
+      console.error('Missing required fields:', parsed);
       return res.status(400).json({ error: true });
+    }
+
+    // Validate and clean up date
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(parsed.date)) {
+      parsed.date = parseDate(parsed.date);
+    }
+
+    // Validate time format
+    if (parsed.time) {
+      const timeRegex = /^\d{2}:\d{2}$/;
+      if (!timeRegex.test(parsed.time)) {
+        parsed.time = null;
+      }
     }
 
     // Add to database
     const newEvent = {
       id: Date.now().toString(),
-      ...parsed,
+      title: parsed.title,
+      date: parsed.date,
+      time: parsed.time || null,
       endTime: null,
       description: ''
     };
+    
     await saveEvent(newEvent);
+    console.log('Event saved:', newEvent);
 
     res.json(newEvent);
   } catch (err) {
