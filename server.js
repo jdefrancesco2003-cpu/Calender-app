@@ -50,63 +50,58 @@ async function deleteEvent(id) {
   await eventsCollection.deleteOne({ id });
 }
 
-// Helper: Parse date naturally
-function parseDate(dateStr) {
+// Helper: Get today's date string
+function getTodayString() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const lower = dateStr.toLowerCase().trim();
-
-  if (lower === 'today') return today.toISOString().split('T')[0];
-  if (lower === 'tomorrow') return tomorrow.toISOString().split('T')[0];
-
-  // Try to parse as date
-  const parsed = new Date(dateStr);
-  if (!isNaN(parsed)) {
-    parsed.setHours(0, 0, 0, 0);
-    return parsed.toISOString().split('T')[0];
-  }
-
   return today.toISOString().split('T')[0];
 }
 
-// Parse event with a specific model
-async function parseEventWithModel(text, model) {
+// Helper: Get tomorrow's date string
+function getTomorrowString() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+  return tomorrow.toISOString().split('T')[0];
+}
+
+// Parse event with Claude
+async function parseEvent(text) {
+  const today = getTodayString();
+  const tomorrow = getTomorrowString();
+
   const response = await client.messages.create({
-    model: model,
+    model: 'claude-opus-4-1-20250805',
     max_tokens: 500,
     messages: [
       {
         role: 'user',
-        content: `You are a calendar event parser. Parse this event description: "${text}"
+        content: `You are a calendar event parser. Today is April 27, 2026. Parse this event: "${text}"
 
-IMPORTANT: Always return valid JSON. Do not include markdown code blocks.
+Return ONLY valid JSON. No markdown, no extra text.
 
 Extract:
-1. title: The event name (required)
-2. date: The date in YYYY-MM-DD format (required)
-3. time: The time in HH:mm 24-hour format, or null if not mentioned (optional)
+1. title: Event name
+2. date: Date in YYYY-MM-DD format
+3. time: Time in HH:mm 24-hour, or null
 
-Instructions for date:
-- "tomorrow" = next day
-- "today" = today
-- "Monday", "Friday", etc = next occurrence of that day
-- "next week" = 7 days from today
-- Specific dates like "April 25" = 2025-04-25
-- If no date mentioned, use today
+Date rules (TODAY = ${today}, TOMORROW = ${tomorrow}):
+- "today" → ${today}
+- "tomorrow" → ${tomorrow}
+- "next week" → 7 days from today
+- Day names like "Friday" → next Friday
+- "next Friday" → next Friday
+- If no date mentioned, use TODAY (${today})
 
-Instructions for time:
-- "noon" or "12pm" = 12:00
-- "morning" or "am" = 09:00 (estimate)
-- "afternoon" = 14:00 (estimate)
-- "evening" = 18:00 (estimate)
-- Specific times like "2pm" or "14:00" = exact time
-- If no time mentioned, return null
+Time rules:
+- "noon" or "12pm" → 12:00
+- "morning" → 09:00
+- "afternoon" → 14:00  
+- "evening" → 18:00
+- Specific times → exact (2pm = 14:00)
+- No time mentioned → null
 
-Return ONLY this JSON format with no extra text:
+JSON format only:
 {
   "title": "event name",
   "date": "YYYY-MM-DD",
@@ -117,31 +112,30 @@ Return ONLY this JSON format with no extra text:
   });
 
   const content = response.content[0].text.trim();
-  console.log(`${model} response:`, content);
+  console.log('Claude response:', content);
 
-  // Try to extract JSON from response
+  // Try to extract JSON
   let parsed;
   try {
     parsed = JSON.parse(content);
   } catch (e) {
-    // Try to find JSON in the response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       parsed = JSON.parse(jsonMatch[0]);
     } else {
-      throw new Error(`Could not parse JSON from ${model}`);
+      throw new Error('Could not parse JSON');
     }
   }
 
-  // Validate required fields
+  // Validate
   if (!parsed.title || !parsed.date) {
-    throw new Error(`Missing required fields from ${model}`);
+    throw new Error('Missing required fields');
   }
 
-  // Validate and clean up date
+  // Validate date format
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegex.test(parsed.date)) {
-    parsed.date = parseDate(parsed.date);
+    throw new Error(`Invalid date format: ${parsed.date}`);
   }
 
   // Validate time format
@@ -155,32 +149,12 @@ Return ONLY this JSON format with no extra text:
   return parsed;
 }
 
-// Parse natural language event with fallback
+// Parse natural language event
 app.post('/api/events/parse', async (req, res) => {
   const { text } = req.body;
 
   try {
-    let parsed;
-    let usedModel = 'sonnet';
-
-    // Try Sonnet first (fast, cheap)
-    try {
-      console.log('Trying Sonnet...');
-      parsed = await parseEventWithModel(text, 'claude-sonnet-4-20250514');
-      console.log('Sonnet succeeded!');
-    } catch (sonnetErr) {
-      console.log('Sonnet failed, trying Opus...', sonnetErr.message);
-      
-      // Fallback to Opus (slower, more powerful)
-      try {
-        parsed = await parseEventWithModel(text, 'claude-opus-4-1-20250805');
-        usedModel = 'opus';
-        console.log('Opus succeeded!');
-      } catch (opusErr) {
-        console.error('Both models failed:', opusErr);
-        return res.status(400).json({ error: true, message: 'Could not parse event' });
-      }
-    }
+    const parsed = await parseEvent(text);
 
     // Add to database
     const newEvent = {
@@ -189,17 +163,16 @@ app.post('/api/events/parse', async (req, res) => {
       date: parsed.date,
       time: parsed.time || null,
       endTime: null,
-      description: '',
-      parsedBy: usedModel
+      description: ''
     };
     
     await saveEvent(newEvent);
-    console.log(`Event saved (${usedModel}):`, newEvent);
+    console.log('Event saved:', newEvent);
 
     res.json(newEvent);
   } catch (err) {
     console.error('Parse error:', err);
-    res.status(500).json({ error: true });
+    res.status(400).json({ error: true });
   }
 });
 
