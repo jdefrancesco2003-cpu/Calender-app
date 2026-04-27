@@ -7,6 +7,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Calendar">
   <title>Calendar</title>
+  
+  <!-- App Icon for iOS Home Screen -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%234a9d6f' width='180' height='180'/><rect fill='%232c2c2e' x='15' y='35' width='150' height='130' rx='12'/><rect fill='%234a9d6f' x='25' y='45' width='130' height='30'/><circle fill='%234a9d6f' cx='40' cy='62' r='3.5'/><circle fill='%234a9d6f' cx='90' cy='62' r='3.5'/><circle fill='%234a9d6f' cx='140' cy='62' r='3.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='25' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='55' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='85' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='115' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='25' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='55' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='85' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='115' y='110' width='20' height='20' rx='2.5'/>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%234a9d6f' width='180' height='180'/><rect fill='%232c2c2e' x='15' y='35' width='150' height='130' rx='12'/><rect fill='%234a9d6f' x='25' y='45' width='130' height='30'/><circle fill='%234a9d6f' cx='40' cy='62' r='3.5'/><circle fill='%234a9d6f' cx='90' cy='62' r='3.5'/><circle fill='%234a9d6f' cx='140' cy='62' r='3.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='25' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='55' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='85' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='115' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='25' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='55' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='85' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='115' y='110' width='20' height='20' rx='2.5'/>">
+
   <style>
     * {
       margin: 0;
@@ -62,6 +67,9 @@
       padding: 16px 0 12px 0;
       border-bottom: 1px solid var(--border-color);
       flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     h1 {
@@ -69,13 +77,26 @@
       font-weight: 700;
       letter-spacing: -0.5px;
       color: var(--text-primary);
-      margin-bottom: 4px;
     }
 
-    .subtitle {
-      font-size: 13px;
-      color: var(--text-secondary);
-      font-weight: 400;
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .header-btn {
+      background: var(--bg-light);
+      border: none;
+      color: var(--text-primary);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      -webkit-appearance: none;
+    }
+
+    .header-btn.active {
+      background: var(--primary);
     }
 
     .main-content {
@@ -246,6 +267,14 @@
       background: var(--bg-card);
     }
 
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--bg-card);
+    }
+
     .day-header {
       text-align: center;
       font-weight: 600;
@@ -269,6 +298,7 @@
       min-height: 44px;
       position: relative;
       transition: all 0.15s ease;
+      font-size: 12px;
     }
 
     .day-cell:active {
@@ -305,20 +335,38 @@
       color: white;
     }
 
-    .day-events {
+    .day-count {
       font-size: 10px;
       color: var(--primary);
       margin-top: 2px;
     }
 
-    .day-cell.selected .day-events {
+    .day-cell.selected .day-count {
       color: rgba(255,255,255,0.9);
+    }
+
+    .week-day {
+      background: var(--bg-light);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      min-height: 200px;
+      overflow-y: auto;
+    }
+
+    .week-day-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
     }
 
     .events-container {
       padding: 12px 16px;
       background: var(--bg-card);
       border-top: 1px solid var(--border-color);
+      flex: 1;
+      overflow-y: auto;
     }
 
     .events-title {
@@ -339,6 +387,12 @@
       justify-content: space-between;
       align-items: center;
       border-left: 4px solid var(--primary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .event-item:active {
+      opacity: 0.8;
     }
 
     .event-details {
@@ -356,10 +410,6 @@
     .event-meta {
       font-size: 13px;
       color: var(--text-secondary);
-    }
-
-    .event-actions {
-      margin-left: 8px;
     }
 
     .status-message {
@@ -410,6 +460,115 @@
       border-bottom-color: var(--primary);
     }
 
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 2000;
+      padding: max(12px, env(safe-area-inset-top)) 12px 12px 12px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .toggle-switch {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      min-height: 0;
+      padding: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--border-color);
+      transition: 0.3s;
+      border-radius: 28px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+
+    .timing-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .timing-btn {
+      padding: 10px 8px;
+      min-height: auto;
+      font-size: 13px;
+      background: var(--bg-light);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .timing-btn.selected {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
     .loading {
       display: inline-block;
       animation: spin 1s linear infinite;
@@ -426,6 +585,12 @@
       height: 1px;
       background: var(--border-color);
       margin: 16px 0;
+    }
+
+    .time-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
 
     @keyframes slideDown {
@@ -469,7 +634,10 @@
   <div class="container">
     <header>
       <h1>Calendar</h1>
-      <p class="subtitle">Natural language events</p>
+      <div class="header-actions">
+        <button class="header-btn" onclick="exportEvents()">Export</button>
+        <button class="header-btn" onclick="openSettings()">Settings</button>
+      </div>
     </header>
 
     <div id="status-message"></div>
@@ -486,11 +654,18 @@
           <div class="month-year" id="month-year"></div>
           <div class="month-nav">
             <button onclick="previousMonth()">←</button>
+            <button class="header-btn" onclick="toggleView()" style="padding: 6px 10px; font-size: 12px;">Week</button>
             <button onclick="nextMonth()">→</button>
           </div>
         </div>
         
-        <div class="calendar-grid" id="calendar-grid"></div>
+        <div id="month-view">
+          <div class="calendar-grid" id="calendar-grid"></div>
+        </div>
+
+        <div id="week-view" style="display: none;">
+          <div class="week-grid" id="week-grid"></div>
+        </div>
         
         <div class="events-container">
           <div class="events-title">Upcoming</div>
@@ -523,8 +698,17 @@
           </div>
 
           <div class="input-group">
-            <label>Time (optional)</label>
-            <input type="time" id="time-input">
+            <label>Time</label>
+            <div class="time-inputs">
+              <div>
+                <label style="font-size: 11px;">Start</label>
+                <input type="time" id="time-input">
+              </div>
+              <div>
+                <label style="font-size: 11px;">End</label>
+                <input type="time" id="end-time-input">
+              </div>
+            </div>
           </div>
 
           <div class="input-group">
@@ -539,16 +723,95 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <h3 id="modal-title">Edit Event</h3>
+      
+      <div class="input-group">
+        <label>Title</label>
+        <input type="text" id="modal-title-input" placeholder="Event name">
+      </div>
+
+      <div class="input-group">
+        <label>Date</label>
+        <input type="date" id="modal-date-input">
+      </div>
+
+      <div class="input-group">
+        <label>Time</label>
+        <div class="time-inputs">
+          <div>
+            <label style="font-size: 11px;">Start</label>
+            <input type="time" id="modal-time-input">
+          </div>
+          <div>
+            <label style="font-size: 11px;">End</label>
+            <input type="time" id="modal-end-time-input">
+          </div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Notes</label>
+        <textarea id="modal-desc-input" placeholder="Add details..."></textarea>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-secondary" style="flex: 1;" onclick="saveEditedEvent()">Save</button>
+        <button class="btn-danger" style="flex: 1;" onclick="deleteEditingEvent()">Delete</button>
+        <button class="btn-secondary" style="flex: 1;" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="settings-overlay">
+    <div class="modal" id="settings-modal">
+      <h3>Notification Settings</h3>
+      
+      <div class="section" style="border: none; padding: 0;">
+        <div class="toggle-switch">
+          <label for="notif-toggle" style="margin: 0; text-transform: none; font-weight: 500;">Enable Notifications</label>
+          <label class="switch">
+            <input type="checkbox" id="notif-toggle" onchange="toggleNotifications()">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="input-group" id="timing-section" style="opacity: 0.5;">
+        <label>Alert Before Event</label>
+        <div class="timing-options">
+          <button class="timing-btn" onclick="setNotificationTiming(15)">15 min</button>
+          <button class="timing-btn" onclick="setNotificationTiming(30)">30 min</button>
+          <button class="timing-btn" onclick="setNotificationTiming(60)">60 min</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <button class="btn-secondary" style="width: 100%;" onclick="closeSettings()">Done</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let currentDate = new Date();
     let allEvents = [];
     let selectedDate = null;
+    let isWeekView = false;
+    let editingEventId = null;
+    let notificationsEnabled = false;
+    let notificationTiming = 15; // minutes
 
     async function init() {
       await loadEvents();
+      loadNotificationSettings();
       renderCalendar();
       renderUpcomingEvents();
       setTodayDate();
+      checkNotificationPermission();
+      scheduleNotifications();
     }
 
     function showTab(tab) {
@@ -559,14 +822,112 @@
       event.target.classList.add('active');
     }
 
+    function toggleView() {
+      isWeekView = !isWeekView;
+      if (isWeekView) {
+        document.getElementById('month-view').style.display = 'none';
+        document.getElementById('week-view').style.display = 'block';
+        renderWeekView();
+      } else {
+        document.getElementById('month-view').style.display = 'block';
+        document.getElementById('week-view').style.display = 'none';
+        renderCalendar();
+      }
+    }
+
     async function loadEvents() {
       try {
         const response = await fetch('/api/events');
         allEvents = await response.json();
+        localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
       } catch (err) {
         console.error('Error loading events:', err);
-        showStatus('Error loading events', 'error');
+        const saved = localStorage.getItem('calendarEvents');
+        allEvents = saved ? JSON.parse(saved) : [];
+        showStatus('Loaded from local storage', 'success');
       }
+    }
+
+    function loadNotificationSettings() {
+      const saved = localStorage.getItem('notificationSettings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        notificationsEnabled = settings.enabled || false;
+        notificationTiming = settings.timing || 15;
+      }
+      updateSettingsUI();
+    }
+
+    function saveNotificationSettings() {
+      localStorage.setItem('notificationSettings', JSON.stringify({
+        enabled: notificationsEnabled,
+        timing: notificationTiming
+      }));
+    }
+
+    function updateSettingsUI() {
+      document.getElementById('notif-toggle').checked = notificationsEnabled;
+      const timingSection = document.getElementById('timing-section');
+      timingSection.style.opacity = notificationsEnabled ? '1' : '0.5';
+      timingSection.style.pointerEvents = notificationsEnabled ? 'auto' : 'none';
+
+      document.querySelectorAll('.timing-btn').forEach(btn => {
+        btn.classList.remove('selected');
+        if (btn.textContent.includes(notificationTiming.toString())) {
+          btn.classList.add('selected');
+        }
+      });
+    }
+
+    function openSettings() {
+      document.getElementById('settings-overlay').classList.add('active');
+      updateSettingsUI();
+    }
+
+    function closeSettings() {
+      document.getElementById('settings-overlay').classList.remove('active');
+    }
+
+    function toggleNotifications() {
+      notificationsEnabled = document.getElementById('notif-toggle').checked;
+      saveNotificationSettings();
+      updateSettingsUI();
+
+      if (notificationsEnabled) {
+        requestNotificationPermission();
+      } else {
+        showStatus('Notifications disabled', 'success');
+      }
+    }
+
+    function setNotificationTiming(minutes) {
+      notificationTiming = minutes;
+      saveNotificationSettings();
+      updateSettingsUI();
+      scheduleNotifications();
+      showStatus(`Alert set for ${minutes} minutes before`, 'success');
+    }
+
+    function checkEventOverlap(date, time) {
+      if (!time) return null;
+      
+      const dayEvents = allEvents.filter(e => e.date === date);
+      const [newHour, newMin] = time.split(':').map(Number);
+      
+      for (let event of dayEvents) {
+        if (!event.time) continue;
+        
+        const [eventHour, eventMin] = event.time.split(':').map(Number);
+        
+        const newTime = newHour * 60 + newMin;
+        const eventTime = eventHour * 60 + eventMin;
+        const diff = Math.abs(newTime - eventTime);
+        
+        if (diff < 60) {
+          return event;
+        }
+      }
+      return null;
     }
 
     async function parseEvent() {
@@ -593,11 +954,22 @@
         if (!response.ok || data.error) {
           showStatus('Try: "lunch tomorrow at noon"', 'error');
         } else {
+          const overlap = checkEventOverlap(data.date, data.time);
+          if (overlap) {
+            const confirmed = confirm(`⚠️ You have "${overlap.title}" at a similar time. Add anyway?`);
+            if (!confirmed) {
+              btn.disabled = false;
+              btn.innerHTML = 'Add Event';
+              return;
+            }
+          }
+
           showStatus(`✓ ${data.title} added`, 'success');
           document.getElementById('event-input').value = '';
           await loadEvents();
           renderCalendar();
           renderUpcomingEvents();
+          scheduleNotifications();
         }
       } catch (err) {
         showStatus('Error adding event', 'error');
@@ -611,6 +983,7 @@
       const title = document.getElementById('title-input').value.trim();
       const date = document.getElementById('date-input').value;
       const time = document.getElementById('time-input').value;
+      const endTime = document.getElementById('end-time-input').value;
       const description = document.getElementById('desc-input').value.trim();
 
       if (!title || !date) {
@@ -618,11 +991,17 @@
         return;
       }
 
+      const overlap = checkEventOverlap(date, time);
+      if (overlap) {
+        const confirmed = confirm(`⚠️ You have "${overlap.title}" at a similar time. Add anyway?`);
+        if (!confirmed) return;
+      }
+
       try {
         const response = await fetch('/api/events', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, date, time: time || null, description })
+          body: JSON.stringify({ title, date, time: time || null, endTime: endTime || null, description })
         });
 
         const data = await response.json();
@@ -631,12 +1010,14 @@
         document.getElementById('title-input').value = '';
         document.getElementById('date-input').value = '';
         document.getElementById('time-input').value = '';
+        document.getElementById('end-time-input').value = '';
         document.getElementById('desc-input').value = '';
         setTodayDate();
 
         await loadEvents();
         renderCalendar();
         renderUpcomingEvents();
+        scheduleNotifications();
       } catch (err) {
         showStatus('Error saving event', 'error');
       }
@@ -650,10 +1031,68 @@
           await loadEvents();
           renderCalendar();
           renderUpcomingEvents();
+          scheduleNotifications();
         }
       } catch (err) {
         showStatus('Error deleting', 'error');
       }
+    }
+
+    function openEditModal(eventId) {
+      const event = allEvents.find(e => e.id === eventId);
+      if (!event) return;
+
+      editingEventId = eventId;
+      document.getElementById('modal-title-input').value = event.title;
+      document.getElementById('modal-date-input').value = event.date;
+      document.getElementById('modal-time-input').value = event.time || '';
+      document.getElementById('modal-end-time-input').value = event.endTime || '';
+      document.getElementById('modal-desc-input').value = event.description || '';
+
+      document.getElementById('modal-overlay').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('active');
+      editingEventId = null;
+    }
+
+    async function saveEditedEvent() {
+      const title = document.getElementById('modal-title-input').value.trim();
+      const date = document.getElementById('modal-date-input').value;
+      const time = document.getElementById('modal-time-input').value;
+      const endTime = document.getElementById('modal-end-time-input').value;
+      const description = document.getElementById('modal-desc-input').value.trim();
+
+      if (!title || !date) {
+        showStatus('Title and date required', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/events/${editingEventId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, date, time: time || null, endTime: endTime || null, description })
+        });
+
+        const data = await response.json();
+        showStatus(`✓ ${data.title} updated`, 'success');
+        closeModal();
+        
+        await loadEvents();
+        renderCalendar();
+        renderUpcomingEvents();
+        scheduleNotifications();
+      } catch (err) {
+        showStatus('Error saving event', 'error');
+      }
+    }
+
+    async function deleteEditingEvent() {
+      if (!confirm('Delete this event?')) return;
+      await deleteEvent(editingEventId);
+      closeModal();
     }
 
     function formatTimeEastern(timeStr) {
@@ -663,6 +1102,13 @@
       const ampm = hour >= 12 ? 'PM' : 'AM';
       const displayHour = hour % 12 || 12;
       return `${displayHour}:${minutes} ${ampm}`;
+    }
+
+    function formatEventTime(startTime, endTime) {
+      if (!startTime) return '';
+      const start = formatTimeEastern(startTime);
+      const end = endTime ? formatTimeEastern(endTime) : '';
+      return end ? `${start} - ${end}` : start;
     }
 
     function renderCalendar() {
@@ -698,10 +1144,11 @@
         const isSelected = dateStr === selectedDate;
         
         const dayEvents = allEvents.filter(e => e.date === dateStr);
+        const eventCount = dayEvents.length;
 
         html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="selectDate('${dateStr}')">
           <div class="day-number">${day}</div>
-          ${dayEvents.length > 0 ? `<div class="day-events">•</div>` : ''}
+          ${eventCount > 0 ? `<div class="day-count">${eventCount}</div>` : ''}
         </div>`;
       }
 
@@ -711,6 +1158,45 @@
       }
 
       document.getElementById('calendar-grid').innerHTML = html;
+    }
+
+    function renderWeekView() {
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+
+      let html = '';
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(weekStart);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        const dayEvents = allEvents.filter(e => e.date === dateStr);
+
+        html += `<div class="week-day">
+          <div class="week-day-header">${days[i]}</div>
+          <div class="week-day-header" style="font-size: 11px; color: var(--text-secondary);">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>`;
+
+        if (dayEvents.length === 0) {
+          html += '<div class="empty-state" style="padding: 20px 0; font-size: 12px;">No events</div>';
+        } else {
+          dayEvents.forEach(event => {
+            const timeStr = formatEventTime(event.time, event.endTime);
+            html += `
+              <div class="event-item" style="margin-bottom: 8px;" onclick="openEditModal('${event.id}')">
+                <div class="event-details">
+                  <div class="event-title" style="font-size: 14px;">${event.title}</div>
+                  <div class="event-meta" style="font-size: 12px;">${timeStr}</div>
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        html += '</div>';
+      }
+
+      document.getElementById('week-grid').innerHTML = html;
     }
 
     function renderUpcomingEvents() {
@@ -727,17 +1213,17 @@
         html = '<div class="empty-state">No upcoming events</div>';
       } else {
         upcoming.forEach(event => {
-          const date = new Date(event.date);
+          const parts = event.date.split('-');
+          const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
           const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          const timeStr = event.time ? formatTimeEastern(event.time) : '';
+          const timeStr = formatEventTime(event.time, event.endTime);
           
           html += `
-            <div class="event-item">
+            <div class="event-item" onclick="openEditModal('${event.id}')">
               <div class="event-details">
                 <div class="event-title">${event.title}</div>
                 <div class="event-meta">${dateStr}${timeStr ? ` • ${timeStr}` : ''}</div>
               </div>
-              <button class="btn-danger" onclick="deleteEvent('${event.id}')">Delete</button>
             </div>
           `;
         });
@@ -765,16 +1251,19 @@
     function filterByDate(dateStr) {
       const dayEvents = allEvents.filter(e => e.date === dateStr);
       if (dayEvents.length > 0) {
-        let html = '<div class="events-title">' + new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + '</div>';
+        const parts = dateStr.split('-');
+        const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        const dateDisplay = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        
+        let html = '<div class="events-title">' + dateDisplay + '</div>';
         dayEvents.forEach(event => {
-          const timeStr = event.time ? formatTimeEastern(event.time) : 'All day';
+          const timeStr = formatEventTime(event.time, event.endTime) || 'All day';
           html += `
-            <div class="event-item">
+            <div class="event-item" onclick="openEditModal('${event.id}')">
               <div class="event-details">
                 <div class="event-title">${event.title}</div>
                 <div class="event-meta">${timeStr}${event.description ? ' • ' + event.description : ''}</div>
               </div>
-              <button class="btn-danger" onclick="deleteEvent('${event.id}')">Delete</button>
             </div>
           `;
         });
@@ -795,6 +1284,76 @@
         el.innerHTML = '';
         el.className = '';
       }, 3000);
+    }
+
+    function checkNotificationPermission() {
+      if ('Notification' in window && notificationsEnabled) {
+        if (Notification.permission === 'granted') {
+          return;
+        }
+      }
+    }
+
+    function requestNotificationPermission() {
+      if (!('Notification' in window)) {
+        showStatus('Notifications not supported', 'error');
+        notificationsEnabled = false;
+        saveNotificationSettings();
+        updateSettingsUI();
+        return;
+      }
+
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          if (permission !== 'granted') {
+            notificationsEnabled = false;
+            saveNotificationSettings();
+            updateSettingsUI();
+            showStatus('Notification permission denied', 'error');
+          } else {
+            showStatus('Notifications enabled', 'success');
+            scheduleNotifications();
+          }
+        });
+      }
+    }
+
+    function scheduleNotifications() {
+      if (!notificationsEnabled || !('Notification' in window)) return;
+
+      const now = new Date();
+      allEvents.forEach(event => {
+        if (!event.time) return;
+
+        const [hours, minutes] = event.time.split(':').map(Number);
+        const eventTime = new Date(event.date);
+        eventTime.setHours(hours, minutes);
+
+        const notifyTime = new Date(eventTime.getTime() - notificationTiming * 60000);
+
+        if (notifyTime > now) {
+          const timeout = notifyTime.getTime() - now.getTime();
+          setTimeout(() => {
+            if (Notification.permission === 'granted') {
+              new Notification(`Upcoming: ${event.title}`, {
+                body: `${formatTimeEastern(event.time)} - ${event.date}`,
+                tag: event.id
+              });
+            }
+          }, timeout);
+        }
+      });
+    }
+
+    function exportEvents() {
+      const dataStr = JSON.stringify(allEvents, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `calendar-backup-${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      showStatus('Events exported', 'success');
     }
 
     window.addEventListener('load', init);
