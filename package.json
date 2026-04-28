@@ -1,11 +1,28 @@
 {
   "name": "natural-language-calendar",
+  "version": "2.0.0",
+  "description": "A personal calendar app that parses natural language events using Claude AI",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "calendar",
+    "events",
+    "natural-language",
+    "claude",
+    "ai"
+  ],
+  "author": "Jayden",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "@anthropic-ai/sdk": "latest",
+    "@anthropic-ai/sdk": "^0.36.1",
     "mongodb": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
