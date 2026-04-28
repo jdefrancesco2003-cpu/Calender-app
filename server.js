@@ -128,10 +128,14 @@ async function parseEvent(text) {
   const today = getTodayString();
   const tomorrow = getTomorrowString();
   const formattedToday = getFormattedDate();
+  const modelName = 'claude-opus-4-1-20250805';
 
   try {
+    console.log(`📝 Parsing event: "${text}"`);
+    console.log(`🤖 Using model: ${modelName}`);
+    
     const response = await client.messages.create({
-      model: 'claude-opus-4-1-20250805',
+      model: modelName,
       max_tokens: 500,
       messages: [
         {
@@ -175,12 +179,13 @@ Return ONLY this JSON format:
     });
 
     const content = response.content[0].text.trim();
-    console.log('Claude response:', content);
+    console.log('✓ Claude response:', content);
 
     let parsed;
     try {
       parsed = JSON.parse(content);
     } catch (e) {
+      console.error('JSON parse error:', e.message);
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         parsed = JSON.parse(jsonMatch[0]);
@@ -215,9 +220,12 @@ Return ONLY this JSON format:
       }
     }
 
+    console.log('✓ Event parsed successfully:', parsed);
     return parsed;
   } catch (err) {
-    console.error('Parse error:', err.message);
+    console.error('✗ Parse error:', err.message);
+    console.error('Error details:', JSON.stringify(err, null, 2));
+    console.error(`Model attempted: ${modelName}`);
     throw err;
   }
 }
@@ -244,7 +252,7 @@ app.post('/api/events/parse', async (req, res) => {
     };
     
     await saveEvent(newEvent);
-    console.log('✓ Event parsed and saved:', newEvent);
+    console.log('✓ Event saved:', newEvent);
     res.json(newEvent);
   } catch (err) {
     console.error('✗ Parse error:', err.message);
@@ -286,6 +294,7 @@ app.post('/api/events', async (req, res) => {
   
   const result = await saveEvent(newEvent);
   if (result) {
+    console.log('✓ Event created:', newEvent);
     res.json(result);
   } else {
     res.status(500).json({ error: 'Failed to save event' });
@@ -317,6 +326,7 @@ app.put('/api/events/:id', async (req, res) => {
   const updated = events.find(e => e.id === eventId);
   
   if (updated) {
+    console.log('✓ Event updated:', updated);
     res.json(updated);
   } else {
     res.status(404).json({ error: 'Event not found' });
@@ -327,6 +337,7 @@ app.put('/api/events/:id', async (req, res) => {
 app.delete('/api/events/:id', async (req, res) => {
   const success = await deleteEvent(req.params.id);
   if (success) {
+    console.log('✓ Event deleted:', req.params.id);
     res.json({ success: true });
   } else {
     res.status(404).json({ error: 'Event not found' });
@@ -335,7 +346,7 @@ app.delete('/api/events/:id', async (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
+  res.json({ status: 'ok', timestamp: new Date(), model: 'claude-opus-4-1-20250805' });
 });
 
 // Start server AFTER MongoDB is connected
@@ -344,6 +355,7 @@ async function startServer() {
     await connectMongoDB();
     app.listen(PORT, () => {
       console.log(`✓ Calendar API running on port ${PORT}`);
+      console.log(`✓ Model: claude-opus-4-1-20250805`);
     });
   } catch (err) {
     console.error('✗ Failed to start server:', err.message);
