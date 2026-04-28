@@ -131,7 +131,7 @@ async function parseEvent(text) {
 
   try {
     const response = await client.messages.create({
-      model: 'claude-opus-4-20250805',
+      model: 'claude-opus-4-1-20250805',
       max_tokens: 500,
       messages: [
         {
