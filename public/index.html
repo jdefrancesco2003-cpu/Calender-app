@@ -241,23 +241,42 @@
       }
     }
 
-    function navigatePrevious() {
-      if (isWeekView) {
-        currentDate.setDate(currentDate.getDate() - 7);
-        renderWeekView();
-      } else {
-        previousMonth();
-      }
-    }
+function navigatePrevious() {
+  if (isWeekView) {
+    currentDate.setDate(currentDate.getDate() - 7);
+    updateWeekHeader();
+    renderWeekView();
+  } else {
+    previousMonth();
+  }
+}
 
-    function navigateNext() {
-      if (isWeekView) {
-        currentDate.setDate(currentDate.getDate() + 7);
-        renderWeekView();
-      } else {
-        nextMonth();
-      }
-    }
+function navigateNext() {
+  if (isWeekView) {
+    currentDate.setDate(currentDate.getDate() + 7);
+    updateWeekHeader();
+    renderWeekView();
+  } else {
+    nextMonth();
+  }
+}
+
+function updateWeekHeader() {
+  const weekStart = new Date(currentDate);
+  weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  
+  const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' });
+  const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' });
+  const year = weekStart.getFullYear();
+  
+  if (startMonth === endMonth) {
+    document.getElementById('month-year').textContent = `${startMonth} ${weekStart.getDate()}-${weekEnd.getDate()}, ${year}`;
+  } else {
+    document.getElementById('month-year').textContent = `${startMonth} ${weekStart.getDate()} - ${endMonth} ${weekEnd.getDate()}, ${year}`;
+  }
+}
     
     async function loadEvents() { try { const response = await fetch('/api/events'); allEvents = await response.json(); localStorage.setItem('calendarEvents', JSON.stringify(allEvents)); } catch (err) { console.error('Error loading events:', err); const saved = localStorage.getItem('calendarEvents'); allEvents = saved ? JSON.parse(saved) : []; showStatus('Using local storage', 'success'); } }
     
