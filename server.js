@@ -173,6 +173,10 @@ Date rules (TODAY = ${today}, TOMORROW = ${tomorrow}):
 - "today" → ${today}
 - "tomorrow" → ${tomorrow}
 - "next week" → 7 days from today
+- "next month" → 30 days from today
+- "in 2 weeks" / "in 3 months" → calculate forward
+- Specific dates like "June 15" or "6/15/2026" → convert to YYYY-MM-DD
+- Month names like "June" → June 1st of next occurrence
 - Day names like "Friday" → next occurring Friday
 - "next Friday" → next Friday
 - For ranges like "Friday to Sunday" → date = Friday, endDate = Sunday
