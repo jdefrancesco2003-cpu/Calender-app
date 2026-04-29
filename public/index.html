@@ -76,8 +76,8 @@
     .week-day-column.today::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--primary); }
     .current-time-line { position: absolute; height: 2px; background: #ff453a; left: 0; right: 0; z-index: 10; }
     .current-time-dot { position: absolute; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; left: -7px; top: -5px; }
-    .week-all-day { padding: 6px 4px; background: rgba(74, 157, 111, 0.1); border-bottom: 2px solid var(--border-color); min-height: 40px; display: flex; flex-direction: column; justify-content: center; }
-    .all-day-event { background: var(--bg-light); padding: 5px 6px; border-radius: 3px; font-size: 12px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border-left: 3px solid var(--primary); }
+    .week-all-day { padding: 8px 4px; background: linear-gradient(90deg, rgba(74, 157, 111, 0.2) 0%, rgba(74, 157, 111, 0.1) 100%); border-bottom: 2px solid var(--primary); min-height: 48px; display: flex; flex-direction: column; justify-content: center; border-left: 3px solid var(--primary); }
+    .all-day-event { background: var(--primary); color: white; padding: 6px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
     .week-event { position: absolute; background: #2a2a2c; border-left: 4px solid var(--primary); border-radius: 2px; padding: 5px 6px; cursor: pointer; overflow: hidden; margin: 0; left: 0.5px; right: 0.5px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 44px; word-wrap: break-word; white-space: normal; }
     .week-event-title { font-weight: 700; color: var(--text-primary); word-break: break-word; font-size: 13px; line-height: 1.2; margin: 0 0 3px 0; }
     .week-event-time { font-size: 9px; color: var(--text-secondary); white-space: normal; line-height: 1.1; word-break: break-word; margin: 0; }
@@ -93,6 +93,7 @@
     .event-details { flex: 1; min-width: 0; }
     .event-title { font-weight: 600; font-size: 15px; color: var(--text-primary); margin-bottom: 4px; }
     .event-meta { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+    .event-day-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
     .event-duration { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
     .all-day-badge { display: inline-block; font-size: 10px; background: var(--primary); color: white; padding: 2px 6px; border-radius: 3px; margin-left: 4px; font-weight: 600; }
     .status-message { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; padding: 12px 16px; border-radius: 10px; font-size: 15px; font-weight: 500; z-index: 1000; animation: slideDown 0.3s ease; }
@@ -127,6 +128,8 @@
     input:checked + .slider { background-color: var(--primary); }
     input:checked + .slider:before { transform: translateX(22px); }
     .search-input { margin-bottom: 12px; }
+    .search-filters { display: flex; gap: 8px; margin-bottom: 12px; }
+    .search-filters input { flex: 1; }
     .events-list { display: flex; flex-direction: column; gap: 8px; }
     .event-day-group { margin-bottom: 20px; }
     .event-day-label { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -134,9 +137,8 @@
     .undo-toast button { padding: 8px 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; min-height: auto; }
     .day-events-modal { max-height: 70vh; }
     .day-events-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 16px; }
-    .toast-notification { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 12px; right: 12px; background: var(--bg-light); color: var(--text-primary); padding: 12px 16px; border-radius: 10px; z-index: 1500; animation: slideUp 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .toast-notification.success { background: var(--success); color: white; }
-    .toast-notification.error { background: var(--error); color: white; }
+    .upcoming-day-group { margin-bottom: 24px; }
+    .upcoming-day-header { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -189,8 +191,11 @@
           </div>
         </div>
         <div class="events-container">
-          <div class="sidebar-section"><div class="sidebar-title">Today</div><div id="today-events"></div></div>
-          <div class="sidebar-section"><div class="sidebar-title">Upcoming</div><div id="upcoming-events"></div></div>
+          <div class="upcoming-day-group" id="today-section"></div>
+          <div class="upcoming-day-group" id="tomorrow-section"></div>
+          <div class="upcoming-day-group" id="week-section"></div>
+          <div class="upcoming-day-group" id="month-section"></div>
+          <div class="upcoming-day-group" id="later-section"></div>
         </div>
       </div>
 
@@ -215,7 +220,13 @@
       <!-- EVENTS TAB -->
       <div id="events-tab" class="tab-content" style="display: none;">
         <div class="section">
+          <div class="section-title">Smart Search</div>
           <input type="text" class="search-input" id="search-input" placeholder="Search events..." onkeyup="filterEvents()">
+          <div class="search-filters">
+            <input type="date" id="search-from" placeholder="From" onchange="filterEvents()" style="font-size: 12px;">
+            <input type="date" id="search-to" placeholder="To" onchange="filterEvents()" style="font-size: 12px;">
+            <button class="btn-secondary" style="padding: 8px 12px; min-height: auto; font-size: 12px;" onclick="clearSearchFilters(); triggerHaptic()">Clear</button>
+          </div>
         </div>
         <div class="events-container" id="events-list"></div>
       </div>
@@ -240,6 +251,22 @@
     </div>
   </div>
 
+  <!-- DUPLICATE MODAL -->
+  <div class="modal-overlay" id="duplicate-overlay">
+    <div class="modal confirmation-modal">
+      <h3 class="confirmation-title">Duplicate Event Detected</h3>
+      <div class="confirmation-content">
+        <div style="text-align: center; padding: 16px 0;">
+          <div style="font-size: 36px; margin-bottom: 12px;">⚠️</div>
+          <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;" id="duplicate-message"></div>
+        </div>
+      </div>
+      <div class="confirmation-buttons">
+        <button class="btn-secondary" style="flex: 1;" onclick="closeDuplicateModal(); triggerHaptic()">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <!-- DAY EVENTS MODAL -->
   <div class="modal-overlay" id="day-modal-overlay">
     <div class="modal day-events-modal">
@@ -260,9 +287,19 @@
       <div class="toggle-switch"><label for="modal-all-day-toggle" style="margin: 0; text-transform: none; font-weight: 500;">All-Day Event</label><label class="switch"><input type="checkbox" id="modal-all-day-toggle" onchange="toggleAllDayModal()"><span class="slider"></span></label></div>
       <div style="display: flex; gap: 8px;">
         <button class="btn-secondary" style="flex: 1;" onclick="saveEditedEvent(); triggerHaptic()">Save</button>
+        <button class="btn-secondary" style="flex: 1; border-color: var(--warning); color: var(--warning);" onclick="undoEditedEvent(); triggerHaptic()">↶ Undo</button>
         <button class="btn-danger" style="flex: 1;" onclick="deleteEditingEvent(); triggerHaptic()">Delete</button>
         <button class="btn-secondary" style="flex: 1;" onclick="closeModal(); triggerHaptic()">Cancel</button>
       </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="modal-overlay" id="settings-overlay">
+    <div class="modal" id="settings-modal">
+      <h3>Notification Settings</h3>
+      <div class="section" style="border: none; padding: 0;"><div class="toggle-switch"><label for="notif-toggle" style="margin: 0; text-transform: none; font-weight: 500;">Enable Notifications</label><label class="switch"><input type="checkbox" id="notif-toggle" onchange="toggleNotifications()"><span class="slider"></span></label></div></div>
+      <div style="margin-top: 16px;"><button class="btn-secondary" style="width: 100%;" onclick="closeSettings(); triggerHaptic()">Done</button></div>
     </div>
   </div>
 
@@ -274,15 +311,6 @@
         <button class="btn-danger" style="flex: 1;" onclick="cancelOverlapSave(); triggerHaptic()">Cancel</button>
         <button class="btn-secondary" style="flex: 1;" onclick="confirmOverlapSave(); triggerHaptic()">Save Anyway</button>
       </div>
-    </div>
-  </div>
-
-  <!-- SETTINGS MODAL -->
-  <div class="modal-overlay" id="settings-overlay">
-    <div class="modal" id="settings-modal">
-      <h3>Notification Settings</h3>
-      <div class="section" style="border: none; padding: 0;"><div class="toggle-switch"><label for="notif-toggle" style="margin: 0; text-transform: none; font-weight: 500;">Enable Notifications</label><label class="switch"><input type="checkbox" id="notif-toggle" onchange="toggleNotifications()"><span class="slider"></span></label></div></div>
-      <div style="margin-top: 16px;"><button class="btn-secondary" style="width: 100%;" onclick="closeSettings(); triggerHaptic()">Done</button></div>
     </div>
   </div>
 
@@ -301,7 +329,31 @@
     let pendingParsedEvent = null;
     let notificationsEnabled = false;
     let searchFilter = '';
+    let pendingEditMode = false;
+    let lastDeletedEvent = null;
+    let lastDeletedEventIndex = -1;
+    let lastEditedEvent = null;
     let pendingOverlapConfirmation = null;
+
+    function capitalizeTitle(str) {
+      if (!str) return '';
+      return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    }
+
+    function triggerHaptic() {
+      if (navigator.vibrate) navigator.vibrate(10);
+    }
+
+    function checkDuplicateEvent(newEvent, excludeEventId = null) {
+      return allEvents.some(event => {
+        if (excludeEventId && event.id === excludeEventId) return false;
+        if (event.title !== newEvent.title) return false;
+        if (event.date !== newEvent.date) return false;
+        if (event.isAllDay !== newEvent.isAllDay) return false;
+        if (!event.isAllDay && event.time !== newEvent.time) return false;
+        return true;
+      });
+    }
 
     function checkEventOverlap(newEvent, excludeEventId = null) {
       return allEvents.some(event => {
@@ -331,6 +383,16 @@
       });
     }
 
+    function showDuplicateModal(eventTitle) {
+      const modal = document.getElementById('duplicate-overlay');
+      document.getElementById('duplicate-message').textContent = `"${eventTitle}" already exists at this date and time. This event is not unique and would create a duplicate.`;
+      modal.classList.add('active');
+    }
+
+    function closeDuplicateModal() {
+      document.getElementById('duplicate-overlay').classList.remove('active');
+    }
+
     function showOverlapConfirmation(eventTitle, callback) {
       pendingOverlapConfirmation = callback;
       const modal = document.getElementById('overlap-modal-overlay');
@@ -352,21 +414,6 @@
       document.getElementById('overlap-modal-overlay').classList.remove('active');
     }
 
-    function capitalizeTitle(str) {
-      if (!str) return '';
-      return str
-        .toLowerCase()
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-    }
-
-    function triggerHaptic() {
-      if (navigator.vibrate) {
-        navigator.vibrate(10);
-      }
-    }
-
     async function init() {
       await loadEvents();
       loadNotificationSettings();
@@ -379,13 +426,11 @@
     }
 
     function toggleMenu() {
-      const menu = document.getElementById('dropdown-menu');
-      menu.classList.toggle('active');
+      document.getElementById('dropdown-menu').classList.toggle('active');
     }
 
     function closeMenuOnTab() {
-      const menu = document.getElementById('dropdown-menu');
-      menu.classList.remove('active');
+      document.getElementById('dropdown-menu').classList.remove('active');
     }
 
     function openAddEventTab() {
@@ -467,7 +512,6 @@
         allEvents = await response.json();
         localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
       } catch (err) {
-        console.error('Error loading events:', err);
         const saved = localStorage.getItem('calendarEvents');
         allEvents = saved ? JSON.parse(saved) : [];
         showStatus('Using local storage', 'success');
@@ -550,6 +594,13 @@
           showStatus(data.error || 'Try: "work on friday 7-3pm"', 'error');
         } else {
           data.title = capitalizeTitle(data.title);
+          
+          if (checkDuplicateEvent(data)) {
+            showDuplicateModal(data.title);
+            btn.disabled = false;
+            return;
+          }
+
           pendingParsedEvent = data;
           pendingEditMode = false;
           showConfirmationModal(data);
@@ -660,6 +711,11 @@
         isAllDay
       };
 
+      if (checkDuplicateEvent(newEvent)) {
+        showDuplicateModal(title);
+        return;
+      }
+
       if (checkEventOverlap(newEvent)) {
         showOverlapConfirmation(title, async () => {
           try {
@@ -671,14 +727,7 @@
             const data = await response.json();
             showStatus(`✓ ${data.title} saved`, 'success');
             showSyncIndicator();
-            document.getElementById('title-input').value = '';
-            document.getElementById('date-input').value = '';
-            document.getElementById('end-date-input').value = '';
-            document.getElementById('time-input').value = '';
-            document.getElementById('end-time-input').value = '';
-            document.getElementById('desc-input').value = '';
-            document.getElementById('all-day-toggle').checked = false;
-            setTodayDate();
+            clearAddForm();
             await loadEvents();
             renderCalendar();
             renderUpcomingEvents();
@@ -699,14 +748,7 @@
         const data = await response.json();
         showStatus(`✓ ${data.title} saved`, 'success');
         showSyncIndicator();
-        document.getElementById('title-input').value = '';
-        document.getElementById('date-input').value = '';
-        document.getElementById('end-date-input').value = '';
-        document.getElementById('time-input').value = '';
-        document.getElementById('end-time-input').value = '';
-        document.getElementById('desc-input').value = '';
-        document.getElementById('all-day-toggle').checked = false;
-        setTodayDate();
+        clearAddForm();
         await loadEvents();
         renderCalendar();
         renderUpcomingEvents();
@@ -714,6 +756,17 @@
       } catch (err) {
         showStatus('Error saving event', 'error');
       }
+    }
+
+    function clearAddForm() {
+      document.getElementById('title-input').value = '';
+      document.getElementById('date-input').value = '';
+      document.getElementById('end-date-input').value = '';
+      document.getElementById('time-input').value = '';
+      document.getElementById('end-time-input').value = '';
+      document.getElementById('desc-input').value = '';
+      document.getElementById('all-day-toggle').checked = false;
+      setTodayDate();
     }
 
     async function deleteEvent(id) {
@@ -782,6 +835,7 @@
       const event = allEvents.find(e => e.id === eventId);
       if (!event) return;
       editingEventId = eventId;
+      lastEditedEvent = JSON.parse(JSON.stringify(event));
       document.getElementById('modal-title-input').value = event.title;
       document.getElementById('modal-date-input').value = event.date;
       document.getElementById('modal-end-date-input').value = event.endDate || '';
@@ -796,6 +850,36 @@
     function closeModal() {
       document.getElementById('modal-overlay').classList.remove('active');
       editingEventId = null;
+      lastEditedEvent = null;
+    }
+
+    async function undoEditedEvent() {
+      if (!lastEditedEvent) return;
+      try {
+        await fetch(`/api/events/${editingEventId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: lastEditedEvent.title,
+            date: lastEditedEvent.date,
+            endDate: lastEditedEvent.endDate || null,
+            time: lastEditedEvent.time || null,
+            endTime: lastEditedEvent.endTime || null,
+            description: lastEditedEvent.description || '',
+            isAllDay: lastEditedEvent.isAllDay || false
+          })
+        });
+        showStatus(`✓ ${lastEditedEvent.title} restored`, 'success');
+        showSyncIndicator();
+        closeModal();
+        await loadEvents();
+        renderCalendar();
+        renderUpcomingEvents();
+        renderEventsPage();
+        scheduleNotifications();
+      } catch (err) {
+        showStatus('Error restoring event', 'error');
+      }
     }
 
     async function saveEditedEvent() {
@@ -939,7 +1023,11 @@
 
     function openDayModal(dateStr) {
       selectedDate = dateStr;
-      const dayEvents = allEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate));
+      const dayEvents = allEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)).sort((a, b) => {
+        if (a.isAllDay && !b.isAllDay) return -1;
+        if (!a.isAllDay && b.isAllDay) return 1;
+        return (a.time || '').localeCompare(b.time || '');
+      });
       const date = new Date(dateStr + 'T00:00:00');
       const dateLabel = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
       
@@ -949,7 +1037,7 @@
       if (dayEvents.length === 0) {
         html = '<div class="empty-state"><div class="empty-state-icon">✓</div>No events on this day</div>';
       } else {
-        dayEvents.sort((a, b) => (a.time || '').localeCompare(b.time || '')).forEach(event => {
+        dayEvents.forEach(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
           html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic()">
@@ -1012,7 +1100,8 @@
         if (allDayEvents.length > 0) {
           html += '<div class="week-all-day">';
           allDayEvents.forEach(event => {
-            html += `<div class="all-day-event" onclick="openEditModal('${event.id}'); triggerHaptic()">${event.title}</div>`;
+            const endText = event.endDate && event.endDate !== event.date ? ` (${event.endDate})` : '';
+            html += `<div class="all-day-event" onclick="openEditModal('${event.id}'); triggerHaptic()">${event.title}${endText}</div>`;
           });
           html += '</div>';
         }
@@ -1035,7 +1124,6 @@
       }
 
       document.getElementById('week-grid').innerHTML = html;
-
       updateCurrentTimeLine();
     }
 
@@ -1058,10 +1146,94 @@
       }
     }
 
-    function renderEventsPage() {
-      const sorted = [...allEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
-      const grouped = {};
+    function getDateGroup(dateStr) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const weekEnd = new Date(today);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      const monthEnd = new Date(today);
+      monthEnd.setDate(monthEnd.getDate() + 30);
 
+      const date = new Date(dateStr + 'T00:00:00');
+
+      if (dateStr === today.toISOString().split('T')[0]) return { group: 'today', label: 'Today' };
+      if (dateStr === tomorrow.toISOString().split('T')[0]) return { group: 'tomorrow', label: 'Tomorrow' };
+      if (date <= weekEnd) return { group: 'week', label: 'This Week' };
+      if (date <= monthEnd) return { group: 'month', label: 'Next Week' };
+      return { group: 'later', label: 'Later' };
+    }
+
+    function renderUpcomingEvents() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const groupedEvents = {
+        today: [],
+        tomorrow: [],
+        week: [],
+        month: [],
+        later: []
+      };
+
+      allEvents.forEach(event => {
+        if (new Date(event.date) >= today) {
+          const group = getDateGroup(event.date);
+          groupedEvents[group.group].push({ ...event, groupLabel: group.label });
+        }
+      });
+
+      Object.keys(groupedEvents).forEach(key => {
+        groupedEvents[key].sort((a, b) => {
+          const dateCompare = new Date(a.date) - new Date(b.date);
+          if (dateCompare !== 0) return dateCompare;
+          if (a.isAllDay && !b.isAllDay) return -1;
+          if (!a.isAllDay && b.isAllDay) return 1;
+          return (a.time || '').localeCompare(b.time || '');
+        });
+      });
+
+      const sections = ['today', 'tomorrow', 'week', 'month', 'later'];
+      sections.forEach(section => {
+        const container = document.getElementById(`${section}-section`);
+        const events = groupedEvents[section];
+        
+        if (events.length === 0) {
+          container.innerHTML = '';
+          return;
+        }
+
+        let html = `<div class="upcoming-day-header">${events[0].groupLabel}</div>`;
+        events.forEach(event => {
+          const timeStr = formatEventTime(event.time, event.endTime);
+          const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
+          const dateObj = new Date(event.date + 'T00:00:00');
+          const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          
+          html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic()">
+            <div class="event-details">
+              <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
+              <div class="event-day-label">${dateLabel}${timeStr ? ` • ${timeStr}${durationInfo}` : ''}</div>
+              ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
+            </div>
+          </div>`;
+        });
+        
+        container.innerHTML = html;
+      });
+    }
+
+    function renderEventsPage() {
+      const sorted = [...allEvents].sort((a, b) => {
+        const dateCompare = new Date(a.date) - new Date(b.date);
+        if (dateCompare !== 0) return dateCompare;
+        if (a.isAllDay && !b.isAllDay) return -1;
+        if (!a.isAllDay && b.isAllDay) return 1;
+        return (a.time || '').localeCompare(b.time || '');
+      });
+
+      const grouped = {};
       sorted.forEach(event => {
         const dateKey = event.date;
         if (!grouped[dateKey]) {
@@ -1078,10 +1250,6 @@
         let dateLabel = '';
         if (dateKey === today) {
           dateLabel = 'Today';
-        } else if (dateKey === getYesterdayString()) {
-          dateLabel = 'Yesterday';
-        } else if (dateKey === getTomorrowString()) {
-          dateLabel = 'Tomorrow';
         } else {
           dateLabel = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         }
@@ -1112,18 +1280,6 @@
       }
 
       document.getElementById('events-list').innerHTML = html;
-    }
-
-    function getYesterdayString() {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      return yesterday.toISOString().split('T')[0];
-    }
-
-    function getTomorrowString() {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return tomorrow.toISOString().split('T')[0];
     }
 
     function setupSwipe(e) {
@@ -1165,13 +1321,34 @@
       }
     }
 
+    function clearSearchFilters() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('search-from').value = '';
+      document.getElementById('search-to').value = '';
+      renderEventsPage();
+    }
+
     function filterEvents() {
       const query = document.getElementById('search-input').value.toLowerCase();
-      const filtered = allEvents.filter(e => e.title.toLowerCase().includes(query) || (e.description && e.description.toLowerCase().includes(query)));
-      
-      const sorted = [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date));
-      const grouped = {};
+      const fromDate = document.getElementById('search-from').value;
+      const toDate = document.getElementById('search-to').value;
 
+      let filtered = allEvents.filter(e => {
+        const textMatch = e.title.toLowerCase().includes(query) || (e.description && e.description.toLowerCase().includes(query));
+        const fromMatch = !fromDate || e.date >= fromDate;
+        const toMatch = !toDate || e.date <= toDate;
+        return textMatch && fromMatch && toMatch;
+      });
+
+      const sorted = [...filtered].sort((a, b) => {
+        const dateCompare = new Date(a.date) - new Date(b.date);
+        if (dateCompare !== 0) return dateCompare;
+        if (a.isAllDay && !b.isAllDay) return -1;
+        if (!a.isAllDay && b.isAllDay) return 1;
+        return (a.time || '').localeCompare(b.time || '');
+      });
+
+      const grouped = {};
       sorted.forEach(event => {
         const dateKey = event.date;
         if (!grouped[dateKey]) {
@@ -1191,10 +1368,6 @@
           let dateLabel = '';
           if (dateKey === today) {
             dateLabel = 'Today';
-          } else if (dateKey === getYesterdayString()) {
-            dateLabel = 'Yesterday';
-          } else if (dateKey === getTomorrowString()) {
-            dateLabel = 'Tomorrow';
           } else {
             dateLabel = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
           }
@@ -1222,43 +1395,6 @@
       }
 
       document.getElementById('events-list').innerHTML = html;
-    }
-
-    function renderUpcomingEvents() {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayEvents = allEvents.filter(e => e.date === today.toISOString().split('T')[0]).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-      let todayHtml = '';
-      if (todayEvents.length === 0) {
-        todayHtml = '<div class="empty-state"><div class="empty-state-icon">✓</div>No events today</div>';
-      } else {
-        todayEvents.forEach(event => {
-          const timeStr = formatEventTime(event.time, event.endTime);
-          const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          todayHtml += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic()"><div class="event-details"><div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}${event.description ? `<div class="event-meta">${event.description}</div>` : ''}</div></div>`;
-        });
-      }
-      document.getElementById('today-events').innerHTML = todayHtml;
-
-      const upcoming = allEvents.filter(e => new Date(e.date) > today).sort((a, b) => {
-        const dateCompare = new Date(a.date) - new Date(b.date);
-        if (dateCompare !== 0) return dateCompare;
-        return (a.time || '').localeCompare(b.time || '');
-      }).slice(0, 5);
-      let upcomingHtml = '';
-      if (upcoming.length === 0) {
-        upcomingHtml = '<div class="empty-state"><div class="empty-state-icon">📅</div>No upcoming events</div>';
-      } else {
-        upcoming.forEach(event => {
-          const parts = event.date.split('-');
-          const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-          const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          const timeStr = formatEventTime(event.time, event.endTime);
-          const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          upcomingHtml += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic()"><div class="event-details"><div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div><div class="event-meta">${dateStr}${timeStr ? ` • ${timeStr}${durationInfo}` : ''}</div>${event.description ? `<div class="event-meta">${event.description}</div>` : ''}</div></div>`;
-        });
-      }
-      document.getElementById('upcoming-events').innerHTML = upcomingHtml;
     }
 
     function previousMonth() {
