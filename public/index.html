@@ -62,25 +62,25 @@
     .day-count { font-size: 10px; color: var(--primary); margin-top: 2px; }
     .day-cell.selected .day-count { color: rgba(255,255,255,0.9); }
     .week-view-container { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
-    .week-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 4px; padding: 12px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); align-items: center; }
-    .week-time-label { padding: 8px 0; font-size: 10px; color: var(--text-secondary); text-align: center; }
-    .week-day-header { padding: 8px 4px; text-align: center; }
-    .week-day-name { font-size: 10px; font-weight: 600; color: var(--text-secondary); }
-    .week-day-date { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-top: 2px; }
-    .week-day-date.today { color: var(--primary); }
-    .week-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 4px; flex: 1; overflow-y: auto; background: var(--bg-card); padding: 4px; position: relative; }
-    .week-time-slots { display: flex; flex-direction: column; background: rgba(74, 157, 111, 0.08); border-right: 2px solid var(--primary); border-radius: 4px; padding: 2px; }
-    .time-slot { padding: 4px 1px; font-size: 9px; color: var(--text-primary); font-weight: 600; text-align: center; min-height: 60px; border-bottom: 1px solid var(--border-color); }
+    .week-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; padding: 10px 0; background: var(--bg-card); border-bottom: 1px solid var(--border-color); align-items: center; }
+    .week-time-label { padding: 0; font-size: 10px; color: var(--text-secondary); text-align: center; line-height: 1; }
+    .week-day-header { padding: 0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; width: 100%; box-sizing: border-box; }
+    .week-day-name { font-size: 9px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0px; line-height: 1.1; margin: 0; }
+    .week-day-date { font-size: 12px; font-weight: 700; color: var(--text-primary); margin-top: 2px; margin-bottom: 0; }
+    .week-day-date.today { color: var(--primary); font-weight: 700; }
+    .week-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; flex: 1; overflow-y: auto; background: var(--bg-card); padding: 4px; position: relative; }
+    .week-time-slots { display: flex; flex-direction: column; background: rgba(74, 157, 111, 0.08); border-right: 2px solid var(--primary); border-radius: 0; padding: 0; }
+    .time-slot { padding: 2px 0; font-size: 8px; color: var(--text-primary); font-weight: 600; text-align: center; min-height: 60px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; }
     .week-day-column { border: 1px solid var(--border-color); position: relative; min-height: 100%; border-radius: 2px; background: var(--bg-light); overflow: hidden; }
     .week-day-column.today { background: rgba(74, 157, 111, 0.08); border-color: var(--primary); }
     .week-day-column.today::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--primary); }
     .current-time-line { position: absolute; height: 2px; background: #ff453a; left: 0; right: 0; z-index: 10; }
     .current-time-dot { position: absolute; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; left: -7px; top: -5px; }
-    .week-all-day { padding: 6px 4px; background: rgba(74, 157, 111, 0.1); border-bottom: 2px solid var(--border-color); min-height: 40px; }
-    .all-day-event { background: var(--bg-light); padding: 4px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border-left: 3px solid var(--primary); }
-    .week-event { position: absolute; background: #2a2a2c; border-left: 3px solid var(--primary); border-radius: 4px; padding: 4px 6px; font-size: 11px; cursor: pointer; overflow: hidden; margin: 1px; left: 1px; right: 1px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 40px; word-wrap: break-word; white-space: normal; line-height: 1.1; }
-    .week-event-title { font-weight: 700; color: var(--text-primary); word-break: break-word; line-height: 1.1; font-size: 11px; }
-    .week-event-time { font-size: 9px; color: var(--text-secondary); white-space: normal; line-height: 1.1; margin-top: 1px; word-break: break-word; }
+    .week-all-day { padding: 6px 4px; background: rgba(74, 157, 111, 0.1); border-bottom: 2px solid var(--border-color); min-height: 40px; display: flex; flex-direction: column; justify-content: center; }
+    .all-day-event { background: var(--bg-light); padding: 5px 6px; border-radius: 3px; font-size: 12px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border-left: 3px solid var(--primary); }
+    .week-event { position: absolute; background: #2a2a2c; border-left: 4px solid var(--primary); border-radius: 2px; padding: 5px 6px; cursor: pointer; overflow: hidden; margin: 0; left: 0.5px; right: 0.5px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 44px; word-wrap: break-word; white-space: normal; }
+    .week-event-title { font-weight: 700; color: var(--text-primary); word-break: break-word; font-size: 13px; line-height: 1.2; margin: 0 0 3px 0; }
+    .week-event-time { font-size: 9px; color: var(--text-secondary); white-space: normal; line-height: 1.1; word-break: break-word; margin: 0; }
     .events-container { padding: 12px 16px; background: var(--bg-card); border-top: 1px solid var(--border-color); overflow-y: auto; }
     .sidebar-section { margin-bottom: 20px; }
     .sidebar-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -266,6 +266,17 @@
     </div>
   </div>
 
+  <!-- OVERLAP CONFIRMATION MODAL -->
+  <div class="modal-overlay" id="overlap-modal-overlay">
+    <div class="modal" style="max-width: 320px;">
+      <div id="overlap-modal-content"></div>
+      <div style="display: flex; gap: 8px; margin-top: 20px;">
+        <button class="btn-danger" style="flex: 1;" onclick="cancelOverlapSave(); triggerHaptic()">Cancel</button>
+        <button class="btn-secondary" style="flex: 1;" onclick="confirmOverlapSave(); triggerHaptic()">Save Anyway</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SETTINGS MODAL -->
   <div class="modal-overlay" id="settings-overlay">
     <div class="modal" id="settings-modal">
@@ -290,9 +301,56 @@
     let pendingParsedEvent = null;
     let notificationsEnabled = false;
     let searchFilter = '';
-    let pendingEditMode = false;
-    let lastDeletedEvent = null;
-    let lastDeletedEventIndex = -1;
+    let pendingOverlapConfirmation = null;
+
+    function checkEventOverlap(newEvent, excludeEventId = null) {
+      return allEvents.some(event => {
+        if (excludeEventId && event.id === excludeEventId) return false;
+        if (event.isAllDay || newEvent.isAllDay) return false;
+        if (!event.time || !newEvent.time) return false;
+
+        const eventDate = event.date;
+        const eventEndDate = event.endDate || event.date;
+        const newDate = newEvent.date;
+        const newEndDate = newEvent.endDate || newEvent.date;
+
+        const datesOverlap = !(newEndDate < eventDate || newDate > eventEndDate);
+        if (!datesOverlap) return false;
+
+        const [eventStartHour, eventStartMin] = event.time.split(':').map(Number);
+        const [eventEndHour, eventEndMin] = (event.endTime || event.time).split(':').map(Number);
+        const [newStartHour, newStartMin] = newEvent.time.split(':').map(Number);
+        const [newEndHour, newEndMin] = (newEvent.endTime || newEvent.time).split(':').map(Number);
+
+        const eventStartMins = eventStartHour * 60 + eventStartMin;
+        const eventEndMins = eventEndHour * 60 + eventEndMin;
+        const newStartMins = newStartHour * 60 + newStartMin;
+        const newEndMins = newEndHour * 60 + newEndMin;
+
+        return newStartMins < eventEndMins && newEndMins > eventStartMins;
+      });
+    }
+
+    function showOverlapConfirmation(eventTitle, callback) {
+      pendingOverlapConfirmation = callback;
+      const modal = document.getElementById('overlap-modal-overlay');
+      const content = document.getElementById('overlap-modal-content');
+      content.innerHTML = `<div style="text-align: center; padding: 20px 0;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><div style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">"${eventTitle}" overlaps with another event</div><div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5;">This event conflicts with an existing event. Are you sure you want to save it anyway?</div></div>`;
+      modal.classList.add('active');
+    }
+
+    function confirmOverlapSave() {
+      if (pendingOverlapConfirmation) {
+        pendingOverlapConfirmation();
+        pendingOverlapConfirmation = null;
+      }
+      document.getElementById('overlap-modal-overlay').classList.remove('active');
+    }
+
+    function cancelOverlapSave() {
+      pendingOverlapConfirmation = null;
+      document.getElementById('overlap-modal-overlay').classList.remove('active');
+    }
 
     function capitalizeTitle(str) {
       if (!str) return '';
@@ -547,6 +605,12 @@
 
     async function confirmParsedEvent() {
       if (!pendingParsedEvent) return;
+      
+      if (checkEventOverlap(pendingParsedEvent)) {
+        showOverlapConfirmation(pendingParsedEvent.title, confirmParsedEvent);
+        return;
+      }
+      
       try {
         await fetch('/api/events', {
           method: 'POST',
@@ -586,19 +650,51 @@
         return;
       }
 
+      const newEvent = {
+        title,
+        date,
+        endDate: endDate || null,
+        time: isAllDay ? null : time || null,
+        endTime: isAllDay ? null : endTime || null,
+        description,
+        isAllDay
+      };
+
+      if (checkEventOverlap(newEvent)) {
+        showOverlapConfirmation(title, async () => {
+          try {
+            const response = await fetch('/api/events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newEvent)
+            });
+            const data = await response.json();
+            showStatus(`✓ ${data.title} saved`, 'success');
+            showSyncIndicator();
+            document.getElementById('title-input').value = '';
+            document.getElementById('date-input').value = '';
+            document.getElementById('end-date-input').value = '';
+            document.getElementById('time-input').value = '';
+            document.getElementById('end-time-input').value = '';
+            document.getElementById('desc-input').value = '';
+            document.getElementById('all-day-toggle').checked = false;
+            setTodayDate();
+            await loadEvents();
+            renderCalendar();
+            renderUpcomingEvents();
+            scheduleNotifications();
+          } catch (err) {
+            showStatus('Error saving event', 'error');
+          }
+        });
+        return;
+      }
+
       try {
         const response = await fetch('/api/events', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title,
-            date,
-            endDate: endDate || null,
-            time: isAllDay ? null : time || null,
-            endTime: isAllDay ? null : endTime || null,
-            description,
-            isAllDay
-          })
+          body: JSON.stringify(newEvent)
         });
         const data = await response.json();
         showStatus(`✓ ${data.title} saved`, 'success');
@@ -716,19 +812,45 @@
         return;
       }
 
+      const updatedEvent = {
+        title,
+        date,
+        endDate: endDate || null,
+        time: isAllDay ? null : time || null,
+        endTime: isAllDay ? null : endTime || null,
+        description,
+        isAllDay
+      };
+
+      if (checkEventOverlap(updatedEvent, editingEventId)) {
+        showOverlapConfirmation(title, async () => {
+          try {
+            const response = await fetch(`/api/events/${editingEventId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updatedEvent)
+            });
+            const data = await response.json();
+            showStatus(`✓ ${data.title} updated`, 'success');
+            showSyncIndicator();
+            closeModal();
+            await loadEvents();
+            renderCalendar();
+            renderUpcomingEvents();
+            renderEventsPage();
+            scheduleNotifications();
+          } catch (err) {
+            showStatus('Error saving event', 'error');
+          }
+        });
+        return;
+      }
+
       try {
         const response = await fetch(`/api/events/${editingEventId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title,
-            date,
-            endDate: endDate || null,
-            time: isAllDay ? null : time || null,
-            endTime: isAllDay ? null : endTime || null,
-            description,
-            isAllDay
-          })
+          body: JSON.stringify(updatedEvent)
         });
         const data = await response.json();
         showStatus(`✓ ${data.title} updated`, 'success');
@@ -858,13 +980,13 @@
       weekStart.setDate(currentDate.getDate() - currentDate.getDay());
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const dayNames = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
 
       for (let i = 0; i < 7; i++) {
         const date = new Date(weekStart);
         date.setDate(date.getDate() + i);
         const dateStr = date.toISOString().split('T')[0];
         const isToday = dateStr === today.toISOString().split('T')[0];
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const header = document.getElementById(`week-day-${i + 1}`);
         header.innerHTML = `<div class="week-day-name">${dayNames[date.getDay()]}</div><div class="week-day-date ${isToday ? 'today' : ''}">${date.getDate()}</div>`;
       }
