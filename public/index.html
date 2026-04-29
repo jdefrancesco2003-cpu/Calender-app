@@ -1239,10 +1239,10 @@
     }
 
     async function handleDragEnd(e) {
-      await endDrag(dragDateStr);
+      await endDrag(dragDateStr, e);
     }
 
-    async function endDrag(dateStr) {
+    async function endDrag(dateStr, e) {
       clearTimeout(dragHoldTimer);
       if (!draggingEvent || !dragStartTime) {
         draggingEvent = null;
@@ -1250,7 +1250,7 @@
         return;
       }
 
-      const currentY = event.touches ? event.touches[0].clientY : event.clientY;
+      const currentY = e.touches ? e.touches[0].clientY : e.clientY;
       const diff = currentY - dragStartY;
       const gridElement = document.getElementById('week-grid');
       const gridRect = gridElement.getBoundingClientRect();
@@ -1294,7 +1294,7 @@
         }
 
         try {
-          await fetch(`/api/events/${eventId}`, {
+          const response = await fetch(`/api/events/${eventId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1307,19 +1307,34 @@
               isAllDay: eventToUpdate.isAllDay
             })
           });
+          
+          if (!response.ok) throw new Error('Save failed');
+          
           showStatus(`✓ ${eventToUpdate.title} moved`, 'success');
           showSyncIndicator();
           triggerHaptic([40]);
+          
+          // Reload and update ALL views
           await loadEvents();
-          renderWeekView();
+          await renderCalendar();
+          await renderUpcomingEvents();
+          await renderEventsPage();
+          await renderWeekView();
         } catch (err) {
+          console.error('Drag save error:', err);
           showStatus('Error rescheduling event', 'error');
           triggerHaptic([100, 50, 100]);
+          // Revert visual state on error
+          await loadEvents();
+          await renderWeekView();
         }
       }
 
-      draggingEvent.classList.remove('dragging');
-      draggingEvent.style.transform = '';
+      // Always cleanup after drag completes
+      if (draggingEvent) {
+        draggingEvent.classList.remove('dragging');
+        draggingEvent.style.transform = '';
+      }
       draggingEvent = null;
       dragStartTime = null;
 
