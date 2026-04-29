@@ -8,9 +8,6 @@
   <meta name="apple-mobile-web-app-title" content="Calendar">
   <title>Calendar</title>
   
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%234a9d6f' width='180' height='180'/><rect fill='%232c2c2e' x='15' y='35' width='150' height='130' rx='12'/><rect fill='%234a9d6f' x='25' y='45' width='130' height='30'/><circle fill='%234a9d6f' cx='40' cy='62' r='3.5'/><circle fill='%234a9d6f' cx='90' cy='62' r='3.5'/><circle fill='%234a9d6f' cx='140' cy='62' r='3.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='25' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='55' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='85' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='115' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='25' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='55' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='85' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='115' y='110' width='20' height='20' rx='2.5'/">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%234a9d6f' width='180' height='180'/><rect fill='%232c2c2e' x='15' y='35' width='150' height='130' rx='12'/><rect fill='%234a9d6f' x='25' y='45' width='130' height='30'/><circle fill='%234a9d6f' cx='40' cy='62' r='3.5'/><circle fill='%234a9d6f' cx='90' cy='62' r='3.5'/><circle fill='%234a9d6f' cx='140' cy='62' r='3.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='25' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='55' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='85' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='115' y='80' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='25' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='55' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='85' y='110' width='20' height='20' rx='2.5'/><rect fill='none' stroke='%234a9d6f' stroke-width='1.8' x='115' y='110' width='20' height='20' rx='2.5'/>">
-
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
     html, body { width: 100%; height: 100%; position: fixed; }
@@ -18,14 +15,19 @@
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif; background: var(--bg-dark); color: var(--text-primary); padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); overflow: hidden; display: flex; flex-direction: column; }
     .container { display: flex; flex-direction: column; height: 100%; overflow: hidden; gap: 0; }
     header { padding: 16px 0 12px 0; border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
-    h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-primary); }
+    h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-primary); flex: 1; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
     .menu-btn { background: var(--bg-light); border: none; color: var(--text-primary); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; -webkit-appearance: none; }
     .menu-btn:active { background: var(--primary); }
+    .sync-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--success); opacity: 0; transition: opacity 0.2s; }
+    .sync-indicator.visible { opacity: 1; }
     .dropdown-menu { position: fixed; top: max(60px, env(safe-area-inset-top)); left: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; z-index: 2000; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: none; }
     .dropdown-menu.active { display: flex; flex-direction: column; }
     .dropdown-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: none; border: none; color: var(--text-primary); text-align: left; cursor: pointer; font-size: 14px; }
     .dropdown-item:last-child { border-bottom: none; }
     .dropdown-item:active { background: var(--bg-light); }
+    .fab { position: fixed; bottom: max(20px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 56px; height: 56px; background: var(--primary); color: white; border: none; border-radius: 50%; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 100; -webkit-appearance: none; }
+    .fab:active { background: var(--primary-dark); }
     .main-content { display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; gap: 0; padding: 0; }
     .section { background: var(--bg-card); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 0; }
     .section-title { font-size: 17px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
@@ -60,35 +62,33 @@
     .day-count { font-size: 10px; color: var(--primary); margin-top: 2px; }
     .day-cell.selected .day-count { color: rgba(255,255,255,0.9); }
     .week-view-container { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
-    .week-header { display: grid; grid-template-columns: 70px repeat(7, 1fr); gap: 0; padding: 0 8px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); }
+    .week-header { display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px; padding: 12px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); align-items: center; }
     .week-time-label { padding: 8px 0; font-size: 11px; color: var(--text-secondary); text-align: center; }
-    .week-day-header { padding: 12px 4px; text-align: center; border-right: 1px solid var(--border-color); }
-    .week-day-header:last-child { border-right: none; }
+    .week-day-header { padding: 8px; text-align: center; }
     .week-day-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
     .week-day-date { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-top: 2px; }
     .week-day-date.today { color: var(--primary); }
-    .week-grid { display: grid; grid-template-columns: 70px repeat(7, 1fr); gap: 0; flex: 1; overflow-y: auto; background: var(--bg-card); padding: 0 8px; position: relative; }
-    .week-time-slots { display: flex; flex-direction: column; border-right: 2px solid var(--primary); background: rgba(74, 157, 111, 0.08); }
-    .time-slot { padding: 12px 4px; font-size: 11px; color: var(--text-primary); font-weight: 600; text-align: right; padding-right: 6px; min-height: 60px; border-bottom: 1px solid var(--border-color); }
-    .week-day-column { border-right: 1px solid var(--border-color); position: relative; min-height: 100%; }
-    .week-day-column:last-child { border-right: none; }
-    .week-day-column.today { background: rgba(74, 157, 111, 0.05); }
+    .week-grid { display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px; flex: 1; overflow-y: auto; background: var(--bg-card); padding: 8px; position: relative; }
+    .week-time-slots { display: flex; flex-direction: column; background: rgba(74, 157, 111, 0.08); border-right: 2px solid var(--primary); border-radius: 4px; padding: 4px; }
+    .time-slot { padding: 8px 2px; font-size: 10px; color: var(--text-primary); font-weight: 600; text-align: center; min-height: 60px; border-bottom: 1px solid var(--border-color); }
+    .week-day-column { border: 1px solid var(--border-color); position: relative; min-height: 100%; border-radius: 4px; background: var(--bg-light); overflow: hidden; }
+    .week-day-column.today { background: rgba(74, 157, 111, 0.08); border-color: var(--primary); }
     .week-day-column.today::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--primary); }
     .current-time-line { position: absolute; height: 2px; background: #ff453a; left: 0; right: 0; z-index: 10; }
     .current-time-dot { position: absolute; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; left: -7px; top: -5px; }
     .week-all-day { padding: 6px 4px; background: rgba(74, 157, 111, 0.1); border-bottom: 2px solid var(--border-color); min-height: 40px; }
     .all-day-event { background: var(--bg-light); padding: 4px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border-left: 3px solid var(--primary); }
-    .week-event { position: absolute; background: var(--bg-light); border-left: 4px solid var(--primary); border-radius: 6px; padding: 8px 10px; font-size: 13px; cursor: pointer; overflow: hidden; margin: 2px; left: 2px; right: 2px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 40px; }
-    .week-event-title { font-weight: 700; color: var(--text-primary); white-space: normal; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; font-size: 14px; }
-    .week-event-time { font-size: 12px; color: var(--text-secondary); white-space: normal; line-height: 1.3; margin-top: 2px; }
+    .week-event { position: absolute; background: var(--bg-light); border-left: 3px solid var(--primary); border-radius: 4px; padding: 6px 8px; font-size: 12px; cursor: pointer; overflow: hidden; margin: 2px; left: 2px; right: 2px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 40px; word-wrap: break-word; white-space: normal; }
+    .week-event-title { font-weight: 700; color: var(--text-primary); word-break: break-word; line-height: 1.2; font-size: 12px; }
+    .week-event-time { font-size: 10px; color: var(--text-secondary); white-space: normal; line-height: 1.2; margin-top: 2px; word-break: break-word; }
     .events-container { padding: 12px 16px; background: var(--bg-card); border-top: 1px solid var(--border-color); overflow-y: auto; }
     .sidebar-section { margin-bottom: 20px; }
     .sidebar-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
     .event-item { background: var(--bg-light); padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: all 0.15s ease; position: relative; overflow: hidden; }
     .event-item:active { opacity: 0.8; }
-    .event-item.swipe-left { transform: translateX(-80px); }
+    .event-item.swipe-left { transform: translateX(-100px); }
     .event-swipe-actions { position: absolute; right: 0; top: 0; height: 100%; display: flex; gap: 0; background: transparent; }
-    .swipe-action { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; cursor: pointer; border: none; min-width: 40px; }
+    .swipe-action { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; cursor: pointer; border: none; min-width: 50px; min-height: auto; }
     .swipe-action.delete { background: var(--error); }
     .event-details { flex: 1; min-width: 0; }
     .event-title { font-weight: 600; font-size: 15px; color: var(--text-primary); margin-bottom: 4px; }
@@ -132,6 +132,8 @@
     .event-day-label { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
     .undo-toast { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 12px; right: 12px; background: var(--bg-light); padding: 12px 16px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; z-index: 1500; animation: slideUp 0.3s ease; }
     .undo-toast button { padding: 8px 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; min-height: auto; }
+    .day-events-modal { max-height: 70vh; }
+    .day-events-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 16px; }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -144,7 +146,10 @@
   <div class="container">
     <header>
       <h1>Calendar</h1>
-      <button class="menu-btn" onclick="toggleMenu()">☰</button>
+      <div class="header-right">
+        <div class="sync-indicator" id="sync-indicator"></div>
+        <button class="menu-btn" onclick="toggleMenu()">☰</button>
+      </div>
       <div class="dropdown-menu" id="dropdown-menu">
         <button class="dropdown-item" onclick="exportEvents()">📥 Export</button>
         <button class="dropdown-item" onclick="openSettings()">⚙️ Settings</button>
@@ -191,7 +196,7 @@
         <div class="section">
           <div class="section-title">Quick Add</div>
           <div class="section-subtitle">Type your event naturally</div>
-          <div class="input-group"><textarea id="event-input" placeholder="e.g., lunch tomorrow at noon" maxlength="200"></textarea></div>
+          <div class="input-group"><textarea id="event-input" placeholder="e.g., work on friday 7-3pm" maxlength="200"></textarea></div>
           <button class="btn-primary" id="parse-btn" onclick="parseEvent()">Add Event</button>
           <div class="divider"></div>
           <div class="section-title">Manual Entry</div>
@@ -212,6 +217,9 @@
         <div class="events-container" id="events-list"></div>
       </div>
     </div>
+
+    <!-- FAB BUTTON -->
+    <button class="fab" onclick="openAddEventTab()">+</button>
   </div>
 
   <!-- CONFIRMATION MODAL -->
@@ -226,6 +234,15 @@
         <button class="btn-secondary" style="flex: 1;" onclick="confirmParsedEvent()">Confirm</button>
         <button class="btn-danger" style="flex: 1;" onclick="closeConfirmation()">Cancel</button>
       </div>
+    </div>
+  </div>
+
+  <!-- DAY EVENTS MODAL -->
+  <div class="modal-overlay" id="day-modal-overlay">
+    <div class="modal day-events-modal">
+      <h3 id="day-modal-title" class="day-events-title"></h3>
+      <div id="day-modal-events"></div>
+      <button class="btn-secondary" style="width: 100%;" onclick="closeDayModal()">Close</button>
     </div>
   </div>
 
@@ -293,6 +310,11 @@
     function closeMenuOnTab() {
       const menu = document.getElementById('dropdown-menu');
       menu.classList.remove('active');
+    }
+
+    function openAddEventTab() {
+      showTab('add');
+      setTimeout(() => document.getElementById('event-input').focus(), 100);
     }
 
     function showTab(tab) {
@@ -446,7 +468,7 @@
         });
         const data = await response.json();
         if (!response.ok || data.error) {
-          showStatus(data.error || 'Try: "lunch tomorrow at noon"', 'error');
+          showStatus(data.error || 'Try: "work on friday 7-3pm"', 'error');
         } else {
           pendingParsedEvent = data;
           pendingEditMode = false;
@@ -461,12 +483,12 @@
 
     function showConfirmationModal(event) {
       const timeStr = formatEventTime(event.time, event.endTime);
-      const dateObj = new Date(event.date);
+      const dateObj = new Date(event.date + 'T00:00:00');
       const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       
       let endDateStr = '';
       if (event.endDate) {
-        const endDateObj = new Date(event.endDate);
+        const endDateObj = new Date(event.endDate + 'T00:00:00');
         endDateStr = endDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       }
 
@@ -510,6 +532,7 @@
           body: JSON.stringify(pendingParsedEvent)
         });
         showStatus(`✓ ${pendingParsedEvent.title} added`, 'success');
+        showSyncIndicator();
         document.getElementById('event-input').value = '';
         closeConfirmation();
         await loadEvents();
@@ -557,6 +580,7 @@
         });
         const data = await response.json();
         showStatus(`✓ ${data.title} saved`, 'success');
+        showSyncIndicator();
         document.getElementById('title-input').value = '';
         document.getElementById('date-input').value = '';
         document.getElementById('end-date-input').value = '';
@@ -588,6 +612,7 @@
           await loadEvents();
           renderCalendar();
           renderUpcomingEvents();
+          renderEventsPage();
           scheduleNotifications();
         }
       } catch (err) {
@@ -604,12 +629,14 @@
           body: JSON.stringify(lastDeletedEvent)
         });
         showStatus(`✓ ${lastDeletedEvent.title} restored`, 'success');
+        showSyncIndicator();
         document.getElementById('undo-toast').style.display = 'none';
         lastDeletedEvent = null;
         lastDeletedEventIndex = -1;
         await loadEvents();
         renderCalendar();
         renderUpcomingEvents();
+        renderEventsPage();
         scheduleNotifications();
       } catch (err) {
         showStatus('Error restoring event', 'error');
@@ -623,6 +650,14 @@
       setTimeout(() => {
         toast.style.display = 'none';
       }, 5000);
+    }
+
+    function showSyncIndicator() {
+      const indicator = document.getElementById('sync-indicator');
+      indicator.classList.add('visible');
+      setTimeout(() => {
+        indicator.classList.remove('visible');
+      }, 2000);
     }
 
     function openEditModal(eventId) {
@@ -675,10 +710,12 @@
         });
         const data = await response.json();
         showStatus(`✓ ${data.title} updated`, 'success');
+        showSyncIndicator();
         closeModal();
         await loadEvents();
         renderCalendar();
         renderUpcomingEvents();
+        renderEventsPage();
         scheduleNotifications();
       } catch (err) {
         showStatus('Error saving event', 'error');
@@ -747,13 +784,51 @@
         const isSelected = dateStr === selectedDate;
         const dayEvents = allEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate));
         const eventCount = dayEvents.length;
-        html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="selectDate('${dateStr}')"><div class="day-number">${day}</div>${eventCount > 0 ? `<div class="day-count">${eventCount}</div>` : ''}</div>`;
+        html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="openDayModal('${dateStr}')"><div class="day-number">${day}</div>${eventCount > 0 ? `<div class="day-count">${eventCount}</div>` : ''}</div>`;
       }
       const remainingCells = 42 - (startingDayOfWeek + daysInMonth);
       for (let i = 1; i <= remainingCells; i++) {
         html += `<div class="day-cell other-month">${i}</div>`;
       }
       document.getElementById('calendar-grid').innerHTML = html;
+    }
+
+    function openDayModal(dateStr) {
+      selectedDate = dateStr;
+      const dayEvents = allEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate));
+      const date = new Date(dateStr + 'T00:00:00');
+      const dateLabel = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      
+      document.getElementById('day-modal-title').textContent = dateLabel;
+      
+      let html = '';
+      if (dayEvents.length === 0) {
+        html = '<div class="empty-state"><div class="empty-state-icon">✓</div>No events on this day</div>';
+      } else {
+        dayEvents.sort((a, b) => (a.time || '').localeCompare(b.time || '')).forEach(event => {
+          const timeStr = formatEventTime(event.time, event.endTime);
+          const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
+          html += `<div class="event-item" onclick="openEditModal('${event.id}')">
+            <div class="event-details">
+              <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
+              ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
+              ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
+            </div>
+            <div class="event-swipe-actions">
+              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}')">Edit</button>
+              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
+            </div>
+          </div>`;
+        });
+      }
+      
+      document.getElementById('day-modal-events').innerHTML = html;
+      document.getElementById('day-modal-overlay').classList.add('active');
+    }
+
+    function closeDayModal() {
+      document.getElementById('day-modal-overlay').classList.remove('active');
+      renderCalendar();
     }
 
     function renderWeekView() {
@@ -855,7 +930,7 @@
       const today = new Date().toISOString().split('T')[0];
 
       Object.keys(grouped).sort().forEach(dateKey => {
-        const date = new Date(dateKey);
+        const date = new Date(dateKey + 'T00:00:00');
         let dateLabel = '';
         if (dateKey === today) {
           dateLabel = 'Today';
@@ -879,8 +954,8 @@
               ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
             </div>
             <div class="event-swipe-actions">
-              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}')">✏️</button>
-              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}')">🗑️</button>
+              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}')">Edit</button>
+              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
             </div>
           </div>`;
         });
@@ -932,7 +1007,7 @@
       currentX = e.touches[0].clientX;
       const diff = startX - currentX;
       if (diff > 0) {
-        e.currentTarget.style.transform = `translateX(-${Math.min(diff, 80)}px)`;
+        e.currentTarget.style.transform = `translateX(-${Math.min(diff, 100)}px)`;
       }
     }
 
@@ -968,7 +1043,7 @@
         html = '<div class="empty-state" style="margin-top: 20px;"><div class="empty-state-icon">🔍</div>No events found</div>';
       } else {
         Object.keys(grouped).sort().forEach(dateKey => {
-          const date = new Date(dateKey);
+          const date = new Date(dateKey + 'T00:00:00');
           let dateLabel = '';
           if (dateKey === today) {
             dateLabel = 'Today';
@@ -992,8 +1067,8 @@
                 ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
               </div>
               <div class="event-swipe-actions">
-                <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}')">✏️</button>
-                <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}')">🗑️</button>
+                <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}')">Edit</button>
+                <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
               </div>
             </div>`;
           });
@@ -1049,11 +1124,6 @@
 
     function nextMonth() {
       currentDate.setMonth(currentDate.getMonth() + 1);
-      renderCalendar();
-    }
-
-    function selectDate(dateStr) {
-      selectedDate = dateStr;
       renderCalendar();
     }
 
