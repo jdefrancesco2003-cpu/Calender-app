@@ -107,9 +107,9 @@
     .status-message { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; padding: 12px 16px; border-radius: 10px; font-size: 15px; font-weight: 500; z-index: 1000; animation: slideDown 0.3s ease; }
     .status-message.success { background: linear-gradient(135deg, var(--success) 0%, #1fa5a5 100%); color: white; }
     .status-message.error { background: linear-gradient(135deg, var(--error) 0%, #ff2d22 100%); color: white; }
-    .section-tabs { display: flex; gap: 0; padding: 0 16px; border-bottom: 1px solid var(--border-color); background: linear-gradient(180deg, rgba(42, 42, 46, 0.6) 0%, rgba(28, 28, 30, 0.3) 100%); }
-    .tab-button { flex: 1; padding: 12px 0; background: none; border: none; border-bottom: 3px solid transparent; font-size: 15px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: all 0.2s ease; }
-    .tab-button.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .section-tabs { display: flex; gap: 0; padding: 0 16px; border-bottom: 2px solid var(--border-color); background: var(--bg-dark); align-items: center; }
+    .tab-button { flex: 1; padding: 14px 0; background: none; border: none; border-bottom: 3px solid transparent; font-size: 15px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); position: relative; text-align: center; letter-spacing: 0.3px; }
+    .tab-button.active { color: var(--primary); border-bottom-color: var(--primary); border-bottom-width: 3px; font-weight: 700; letter-spacing: 0.4px; }
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; padding: max(12px, env(safe-area-inset-top)) 12px 12px 12px; animation: fadeIn 0.2s ease; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
     .modal-overlay.active { display: flex; align-items: flex-end; }
     .modal { background: linear-gradient(135deg, var(--bg-card) 0%, rgba(42, 42, 46, 0.9) 100%); border-radius: 20px 20px 0 0; width: 100%; max-height: 80vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -1117,6 +1117,13 @@
       renderCalendar();
     }
 
+    function getLocalDateString(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
     function renderWeekView() {
       const weekStart = new Date(currentDate);
       weekStart.setDate(currentDate.getDate() - currentDate.getDay());
@@ -1127,8 +1134,8 @@
       for (let i = 0; i < 7; i++) {
         const date = new Date(weekStart);
         date.setDate(date.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
-        const isToday = dateStr === today.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(date);
+        const isToday = dateStr === getLocalDateString(today);
         const header = document.getElementById(`week-day-${i + 1}`);
         header.innerHTML = `<div class="week-day-name">${dayNames[date.getDay()]}</div><div class="week-day-date ${isToday ? 'today' : ''}">${date.getDate()}</div>`;
       }
@@ -1143,8 +1150,8 @@
       for (let i = 0; i < 7; i++) {
         const date = new Date(weekStart);
         date.setDate(date.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
-        const isToday = dateStr === today.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(date);
+        const isToday = dateStr === getLocalDateString(today);
 
         const allDayEvents = allEvents.filter(e => (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) && e.isAllDay);
         const timedEvents = allEvents.filter(e => (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) && !e.isAllDay && e.time).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
