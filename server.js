@@ -1,7 +1,7 @@
 const express = require('express');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const cors = require('cors');
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,7 +15,6 @@ const mongoUri = process.env.MONGODB_URI;
 let eventsCollection;
 let mongoClient;
 
-// Connect to MongoDB BEFORE starting server
 async function connectMongoDB() {
   try {
     mongoClient = new MongoClient(mongoUri, { useUnifiedTopology: true });
@@ -30,12 +29,8 @@ async function connectMongoDB() {
   }
 }
 
-// Load events from database
 async function loadEvents() {
-  if (!eventsCollection) {
-    console.error('MongoDB not connected');
-    return [];
-  }
+  if (!eventsCollection) return [];
   try {
     const events = await eventsCollection.find({}).toArray();
     return events;
@@ -45,12 +40,8 @@ async function loadEvents() {
   }
 }
 
-// Save event to database
 async function saveEvent(event) {
-  if (!eventsCollection) {
-    console.error('MongoDB not connected');
-    return null;
-  }
+  if (!eventsCollection) return null;
   try {
     const result = await eventsCollection.insertOne(event);
     return { ...event, _id: result.insertedId };
@@ -60,17 +51,10 @@ async function saveEvent(event) {
   }
 }
 
-// Update event
 async function updateEvent(id, updates) {
-  if (!eventsCollection) {
-    console.error('MongoDB not connected');
-    return null;
-  }
+  if (!eventsCollection) return null;
   try {
-    await eventsCollection.updateOne(
-      { id },
-      { $set: updates }
-    );
+    await eventsCollection.updateOne({ id }, { $set: updates });
     return updates;
   } catch (err) {
     console.error('Error updating event:', err.message);
@@ -78,12 +62,8 @@ async function updateEvent(id, updates) {
   }
 }
 
-// Delete event
 async function deleteEvent(id) {
-  if (!eventsCollection) {
-    console.error('MongoDB not connected');
-    return false;
-  }
+  if (!eventsCollection) return false;
   try {
     const result = await eventsCollection.deleteOne({ id });
     return result.deletedCount > 0;
@@ -93,14 +73,12 @@ async function deleteEvent(id) {
   }
 }
 
-// Helper: Get today's date string
 function getTodayString() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return today.toISOString().split('T')[0];
 }
 
-// Helper: Get tomorrow's date string
 function getTomorrowString() {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -108,36 +86,11 @@ function getTomorrowString() {
   return tomorrow.toISOString().split('T')[0];
 }
 
-// Helper: Format date for display
 function getFormattedDate() {
   const today = new Date();
-  return today.toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
+  return today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// Helper: Get next occurrence of a day name
-function getNextDayOfWeek(dayName) {
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayDay = today.getDay();
-  const targetDay = days.indexOf(dayName.toLowerCase());
-  
-  if (targetDay === -1) return null;
-  
-  let daysAhead = targetDay - todayDay;
-  if (daysAhead <= 0) daysAhead += 7;
-  
-  const result = new Date(today);
-  result.setDate(result.getDate() + daysAhead);
-  return result.toISOString().split('T')[0];
-}
-
-// Parse event with Claude
 async function parseEvent(text) {
   if (!text || text.trim().length === 0) {
     throw new Error('Event text cannot be empty');
@@ -150,61 +103,52 @@ async function parseEvent(text) {
 
   try {
     console.log(`📝 Parsing event: "${text}"`);
-    console.log(`🤖 Using model: ${modelName}`);
     
     const response = await client.messages.create({
       model: modelName,
       max_tokens: 500,
-      messages: [
-        {
-          role: 'user',
-          content: `You are a calendar event parser. Today is ${formattedToday} (${today}). Parse this event: "${text}"
+      messages: [{
+        role: 'user',
+        content: `You are a calendar event parser. Today is ${formattedToday} (${today}). Parse this event: "${text}"
 
 Return ONLY valid JSON. No markdown, no extra text.
 
 Extract:
 1. title: Event name
-2. date: Start date in YYYY-MM-DD format (or null)
-3. endDate: End date in YYYY-MM-DD format for multi-day events (or null for single day)
-4. time: Start time in HH:mm 24-hour format, or null if not specified
-5. endTime: End time in HH:mm format, or null if not specified
+2. date: Start date in YYYY-MM-DD format
+3. endDate: End date in YYYY-MM-DD format for multi-day events (or null)
+4. time: Start time in HH:mm 24-hour format, or null
+5. endTime: End time in HH:mm format, or null
+6. isAllDay: true if no specific times mentioned, false otherwise
 
 Date rules (TODAY = ${today}, TOMORROW = ${tomorrow}):
 - "today" → ${today}
 - "tomorrow" → ${tomorrow}
 - "next week" → 7 days from today
-- "next month" → 30 days from today
-- "in 2 weeks" / "in 3 months" → calculate forward from today
-- Specific dates with month/day like "June 5" or "6/5" → June 5th of 2026 (YYYY-MM-DD format)
-- Specific dates like "June 5-7" or "6/5-6/7" → date = June 5, endDate = June 7
-- Month names like "June" → June 1st of 2026
-- Day names like "Friday" → next occurring Friday from today
-- "next Friday" → next Friday from today
-- For ranges like "Friday to Sunday" → date = Friday, endDate = Sunday
-- For ranges like "starting Friday ... to Sunday" → date = Friday, endDate = Sunday
-- IMPORTANT: For dates with explicit month/day numbers, interpret them literally (June 5 = 2026-06-05, not 2026-06-04)
-- If no date mentioned, use TODAY (${today})
+- Specific dates like "June 5" → 2026-06-05
+- Ranges like "June 5-7" → date = 2026-06-05, endDate = 2026-06-07
+- Day names → next occurring day
+- For ranges → date = start, endDate = end
 
 Time rules:
 - "noon" or "12pm" → 12:00
 - "morning" → 09:00
-- "afternoon" → 14:00  
+- "afternoon" → 14:00
 - "evening" → 18:00
-- "night" → 20:00
-- Specific times → exact (2pm = 14:00, 6pm = 18:00)
-- For ranges like "6pm to 10pm" → time = start time, endTime = end time
-- No time mentioned → null
+- Specific times → exact (6pm = 18:00)
+- "6pm to 10pm" → time = 18:00, endTime = 22:00
+- No time = null (all-day event)
 
-Return ONLY this JSON format:
+Return ONLY this JSON:
 {
   "title": "event name",
   "date": "YYYY-MM-DD",
   "endDate": "YYYY-MM-DD" or null,
   "time": "HH:mm" or null,
-  "endTime": "HH:mm" or null
+  "endTime": "HH:mm" or null,
+  "isAllDay": true/false
 }`
-        }
-      ]
+      }]
     });
 
     const content = response.content[0].text.trim();
@@ -214,32 +158,27 @@ Return ONLY this JSON format:
     try {
       parsed = JSON.parse(content);
     } catch (e) {
-      console.error('JSON parse error:', e.message);
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         parsed = JSON.parse(jsonMatch[0]);
       } else {
-        throw new Error('Could not extract JSON from response');
+        throw new Error('Could not extract JSON');
       }
     }
 
-    // Validate required fields
     if (!parsed.title || !parsed.date) {
-      throw new Error('Missing required fields: title and date');
+      throw new Error('Missing title or date');
     }
 
-    // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(parsed.date)) {
       throw new Error(`Invalid date format: ${parsed.date}`);
     }
 
-    // Validate end date if present
     if (parsed.endDate && !dateRegex.test(parsed.endDate)) {
       parsed.endDate = null;
     }
 
-    // Validate time format if present
     if (parsed.time) {
       const timeRegex = /^\d{2}:\d{2}$/;
       if (!timeRegex.test(parsed.time)) {
@@ -258,16 +197,12 @@ Return ONLY this JSON format:
     return parsed;
   } catch (err) {
     console.error('✗ Parse error:', err.message);
-    console.error('Error details:', JSON.stringify(err, null, 2));
-    console.error(`Model attempted: ${modelName}`);
     throw err;
   }
 }
 
-// Parse natural language event
 app.post('/api/events/parse', async (req, res) => {
   const { text } = req.body;
-
   if (!text) {
     return res.status(400).json({ error: 'Event text is required' });
   }
@@ -281,6 +216,7 @@ app.post('/api/events/parse', async (req, res) => {
       endDate: parsed.endDate || null,
       time: parsed.time || null,
       endTime: parsed.endTime || null,
+      isAllDay: parsed.isAllDay || (parsed.time === null && parsed.endTime === null),
       description: '',
       isMultiDay: !!parsed.endDate,
       createdAt: new Date()
@@ -295,7 +231,6 @@ app.post('/api/events/parse', async (req, res) => {
   }
 });
 
-// Get all events
 app.get('/api/events', async (req, res) => {
   try {
     const events = await loadEvents();
@@ -307,11 +242,9 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
-// Add event (manual entry)
 app.post('/api/events', async (req, res) => {
-  const { title, date, endDate, time, endTime, description } = req.body;
+  const { title, date, endDate, time, endTime, description, isAllDay } = req.body;
   
-  // Validate required fields
   if (!title || !date) {
     return res.status(400).json({ error: 'Title and date are required' });
   }
@@ -323,6 +256,7 @@ app.post('/api/events', async (req, res) => {
     endDate: endDate || null,
     time: time || null,
     endTime: endTime || null,
+    isAllDay: isAllDay || (time === null && endTime === null),
     description: description || '',
     isMultiDay: !!endDate,
     createdAt: new Date()
@@ -337,12 +271,10 @@ app.post('/api/events', async (req, res) => {
   }
 });
 
-// Update event
 app.put('/api/events/:id', async (req, res) => {
-  const { title, date, endDate, time, endTime, description } = req.body;
+  const { title, date, endDate, time, endTime, description, isAllDay } = req.body;
   const eventId = req.params.id;
 
-  // Validate required fields
   if (!title || !date) {
     return res.status(400).json({ error: 'Title and date are required' });
   }
@@ -353,13 +285,13 @@ app.put('/api/events/:id', async (req, res) => {
     endDate: endDate || null,
     time: time || null,
     endTime: endTime || null,
+    isAllDay: isAllDay || (time === null && endTime === null),
     description: description || '',
     isMultiDay: !!endDate,
     updatedAt: new Date()
   };
 
   await updateEvent(eventId, updates);
-  
   const events = await loadEvents();
   const updated = events.find(e => e.id === eventId);
   
@@ -371,7 +303,6 @@ app.put('/api/events/:id', async (req, res) => {
   }
 });
 
-// Delete event
 app.delete('/api/events/:id', async (req, res) => {
   const success = await deleteEvent(req.params.id);
   if (success) {
@@ -382,18 +313,15 @@ app.delete('/api/events/:id', async (req, res) => {
   }
 });
 
-// Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date(), model: 'claude-opus-4-1-20250805' });
+  res.json({ status: 'ok', timestamp: new Date() });
 });
 
-// Start server AFTER MongoDB is connected
 async function startServer() {
   try {
     await connectMongoDB();
     app.listen(PORT, () => {
       console.log(`✓ Calendar API running on port ${PORT}`);
-      console.log(`✓ Model: claude-opus-4-1-20250805`);
     });
   } catch (err) {
     console.error('✗ Failed to start server:', err.message);
@@ -401,7 +329,6 @@ async function startServer() {
   }
 }
 
-// Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n✓ Shutting down gracefully...');
   if (mongoClient) {
