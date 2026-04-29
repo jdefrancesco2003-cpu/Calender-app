@@ -1188,26 +1188,47 @@
       updateCurrentTimeLine();
     }
 
+    let dragHoldTimer = null;
+    let dragDateStr = null;
+    let dragCancelled = false;
+
     function startDrag(e, dateStr) {
-      if (e.touches) {
-        dragStartY = e.touches[0].clientY;
-      } else {
-        dragStartY = e.clientY;
-      }
-      draggingEvent = e.currentTarget;
-      draggingEvent.classList.add('dragging');
-      const eventId = draggingEvent.dataset.eventId;
+      dragCancelled = false;
+      dragDateStr = dateStr;
+      const startY = e.touches ? e.touches[0].clientY : e.clientY;
+      const eventElement = e.currentTarget;
+      const eventId = eventElement.dataset.eventId;
       const event = allEvents.find(ev => ev.id === eventId);
-      if (event) {
-        dragStartTime = event.time;
-      }
+
+      // Wait 300ms for a proper hold
+      dragHoldTimer = setTimeout(() => {
+        if (dragCancelled) return;
+        
+        dragStartY = startY;
+        draggingEvent = eventElement;
+        draggingEvent.classList.add('dragging');
+        if (event) {
+          dragStartTime = event.time;
+        }
+        
+        document.addEventListener('mousemove', handleDragMove);
+        document.addEventListener('touchmove', handleDragMove);
+        document.addEventListener('mouseup', handleDragEnd);
+        document.addEventListener('touchend', handleDragEnd);
+        
+        triggerHaptic([50, 30, 50]);
+      }, 300);
+
+      // Cancel drag if user releases before hold completes
+      const cancelDrag = () => {
+        clearTimeout(dragHoldTimer);
+        dragCancelled = true;
+        document.removeEventListener('mouseup', cancelDrag);
+        document.removeEventListener('touchend', cancelDrag);
+      };
       
-      document.addEventListener('mousemove', handleDragMove);
-      document.addEventListener('touchmove', handleDragMove);
-      document.addEventListener('mouseup', () => endDrag(dateStr));
-      document.addEventListener('touchend', () => endDrag(dateStr));
-      
-      triggerHaptic([50, 30, 50]);
+      document.addEventListener('mouseup', cancelDrag);
+      document.addEventListener('touchend', cancelDrag);
     }
 
     function handleDragMove(e) {
@@ -1217,8 +1238,17 @@
       draggingEvent.style.transform = `translateY(${diff}px)`;
     }
 
+    async function handleDragEnd(e) {
+      await endDrag(dragDateStr);
+    }
+
     async function endDrag(dateStr) {
-      if (!draggingEvent || !dragStartTime) return;
+      clearTimeout(dragHoldTimer);
+      if (!draggingEvent || !dragStartTime) {
+        draggingEvent = null;
+        dragStartTime = null;
+        return;
+      }
 
       const currentY = event.touches ? event.touches[0].clientY : event.clientY;
       const diff = currentY - dragStartY;
@@ -1228,20 +1258,17 @@
       const minutesDiff = Math.round(diff / (pixelsPerMinute * 15)) * 15;
 
       const [hours, minutes] = dragStartTime.split(':').map(Number);
-      let newMinutes = minutes + minutesDiff;
-      let newHours = hours;
+      let totalMinutes = hours * 60 + minutes + minutesDiff;
+      
+      // Snap to nearest 15-minute interval
+      totalMinutes = Math.round(totalMinutes / 15) * 15;
 
-      while (newMinutes >= 60) {
-        newMinutes -= 60;
-        newHours += 1;
-      }
-      while (newMinutes < 0) {
-        newMinutes += 60;
-        newHours -= 1;
-      }
+      // Clamp to 0-1439 (0:00 to 23:45)
+      if (totalMinutes < 0) totalMinutes = 0;
+      if (totalMinutes > 1439) totalMinutes = 1439;
 
-      if (newHours < 0) newHours = 0;
-      if (newHours > 23) newHours = 23;
+      let newHours = Math.floor(totalMinutes / 60);
+      let newMinutes = totalMinutes % 60;
 
       const newTime = `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
 
@@ -1254,12 +1281,15 @@
         if (duration) {
           const [durHours, durMins] = duration.split(/[hm]/).filter(x => x).map(Number);
           let totalDurMins = (durHours || 0) * 60 + (durMins || 0);
-          let endMins = newMinutes + totalDurMins;
-          let endHours = newHours;
-          while (endMins >= 60) {
-            endMins -= 60;
-            endHours += 1;
-          }
+          let endTotalMinutes = newHours * 60 + newMinutes + totalDurMins;
+          
+          // Snap end time to nearest 15-minute interval
+          endTotalMinutes = Math.round(endTotalMinutes / 15) * 15;
+          
+          if (endTotalMinutes > 1439) endTotalMinutes = 1439;
+          
+          let endHours = Math.floor(endTotalMinutes / 60);
+          let endMins = endTotalMinutes % 60;
           newEndTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
         }
 
@@ -1295,6 +1325,8 @@
 
       document.removeEventListener('mousemove', handleDragMove);
       document.removeEventListener('touchmove', handleDragMove);
+      document.removeEventListener('mouseup', handleDragEnd);
+      document.removeEventListener('touchend', handleDragEnd);
     }
 
     function updateCurrentTimeLine() {
