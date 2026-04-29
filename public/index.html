@@ -12,110 +12,118 @@
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
     html, body { width: 100%; height: 100%; position: fixed; }
     :root { --primary: #4a9d6f; --primary-light: #5faf81; --primary-dark: #3a8d5f; --bg-dark: #1c1c1e; --bg-card: #2c2c2e; --bg-light: #3a3a3c; --text-primary: #ffffff; --text-secondary: #a1a1a6; --border-color: #424245; --success: #30b0c0; --error: #ff453a; --warning: #ff9500; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif; background: var(--bg-dark); color: var(--text-primary); padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); overflow: hidden; display: flex; flex-direction: column; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif; background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a1c 100%); color: var(--text-primary); padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); overflow: hidden; display: flex; flex-direction: column; }
     .container { display: flex; flex-direction: column; height: 100%; overflow: hidden; gap: 0; }
-    header { padding: 16px 0 12px 0; border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
+    header { padding: 16px 0 12px 0; border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, rgba(42, 42, 46, 0.8) 0%, rgba(28, 28, 30, 0.5) 100%); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
     h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-primary); flex: 1; }
-    .header-right { display: flex; align-items: center; gap: 8px; }
-    .menu-btn { background: var(--bg-light); border: none; color: var(--text-primary); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; -webkit-appearance: none; }
-    .menu-btn:active { background: var(--primary); }
-    .sync-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--success); opacity: 0; transition: opacity 0.2s; }
-    .sync-indicator.visible { opacity: 1; }
-    .dropdown-menu { position: fixed; top: max(60px, env(safe-area-inset-top)); left: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; z-index: 2000; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: none; }
-    .dropdown-menu.active { display: flex; flex-direction: column; }
-    .dropdown-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: none; border: none; color: var(--text-primary); text-align: left; cursor: pointer; font-size: 14px; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .weather-widget { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: rgba(74, 157, 111, 0.1); border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid rgba(74, 157, 111, 0.2); animation: fadeIn 0.4s ease; }
+    .weather-icon { font-size: 16px; }
+    .weather-temp { font-weight: 600; color: var(--primary); }
+    .menu-btn { background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%); border: none; color: var(--text-primary); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; -webkit-appearance: none; transition: all 0.2s ease; }
+    .menu-btn:active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); transform: scale(0.95); }
+    .sync-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--success); opacity: 0; transition: opacity 0.2s; box-shadow: 0 0 8px rgba(48, 176, 192, 0.6); }
+    .sync-indicator.visible { opacity: 1; animation: pulse 0.6s ease; }
+    .dropdown-menu { position: fixed; top: max(60px, env(safe-area-inset-top)); left: 12px; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(28, 28, 30, 0.9) 100%); border: 1px solid var(--border-color); border-radius: 10px; z-index: 2000; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .dropdown-menu.active { display: flex; flex-direction: column; animation: slideDown 0.3s ease; }
+    .dropdown-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: none; border: none; color: var(--text-primary); text-align: left; cursor: pointer; font-size: 14px; transition: all 0.2s ease; }
     .dropdown-item:last-child { border-bottom: none; }
-    .dropdown-item:active { background: var(--bg-light); }
-    .fab { position: fixed; bottom: max(20px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 56px; height: 56px; background: var(--primary); color: white; border: none; border-radius: 50%; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 100; -webkit-appearance: none; }
-    .fab:active { background: var(--primary-dark); }
+    .dropdown-item:active { background: rgba(74, 157, 111, 0.2); transform: translateX(4px); }
+    .fab { position: fixed; bottom: max(20px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 56px; height: 56px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 50%; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(74, 157, 111, 0.3); z-index: 100; -webkit-appearance: none; transition: all 0.2s ease; }
+    .fab:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(74, 157, 111, 0.4); }
     .main-content { display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; gap: 0; padding: 0; }
-    .section { background: var(--bg-card); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 0; }
+    .section { background: linear-gradient(135deg, var(--bg-card) 0%, rgba(42, 42, 46, 0.8) 100%); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 0; }
     .section-title { font-size: 17px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
     .section-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
     .input-group { display: flex; flex-direction: column; gap: 8px; }
     .input-group label { font-size: 13px; font-weight: 600; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; }
-    input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--bg-light); color: var(--text-primary); -webkit-appearance: none; appearance: none; min-height: 44px; }
+    input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.8) 100%); color: var(--text-primary); -webkit-appearance: none; appearance: none; min-height: 44px; transition: all 0.2s ease; }
     input::placeholder, textarea::placeholder { color: var(--text-secondary); }
-    input:focus, textarea:focus { outline: none; border-color: var(--primary); background: var(--bg-light); }
+    input:focus, textarea:focus { outline: none; border-color: var(--primary); background: linear-gradient(135deg, rgba(74, 157, 111, 0.1) 0%, rgba(74, 157, 111, 0.05) 100%); box-shadow: 0 0 0 3px rgba(74, 157, 111, 0.1); }
     textarea { resize: none; min-height: 100px; font-size: 16px; }
     button { padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; min-height: 48px; display: flex; align-items: center; justify-content: center; -webkit-appearance: none; appearance: none; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:active { background: var(--primary-dark); }
-    .btn-secondary { background: var(--bg-light); color: var(--primary); border: 1.5px solid var(--primary); font-weight: 600; }
-    .btn-secondary:active { background: var(--primary); color: white; }
-    .btn-danger { background: var(--error); color: white; font-size: 14px; padding: 10px 14px; min-height: auto; }
-    .btn-danger:active { opacity: 0.7; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 12px rgba(74, 157, 111, 0.2); }
+    .btn-primary:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(74, 157, 111, 0.3); }
+    .btn-secondary { background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%); color: var(--primary); border: 1.5px solid var(--primary); font-weight: 600; }
+    .btn-secondary:active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; transform: scale(0.98); }
+    .btn-danger { background: linear-gradient(135deg, var(--error) 0%, #ff2d22 100%); color: white; font-size: 14px; padding: 10px 14px; min-height: auto; }
+    .btn-danger:active { transform: scale(0.96); opacity: 0.8; }
     button:disabled { opacity: 0.5; pointer-events: none; }
-    .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: linear-gradient(180deg, rgba(42, 42, 46, 0.6) 0%, rgba(28, 28, 30, 0.3) 100%); }
     .month-year { font-size: 18px; font-weight: 600; color: var(--text-primary); }
     .month-nav { display: flex; gap: 8px; }
-    .month-nav button { width: 40px; height: 40px; padding: 0; border-radius: 8px; background: var(--bg-light); font-size: 18px; color: var(--text-primary); min-height: auto; }
+    .month-nav button { width: 40px; height: 40px; padding: 0; border-radius: 8px; background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%); font-size: 18px; color: var(--text-primary); min-height: auto; transition: all 0.2s ease; }
+    .month-nav button:active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); transform: scale(0.92); }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 12px 16px; background: var(--bg-card); }
     .day-header { text-align: center; font-weight: 600; color: var(--text-secondary); padding: 8px 0; font-size: 12px; letter-spacing: 0.5px; }
-    .day-cell { aspect-ratio: 1; border: 2px solid var(--border-color); border-radius: 8px; padding: 6px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; position: relative; transition: all 0.15s ease; font-size: 12px; }
-    .day-cell:active { opacity: 0.7; }
+    .day-cell { aspect-ratio: 1; border: 2px solid var(--border-color); border-radius: 8px; padding: 6px; background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.7) 100%); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; position: relative; transition: all 0.2s ease; font-size: 12px; }
+    .day-cell:active { transform: scale(0.95); }
     .day-cell.other-month { background: transparent; border-color: transparent; opacity: 0.3; }
-    .day-cell.today { border: 2px solid var(--primary); background: var(--bg-light); color: var(--text-primary); font-weight: 600; box-shadow: 0 0 0 1px var(--primary); }
-    .day-cell.selected { background: var(--primary); border-color: var(--primary); color: white; font-weight: 600; }
+    .day-cell.today { border: 2px solid var(--primary); background: linear-gradient(135deg, rgba(74, 157, 111, 0.15) 0%, rgba(74, 157, 111, 0.05) 100%); color: var(--text-primary); font-weight: 600; box-shadow: 0 0 0 1px var(--primary), inset 0 0 8px rgba(74, 157, 111, 0.1); }
+    .day-cell.selected { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-color: var(--primary); color: white; font-weight: 600; }
     .day-number { font-size: 14px; font-weight: 600; color: var(--text-primary); }
     .day-cell.selected .day-number { color: white; }
     .day-count { font-size: 10px; color: var(--primary); margin-top: 2px; }
     .day-cell.selected .day-count { color: rgba(255,255,255,0.9); }
     .week-view-container { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
-    .week-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; padding: 10px 0; background: var(--bg-card); border-bottom: 1px solid var(--border-color); align-items: center; }
+    .week-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; padding: 10px 0; background: linear-gradient(180deg, rgba(42, 42, 46, 0.6) 0%, rgba(28, 28, 30, 0.3) 100%); border-bottom: 1px solid var(--border-color); align-items: center; }
     .week-time-label { padding: 0; font-size: 10px; color: var(--text-secondary); text-align: center; line-height: 1; }
     .week-day-header { padding: 0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; width: 100%; box-sizing: border-box; }
     .week-day-name { font-size: 9px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0px; line-height: 1.1; margin: 0; }
     .week-day-date { font-size: 12px; font-weight: 700; color: var(--text-primary); margin-top: 2px; margin-bottom: 0; }
     .week-day-date.today { color: var(--primary); font-weight: 700; }
-    .week-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; flex: 1; overflow-y: auto; background: var(--bg-card); padding: 4px; position: relative; }
-    .week-time-slots { display: flex; flex-direction: column; background: rgba(74, 157, 111, 0.08); border-right: 2px solid var(--primary); border-radius: 0; padding: 0; }
+    .week-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; flex: 1; overflow-y: auto; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(28, 28, 30, 0.8) 100%); padding: 4px; position: relative; }
+    .week-time-slots { display: flex; flex-direction: column; background: linear-gradient(180deg, rgba(74, 157, 111, 0.12) 0%, rgba(74, 157, 111, 0.04) 100%); border-right: 2px solid var(--primary); border-radius: 0; padding: 0; }
     .time-slot { padding: 2px 0; font-size: 8px; color: var(--text-primary); font-weight: 600; text-align: center; min-height: 60px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; }
-    .week-day-column { border: 1px solid var(--border-color); position: relative; min-height: 100%; border-radius: 2px; background: var(--bg-light); overflow: hidden; }
-    .week-day-column.today { background: rgba(74, 157, 111, 0.08); border-color: var(--primary); }
+    .week-day-column { border: 1px solid var(--border-color); position: relative; min-height: 100%; border-radius: 2px; background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.7) 100%); overflow: hidden; }
+    .week-day-column.today { background: linear-gradient(135deg, rgba(74, 157, 111, 0.12) 0%, rgba(74, 157, 111, 0.04) 100%); border-color: var(--primary); }
     .week-day-column.today::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--primary); }
-    .current-time-line { position: absolute; height: 2px; background: #ff453a; left: 0; right: 0; z-index: 10; }
-    .current-time-dot { position: absolute; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; left: -7px; top: -5px; }
+    .current-time-line { position: absolute; height: 2px; background: #ff453a; left: 0; right: 0; z-index: 10; box-shadow: 0 0 8px rgba(255, 69, 58, 0.5); }
+    .current-time-dot { position: absolute; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; left: -7px; top: -5px; box-shadow: 0 0 8px rgba(255, 69, 58, 0.6); }
     .week-all-day { padding: 8px 4px; background: linear-gradient(90deg, rgba(74, 157, 111, 0.2) 0%, rgba(74, 157, 111, 0.1) 100%); border-bottom: 2px solid var(--primary); min-height: 48px; display: flex; flex-direction: column; justify-content: center; border-left: 3px solid var(--primary); }
-    .all-day-event { background: var(--primary); color: white; padding: 6px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-    .week-event { position: absolute; background: #2a2a2c; border-left: 4px solid var(--primary); border-radius: 2px; padding: 5px 6px; cursor: pointer; overflow: hidden; margin: 0; left: 0.5px; right: 0.5px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 44px; word-wrap: break-word; white-space: normal; }
+    .all-day-event { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 6px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 2px 8px rgba(74, 157, 111, 0.2); transition: all 0.2s ease; }
+    .all-day-event:active { transform: scale(0.98); }
+    .week-event { position: absolute; background: linear-gradient(135deg, #3a3a3c 0%, #2a2a2c 100%); border-left: 4px solid var(--primary); border-radius: 2px; padding: 5px 6px; cursor: grab; overflow: hidden; margin: 0; left: 0.5px; right: 0.5px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 44px; word-wrap: break-word; white-space: normal; touch-action: none; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); transition: all 0.15s ease; }
+    .week-event.dragging { opacity: 0.9; box-shadow: 0 8px 24px rgba(74, 157, 111, 0.3); z-index: 50; border-left-width: 6px; }
+    .week-event:active { cursor: grabbing; }
     .week-event-title { font-weight: 700; color: var(--text-primary); word-break: break-word; font-size: 13px; line-height: 1.2; margin: 0 0 3px 0; }
     .week-event-time { font-size: 9px; color: var(--text-secondary); white-space: normal; line-height: 1.1; word-break: break-word; margin: 0; }
-    .events-container { padding: 12px 16px; background: var(--bg-card); border-top: 1px solid var(--border-color); overflow-y: auto; }
+    .events-container { padding: 12px 16px; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(28, 28, 30, 0.8) 100%); border-top: 1px solid var(--border-color); overflow-y: auto; }
     .sidebar-section { margin-bottom: 20px; }
     .sidebar-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .event-item { background: var(--bg-light); padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: all 0.15s ease; position: relative; overflow: hidden; }
-    .event-item:active { opacity: 0.8; }
+    .event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.8) 100%); padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+    .event-item:active { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(74, 157, 111, 0.15); }
     .event-item.swipe-left { transform: translateX(-100px); }
     .event-swipe-actions { position: absolute; right: 0; top: 0; height: 100%; display: flex; gap: 0; background: transparent; }
-    .swipe-action { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; cursor: pointer; border: none; min-width: 50px; min-height: auto; }
-    .swipe-action.delete { background: var(--error); }
+    .swipe-action { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; cursor: pointer; border: none; min-width: 50px; min-height: auto; transition: all 0.2s ease; }
+    .swipe-action:active { transform: scale(0.95); }
+    .swipe-action.delete { background: linear-gradient(135deg, var(--error) 0%, #ff2d22 100%); }
     .event-details { flex: 1; min-width: 0; }
     .event-title { font-weight: 600; font-size: 15px; color: var(--text-primary); margin-bottom: 4px; }
     .event-meta { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
     .event-day-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
     .event-duration { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
-    .all-day-badge { display: inline-block; font-size: 10px; background: var(--primary); color: white; padding: 2px 6px; border-radius: 3px; margin-left: 4px; font-weight: 600; }
+    .all-day-badge { display: inline-block; font-size: 10px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 2px 6px; border-radius: 3px; margin-left: 4px; font-weight: 600; }
     .status-message { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; padding: 12px 16px; border-radius: 10px; font-size: 15px; font-weight: 500; z-index: 1000; animation: slideDown 0.3s ease; }
-    .status-message.success { background: var(--success); color: white; }
-    .status-message.error { background: var(--error); color: white; }
-    .section-tabs { display: flex; gap: 0; padding: 0 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); }
-    .tab-button { flex: 1; padding: 12px 0; background: none; border: none; border-bottom: 3px solid transparent; font-size: 15px; font-weight: 600; color: var(--text-secondary); min-height: auto; }
+    .status-message.success { background: linear-gradient(135deg, var(--success) 0%, #1fa5a5 100%); color: white; }
+    .status-message.error { background: linear-gradient(135deg, var(--error) 0%, #ff2d22 100%); color: white; }
+    .section-tabs { display: flex; gap: 0; padding: 0 16px; border-bottom: 1px solid var(--border-color); background: linear-gradient(180deg, rgba(42, 42, 46, 0.6) 0%, rgba(28, 28, 30, 0.3) 100%); }
+    .tab-button { flex: 1; padding: 12px 0; background: none; border: none; border-bottom: 3px solid transparent; font-size: 15px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: all 0.2s ease; }
     .tab-button.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; padding: max(12px, env(safe-area-inset-top)) 12px 12px 12px; animation: fadeIn 0.2s ease; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; padding: max(12px, env(safe-area-inset-top)) 12px 12px 12px; animation: fadeIn 0.2s ease; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
     .modal-overlay.active { display: flex; align-items: flex-end; }
-    .modal { background: var(--bg-card); border-radius: 20px 20px 0 0; width: 100%; max-height: 80vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .modal { background: linear-gradient(135deg, var(--bg-card) 0%, rgba(42, 42, 46, 0.9) 100%); border-radius: 20px 20px 0 0; width: 100%; max-height: 80vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
     .modal h3 { font-size: 18px; font-weight: 600; color: var(--text-primary); }
     .confirmation-modal { padding: 24px 20px; }
     .confirmation-content { margin-bottom: 20px; }
     .confirmation-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
-    .confirmation-detail { background: var(--bg-light); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
+    .confirmation-detail { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.8) 100%); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
     .confirmation-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
     .confirmation-value { font-size: 15px; font-weight: 600; color: var(--text-primary); }
     .confirmation-buttons { display: flex; gap: 8px; }
     .confirmation-buttons button { flex: 1; }
-    .edit-button-modal { padding: 12px; border-radius: 8px; background: var(--bg-light); border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; }
-    .edit-button-modal:active { background: var(--primary); }
+    .edit-button-modal { padding: 12px; border-radius: 8px; background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%); border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    .edit-button-modal:active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); }
     .empty-state { text-align: center; padding: 32px 16px; color: var(--text-secondary); font-size: 15px; line-height: 1.5; }
     .empty-state-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
     .divider { height: 1px; background: var(--border-color); margin: 16px 0; }
@@ -123,18 +131,19 @@
     .toggle-switch { display: flex; align-items: center; gap: 12px; }
     .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
     .switch input { opacity: 0; width: 0; height: 0; min-height: 0; padding: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: 0.3s; border-radius: 28px; }
-    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: 0.3s; border-radius: 50%; }
-    input:checked + .slider { background-color: var(--primary); }
-    input:checked + .slider:before { transform: translateX(22px); }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, var(--border-color) 0%, rgba(66, 66, 69, 0.8) 100%); transition: 0.3s; border-radius: 28px; }
+    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: 0.3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+    input:checked + .slider { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); }
+    input:checked + .slider:before { transform: translateX(22px); box-shadow: 0 2px 8px rgba(74, 157, 111, 0.4); }
     .search-input { margin-bottom: 12px; }
     .search-filters { display: flex; gap: 8px; margin-bottom: 12px; }
     .search-filters input { flex: 1; }
     .events-list { display: flex; flex-direction: column; gap: 8px; }
     .event-day-group { margin-bottom: 20px; }
     .event-day-label { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .undo-toast { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 12px; right: 12px; background: var(--bg-light); padding: 12px 16px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; z-index: 1500; animation: slideUp 0.3s ease; }
-    .undo-toast button { padding: 8px 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; min-height: auto; }
+    .undo-toast { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 12px; right: 12px; background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%); padding: 12px 16px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; z-index: 1500; animation: slideUp 0.3s ease; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+    .undo-toast button { padding: 8px 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; min-height: auto; transition: all 0.2s ease; }
+    .undo-toast button:active { transform: scale(0.95); }
     .day-events-modal { max-height: 70vh; }
     .day-events-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 16px; }
     .upcoming-day-group { margin-bottom: 24px; }
@@ -142,6 +151,7 @@
     @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 8px rgba(48, 176, 192, 0.6); } 50% { box-shadow: 0 0 16px rgba(48, 176, 192, 0.8); } }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
@@ -152,21 +162,25 @@
     <header>
       <h1>Calendar</h1>
       <div class="header-right">
+        <div class="weather-widget" id="weather-widget" style="display: none;">
+          <span class="weather-icon" id="weather-icon">☀️</span>
+          <span class="weather-temp" id="weather-temp">--°</span>
+        </div>
         <div class="sync-indicator" id="sync-indicator"></div>
-        <button class="menu-btn" onclick="toggleMenu(); triggerHaptic()">☰</button>
+        <button class="menu-btn" onclick="toggleMenu(); triggerHaptic(20)">☰</button>
       </div>
       <div class="dropdown-menu" id="dropdown-menu">
-        <button class="dropdown-item" onclick="exportEvents(); triggerHaptic()">📥 Export</button>
-        <button class="dropdown-item" onclick="openSettings(); triggerHaptic()">⚙️ Settings</button>
+        <button class="dropdown-item" onclick="exportEvents(); triggerHaptic(20)">📥 Export</button>
+        <button class="dropdown-item" onclick="openSettings(); triggerHaptic(20)">⚙️ Settings</button>
       </div>
     </header>
 
     <div id="status-message"></div>
 
     <div class="section-tabs">
-      <button class="tab-button active" onclick="showTab('calendar'); triggerHaptic()">Calendar</button>
-      <button class="tab-button" onclick="showTab('add'); triggerHaptic()">Add Event</button>
-      <button class="tab-button" onclick="showTab('events'); triggerHaptic()">Events</button>
+      <button class="tab-button active" onclick="showTab('calendar'); triggerHaptic(20)">Calendar</button>
+      <button class="tab-button" onclick="showTab('add'); triggerHaptic(20)">Add Event</button>
+      <button class="tab-button" onclick="showTab('events'); triggerHaptic(20)">Events</button>
     </div>
 
     <div class="main-content">
@@ -175,9 +189,9 @@
         <div class="calendar-header">
           <div class="month-year" id="month-year"></div>
           <div class="month-nav">
-            <button onclick="navigatePrevious(); triggerHaptic()">←</button>
-            <button class="month-nav" id="view-toggle-btn" onclick="toggleView(); triggerHaptic()" style="padding: 6px 10px; font-size: 12px; width: auto;">Week</button>
-            <button onclick="navigateNext(); triggerHaptic()">→</button>
+            <button onclick="navigatePrevious(); triggerHaptic(20)">←</button>
+            <button class="month-nav" id="view-toggle-btn" onclick="toggleView(); triggerHaptic(20)" style="padding: 6px 10px; font-size: 12px; width: auto;">Week</button>
+            <button onclick="navigateNext(); triggerHaptic(20)">→</button>
           </div>
         </div>
         <div id="month-view"><div class="calendar-grid" id="calendar-grid"></div></div>
@@ -205,7 +219,7 @@
           <div class="section-title">Quick Add</div>
           <div class="section-subtitle">Type your event naturally</div>
           <div class="input-group"><textarea id="event-input" placeholder="e.g., work on friday 7-3pm" maxlength="200"></textarea></div>
-          <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic()">Add Event</button>
+          <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50, 30, 50])">Add Event</button>
           <div class="divider"></div>
           <div class="section-title">Manual Entry</div>
           <div class="input-group"><label>Title</label><input type="text" id="title-input" placeholder="Event name" maxlength="100"></div>
@@ -213,7 +227,7 @@
           <div class="input-group"><label>Time</label><div class="time-inputs"><div><label style="font-size: 11px;">Start</label><input type="time" id="time-input"></div><div><label style="font-size: 11px;">End</label><input type="time" id="end-time-input"></div></div></div>
           <div class="input-group"><label>Notes</label><textarea id="desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
           <div class="toggle-switch"><label for="all-day-toggle" style="margin: 0; text-transform: none; font-weight: 500;">All-Day Event</label><label class="switch"><input type="checkbox" id="all-day-toggle" onchange="toggleAllDayManual()"><span class="slider"></span></label></div>
-          <button class="btn-secondary" onclick="addEventManually(); triggerHaptic()">Save Event</button>
+          <button class="btn-secondary" onclick="addEventManually(); triggerHaptic([60, 20, 60])">Save Event</button>
         </div>
       </div>
 
@@ -225,7 +239,7 @@
           <div class="search-filters">
             <input type="date" id="search-from" placeholder="From" onchange="filterEvents()" style="font-size: 12px;">
             <input type="date" id="search-to" placeholder="To" onchange="filterEvents()" style="font-size: 12px;">
-            <button class="btn-secondary" style="padding: 8px 12px; min-height: auto; font-size: 12px;" onclick="clearSearchFilters(); triggerHaptic()">Clear</button>
+            <button class="btn-secondary" style="padding: 8px 12px; min-height: auto; font-size: 12px;" onclick="clearSearchFilters(); triggerHaptic(20)">Clear</button>
           </div>
         </div>
         <div class="events-container" id="events-list"></div>
@@ -233,7 +247,7 @@
     </div>
 
     <!-- FAB BUTTON -->
-    <button class="fab" onclick="openAddEventTab(); triggerHaptic()">+</button>
+    <button class="fab" onclick="openAddEventTab(); triggerHaptic([50, 30, 50])">+</button>
   </div>
 
   <!-- CONFIRMATION MODAL -->
@@ -242,11 +256,11 @@
       <h3 class="confirmation-title">Confirm Event</h3>
       <div class="confirmation-content" id="confirmation-content"></div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <button class="edit-button-modal" onclick="enterEditMode(); triggerHaptic()">✏️ Edit Before Saving</button>
+        <button class="edit-button-modal" onclick="enterEditMode(); triggerHaptic(20)">✏️ Edit Before Saving</button>
       </div>
       <div class="confirmation-buttons">
-        <button class="btn-secondary" style="flex: 1;" onclick="confirmParsedEvent(); triggerHaptic()">Confirm</button>
-        <button class="btn-danger" style="flex: 1;" onclick="closeConfirmation(); triggerHaptic()">Cancel</button>
+        <button class="btn-secondary" style="flex: 1;" onclick="confirmParsedEvent(); triggerHaptic([60, 20, 60])">Confirm</button>
+        <button class="btn-danger" style="flex: 1;" onclick="closeConfirmation(); triggerHaptic([100, 50, 100])">Cancel</button>
       </div>
     </div>
   </div>
@@ -262,7 +276,7 @@
         </div>
       </div>
       <div class="confirmation-buttons">
-        <button class="btn-secondary" style="flex: 1;" onclick="closeDuplicateModal(); triggerHaptic()">Got it</button>
+        <button class="btn-secondary" style="flex: 1;" onclick="closeDuplicateModal(); triggerHaptic(20)">Got it</button>
       </div>
     </div>
   </div>
@@ -272,7 +286,7 @@
     <div class="modal day-events-modal">
       <h3 id="day-modal-title" class="day-events-title"></h3>
       <div id="day-modal-events"></div>
-      <button class="btn-secondary" style="width: 100%;" onclick="closeDayModal(); triggerHaptic()">Close</button>
+      <button class="btn-secondary" style="width: 100%;" onclick="closeDayModal(); triggerHaptic(20)">Close</button>
     </div>
   </div>
 
@@ -286,10 +300,10 @@
       <div class="input-group"><label>Notes</label><textarea id="modal-desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
       <div class="toggle-switch"><label for="modal-all-day-toggle" style="margin: 0; text-transform: none; font-weight: 500;">All-Day Event</label><label class="switch"><input type="checkbox" id="modal-all-day-toggle" onchange="toggleAllDayModal()"><span class="slider"></span></label></div>
       <div style="display: flex; gap: 8px;">
-        <button class="btn-secondary" style="flex: 1;" onclick="saveEditedEvent(); triggerHaptic()">Save</button>
-        <button class="btn-secondary" style="flex: 1; border-color: var(--warning); color: var(--warning);" onclick="undoEditedEvent(); triggerHaptic()">↶ Undo</button>
-        <button class="btn-danger" style="flex: 1;" onclick="deleteEditingEvent(); triggerHaptic()">Delete</button>
-        <button class="btn-secondary" style="flex: 1;" onclick="closeModal(); triggerHaptic()">Cancel</button>
+        <button class="btn-secondary" style="flex: 1;" onclick="saveEditedEvent(); triggerHaptic([60, 20, 60])">Save</button>
+        <button class="btn-secondary" style="flex: 1; border-color: var(--warning); color: var(--warning);" onclick="undoEditedEvent(); triggerHaptic([50, 30, 50])">↶ Undo</button>
+        <button class="btn-danger" style="flex: 1;" onclick="deleteEditingEvent(); triggerHaptic([100, 50, 100])">Delete</button>
+        <button class="btn-secondary" style="flex: 1;" onclick="closeModal(); triggerHaptic(20)">Cancel</button>
       </div>
     </div>
   </div>
@@ -299,7 +313,7 @@
     <div class="modal" id="settings-modal">
       <h3>Notification Settings</h3>
       <div class="section" style="border: none; padding: 0;"><div class="toggle-switch"><label for="notif-toggle" style="margin: 0; text-transform: none; font-weight: 500;">Enable Notifications</label><label class="switch"><input type="checkbox" id="notif-toggle" onchange="toggleNotifications()"><span class="slider"></span></label></div></div>
-      <div style="margin-top: 16px;"><button class="btn-secondary" style="width: 100%;" onclick="closeSettings(); triggerHaptic()">Done</button></div>
+      <div style="margin-top: 16px;"><button class="btn-secondary" style="width: 100%;" onclick="closeSettings(); triggerHaptic(20)">Done</button></div>
     </div>
   </div>
 
@@ -308,8 +322,8 @@
     <div class="modal" style="max-width: 320px;">
       <div id="overlap-modal-content"></div>
       <div style="display: flex; gap: 8px; margin-top: 20px;">
-        <button class="btn-danger" style="flex: 1;" onclick="cancelOverlapSave(); triggerHaptic()">Cancel</button>
-        <button class="btn-secondary" style="flex: 1;" onclick="confirmOverlapSave(); triggerHaptic()">Save Anyway</button>
+        <button class="btn-danger" style="flex: 1;" onclick="cancelOverlapSave(); triggerHaptic([100, 50, 100])">Cancel</button>
+        <button class="btn-secondary" style="flex: 1;" onclick="confirmOverlapSave(); triggerHaptic([60, 20, 60])">Save Anyway</button>
       </div>
     </div>
   </div>
@@ -317,7 +331,7 @@
   <!-- UNDO TOAST -->
   <div class="undo-toast" id="undo-toast" style="display: none;">
     <span id="undo-message"></span>
-    <button onclick="undoDelete(); triggerHaptic()">Undo</button>
+    <button onclick="undoDelete(); triggerHaptic([40])">Undo</button>
   </div>
 
   <script>
@@ -334,14 +348,24 @@
     let lastDeletedEventIndex = -1;
     let lastEditedEvent = null;
     let pendingOverlapConfirmation = null;
+    let draggingEvent = null;
+    let dragStartY = 0;
+    let dragStartTime = null;
+
+    const WEATHER_API_KEY = '46a759eb926bfad1530ec2671deb009c'; // User will add their OpenWeatherMap API key
 
     function capitalizeTitle(str) {
       if (!str) return '';
       return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     }
 
-    function triggerHaptic() {
-      if (navigator.vibrate) navigator.vibrate(10);
+    function triggerHaptic(pattern = 20) {
+      if (!navigator.vibrate) return;
+      if (typeof pattern === 'number') {
+        navigator.vibrate(pattern);
+      } else if (Array.isArray(pattern)) {
+        navigator.vibrate(pattern);
+      }
     }
 
     function checkDuplicateEvent(newEvent, excludeEventId = null) {
@@ -414,6 +438,33 @@
       document.getElementById('overlap-modal-overlay').classList.remove('active');
     }
 
+    async function fetchWeather() {
+      if (!WEATHER_API_KEY) {
+        return; // Skip if no API key
+      }
+      try {
+        const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=42.2088&lon=-71.2170&units=imperial&appid=${WEATHER_API_KEY}`);
+        const data = await response.json();
+        const temp = Math.round(data.main.temp);
+        const icon = getWeatherIcon(data.weather[0].main);
+        document.getElementById('weather-temp').textContent = `${temp}°`;
+        document.getElementById('weather-icon').textContent = icon;
+        document.getElementById('weather-widget').style.display = 'flex';
+      } catch (err) {
+        console.log('Weather fetch error (non-critical):', err);
+      }
+    }
+
+    function getWeatherIcon(condition) {
+      const conditionLower = condition.toLowerCase();
+      if (conditionLower.includes('cloud')) return '☁️';
+      if (conditionLower.includes('rain')) return '🌧️';
+      if (conditionLower.includes('snow')) return '❄️';
+      if (conditionLower.includes('clear') || conditionLower.includes('sunny')) return '☀️';
+      if (conditionLower.includes('wind')) return '💨';
+      return '🌤️';
+    }
+
     async function init() {
       await loadEvents();
       loadNotificationSettings();
@@ -423,6 +474,8 @@
       checkNotificationPermission();
       scheduleNotifications();
       updateWeekHeader();
+      fetchWeather();
+      setInterval(fetchWeather, 600000); // Refresh weather every 10 minutes
     }
 
     function toggleMenu() {
@@ -1012,7 +1065,7 @@
         const isSelected = dateStr === selectedDate;
         const dayEvents = allEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate));
         const eventCount = dayEvents.length;
-        html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="openDayModal('${dateStr}'); triggerHaptic()"><div class="day-number">${day}</div>${eventCount > 0 ? `<div class="day-count">${eventCount}</div>` : ''}</div>`;
+        html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="openDayModal('${dateStr}'); triggerHaptic([40])"><div class="day-number">${day}</div>${eventCount > 0 ? `<div class="day-count">${eventCount}</div>` : ''}</div>`;
       }
       const remainingCells = 42 - (startingDayOfWeek + daysInMonth);
       for (let i = 1; i <= remainingCells; i++) {
@@ -1040,15 +1093,15 @@
         dayEvents.forEach(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic()">
+          html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
               <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
               ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
               ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
             </div>
             <div class="event-swipe-actions">
-              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic()">Edit</button>
-              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic()">Delete</button>
+              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic([40])">Edit</button>
+              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic([100, 50, 100])">Delete</button>
             </div>
           </div>`;
         });
@@ -1101,7 +1154,7 @@
           html += '<div class="week-all-day">';
           allDayEvents.forEach(event => {
             const endText = event.endDate && event.endDate !== event.date ? ` (${event.endDate})` : '';
-            html += `<div class="all-day-event" onclick="openEditModal('${event.id}'); triggerHaptic()">${event.title}${endText}</div>`;
+            html += `<div class="all-day-event" onclick="openEditModal('${event.id}'); triggerHaptic([40])">${event.title}${endText}</div>`;
           });
           html += '</div>';
         }
@@ -1117,7 +1170,7 @@
           }
           const heightPercent = (durationHours / 24) * 100;
           const durationLabel = event.endTime ? calculateDuration(event.time, event.endTime) : '';
-          html += `<div class="week-event" style="top: ${topPercent}%; height: ${Math.max(heightPercent, 6)}%;" onclick="openEditModal('${event.id}'); triggerHaptic()"><div class="week-event-title">${event.title}</div><div class="week-event-time">${formatEventTime(event.time, event.endTime)}${durationLabel ? ` (${durationLabel})` : ''}</div></div>`;
+          html += `<div class="week-event" style="top: ${topPercent}%; height: ${Math.max(heightPercent, 6)}%;" data-event-id="${event.id}" onmousedown="startDrag(event, '${dateStr}')" ontouchstart="startDrag(event, '${dateStr}')"><div class="week-event-title">${event.title}</div><div class="week-event-time">${formatEventTime(event.time, event.endTime)}${durationLabel ? ` (${durationLabel})` : ''}</div></div>`;
         });
 
         html += '</div>';
@@ -1125,6 +1178,115 @@
 
       document.getElementById('week-grid').innerHTML = html;
       updateCurrentTimeLine();
+    }
+
+    function startDrag(e, dateStr) {
+      if (e.touches) {
+        dragStartY = e.touches[0].clientY;
+      } else {
+        dragStartY = e.clientY;
+      }
+      draggingEvent = e.currentTarget;
+      draggingEvent.classList.add('dragging');
+      const eventId = draggingEvent.dataset.eventId;
+      const event = allEvents.find(ev => ev.id === eventId);
+      if (event) {
+        dragStartTime = event.time;
+      }
+      
+      document.addEventListener('mousemove', handleDragMove);
+      document.addEventListener('touchmove', handleDragMove);
+      document.addEventListener('mouseup', () => endDrag(dateStr));
+      document.addEventListener('touchend', () => endDrag(dateStr));
+      
+      triggerHaptic([50, 30, 50]);
+    }
+
+    function handleDragMove(e) {
+      if (!draggingEvent) return;
+      const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+      const diff = currentY - dragStartY;
+      draggingEvent.style.transform = `translateY(${diff}px)`;
+    }
+
+    async function endDrag(dateStr) {
+      if (!draggingEvent || !dragStartTime) return;
+
+      const currentY = event.touches ? event.touches[0].clientY : event.clientY;
+      const diff = currentY - dragStartY;
+      const gridElement = document.getElementById('week-grid');
+      const gridRect = gridElement.getBoundingClientRect();
+      const pixelsPerMinute = gridRect.height / (24 * 60);
+      const minutesDiff = Math.round(diff / (pixelsPerMinute * 15)) * 15;
+
+      const [hours, minutes] = dragStartTime.split(':').map(Number);
+      let newMinutes = minutes + minutesDiff;
+      let newHours = hours;
+
+      while (newMinutes >= 60) {
+        newMinutes -= 60;
+        newHours += 1;
+      }
+      while (newMinutes < 0) {
+        newMinutes += 60;
+        newHours -= 1;
+      }
+
+      if (newHours < 0) newHours = 0;
+      if (newHours > 23) newHours = 23;
+
+      const newTime = `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+
+      const eventId = draggingEvent.dataset.eventId;
+      const eventToUpdate = allEvents.find(e => e.id === eventId);
+
+      if (eventToUpdate && eventToUpdate.time !== newTime) {
+        const duration = eventToUpdate.endTime ? calculateDuration(eventToUpdate.time, eventToUpdate.endTime) : null;
+        let newEndTime = null;
+        if (duration) {
+          const [durHours, durMins] = duration.split(/[hm]/).filter(x => x).map(Number);
+          let totalDurMins = (durHours || 0) * 60 + (durMins || 0);
+          let endMins = newMinutes + totalDurMins;
+          let endHours = newHours;
+          while (endMins >= 60) {
+            endMins -= 60;
+            endHours += 1;
+          }
+          newEndTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+        }
+
+        try {
+          await fetch(`/api/events/${eventId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: eventToUpdate.title,
+              date: eventToUpdate.date,
+              endDate: eventToUpdate.endDate || null,
+              time: newTime,
+              endTime: newEndTime || null,
+              description: eventToUpdate.description || '',
+              isAllDay: eventToUpdate.isAllDay
+            })
+          });
+          showStatus(`✓ ${eventToUpdate.title} moved`, 'success');
+          showSyncIndicator();
+          triggerHaptic([40]);
+          await loadEvents();
+          renderWeekView();
+        } catch (err) {
+          showStatus('Error rescheduling event', 'error');
+          triggerHaptic([100, 50, 100]);
+        }
+      }
+
+      draggingEvent.classList.remove('dragging');
+      draggingEvent.style.transform = '';
+      draggingEvent = null;
+      dragStartTime = null;
+
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('touchmove', handleDragMove);
     }
 
     function updateCurrentTimeLine() {
@@ -1211,7 +1373,7 @@
           const dateObj = new Date(event.date + 'T00:00:00');
           const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
           
-          html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic()">
+          html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
               <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
               <div class="event-day-label">${dateLabel}${timeStr ? ` • ${timeStr}${durationInfo}` : ''}</div>
@@ -1259,15 +1421,15 @@
         grouped[dateKey].forEach(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}'); triggerHaptic()">
+          html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
               <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
               ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
               ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
             </div>
             <div class="event-swipe-actions">
-              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic()">Edit</button>
-              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic()">Delete</button>
+              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic([40])">Edit</button>
+              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic([100, 50, 100])">Delete</button>
             </div>
           </div>`;
         });
@@ -1377,15 +1539,15 @@
           grouped[dateKey].forEach(event => {
             const timeStr = formatEventTime(event.time, event.endTime);
             const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-            html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}'); triggerHaptic()">
+            html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
               <div class="event-details">
                 <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
                 ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
                 ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
               </div>
               <div class="event-swipe-actions">
-                <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic()">Edit</button>
-                <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic()">Delete</button>
+                <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic([40])">Edit</button>
+                <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic([100, 50, 100])">Delete</button>
               </div>
             </div>`;
           });
