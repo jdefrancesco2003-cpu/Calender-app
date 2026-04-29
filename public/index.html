@@ -12,9 +12,9 @@
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
     html, body { width: 100%; height: 100%; position: fixed; }
     :root { --primary: #4a9d6f; --primary-light: #5faf81; --primary-dark: #3a8d5f; --bg-dark: #1c1c1e; --bg-card: #2c2c2e; --bg-light: #3a3a3c; --text-primary: #ffffff; --text-secondary: #a1a1a6; --border-color: #424245; --success: #30b0c0; --error: #ff453a; --warning: #ff9500; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif; background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a1c 100%); color: var(--text-primary); padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); overflow: hidden; display: flex; flex-direction: column; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif; background: var(--bg-dark); color: var(--text-primary); padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); overflow: hidden; display: flex; flex-direction: column; }
     .container { display: flex; flex-direction: column; height: 100%; overflow: hidden; gap: 0; }
-    header { padding: 16px 0 12px 0; border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, rgba(42, 42, 46, 0.8) 0%, rgba(28, 28, 30, 0.5) 100%); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    header { padding: 16px 0 12px 0; border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); }
     h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-primary); flex: 1; }
     .header-right { display: flex; align-items: center; gap: 12px; }
     .weather-widget { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: rgba(74, 157, 111, 0.1); border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid rgba(74, 157, 111, 0.2); animation: fadeIn 0.4s ease; }
@@ -24,7 +24,7 @@
     .menu-btn:active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); transform: scale(0.95); }
     .sync-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--success); opacity: 0; transition: opacity 0.2s; box-shadow: 0 0 8px rgba(48, 176, 192, 0.6); }
     .sync-indicator.visible { opacity: 1; animation: pulse 0.6s ease; }
-    .dropdown-menu { position: fixed; top: max(60px, env(safe-area-inset-top)); left: 12px; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(28, 28, 30, 0.9) 100%); border: 1px solid var(--border-color); border-radius: 10px; z-index: 2000; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .dropdown-menu { position: fixed; top: max(60px, env(safe-area-inset-top)); left: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; z-index: 2000; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: none; }
     .dropdown-menu.active { display: flex; flex-direction: column; animation: slideDown 0.3s ease; }
     .dropdown-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: none; border: none; color: var(--text-primary); text-align: left; cursor: pointer; font-size: 14px; transition: all 0.2s ease; }
     .dropdown-item:last-child { border-bottom: none; }
@@ -32,14 +32,14 @@
     .fab { position: fixed; bottom: max(20px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 56px; height: 56px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 50%; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(74, 157, 111, 0.3); z-index: 100; -webkit-appearance: none; transition: all 0.2s ease; }
     .fab:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(74, 157, 111, 0.4); }
     .main-content { display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; gap: 0; padding: 0; }
-    .section { background: linear-gradient(135deg, var(--bg-card) 0%, rgba(42, 42, 46, 0.8) 100%); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 0; }
+    .section { background: var(--bg-card); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 0; }
     .section-title { font-size: 17px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
     .section-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
     .input-group { display: flex; flex-direction: column; gap: 8px; }
     .input-group label { font-size: 13px; font-weight: 600; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; }
-    input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.8) 100%); color: var(--text-primary); -webkit-appearance: none; appearance: none; min-height: 44px; transition: all 0.2s ease; }
+    input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--bg-light); color: var(--text-primary); -webkit-appearance: none; appearance: none; min-height: 44px; transition: all 0.2s ease; }
     input::placeholder, textarea::placeholder { color: var(--text-secondary); }
-    input:focus, textarea:focus { outline: none; border-color: var(--primary); background: linear-gradient(135deg, rgba(74, 157, 111, 0.1) 0%, rgba(74, 157, 111, 0.05) 100%); box-shadow: 0 0 0 3px rgba(74, 157, 111, 0.1); }
+    input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74, 157, 111, 0.1); }
     textarea { resize: none; min-height: 100px; font-size: 16px; }
     button { padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; min-height: 48px; display: flex; align-items: center; justify-content: center; -webkit-appearance: none; appearance: none; }
     .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 12px rgba(74, 157, 111, 0.2); }
@@ -49,46 +49,46 @@
     .btn-danger { background: linear-gradient(135deg, var(--error) 0%, #ff2d22 100%); color: white; font-size: 14px; padding: 10px 14px; min-height: auto; }
     .btn-danger:active { transform: scale(0.96); opacity: 0.8; }
     button:disabled { opacity: 0.5; pointer-events: none; }
-    .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: linear-gradient(180deg, rgba(42, 42, 46, 0.6) 0%, rgba(28, 28, 30, 0.3) 100%); }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); }
     .month-year { font-size: 18px; font-weight: 600; color: var(--text-primary); }
     .month-nav { display: flex; gap: 8px; }
-    .month-nav button { width: 40px; height: 40px; padding: 0; border-radius: 8px; background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%); font-size: 18px; color: var(--text-primary); min-height: auto; transition: all 0.2s ease; }
+    .month-nav button { width: 40px; height: 40px; padding: 0; border-radius: 8px; background: var(--bg-light); font-size: 18px; color: var(--text-primary); min-height: auto; transition: all 0.2s ease; }
     .month-nav button:active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); transform: scale(0.92); }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 12px 16px; background: var(--bg-card); }
     .day-header { text-align: center; font-weight: 600; color: var(--text-secondary); padding: 8px 0; font-size: 12px; letter-spacing: 0.5px; }
-    .day-cell { aspect-ratio: 1; border: 2px solid var(--border-color); border-radius: 8px; padding: 6px; background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.7) 100%); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; position: relative; transition: all 0.2s ease; font-size: 12px; }
+    .day-cell { aspect-ratio: 1; border: 2px solid var(--border-color); border-radius: 8px; padding: 6px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; position: relative; transition: all 0.2s ease; font-size: 12px; }
     .day-cell:active { transform: scale(0.95); }
     .day-cell.other-month { background: transparent; border-color: transparent; opacity: 0.3; }
-    .day-cell.today { border: 2px solid var(--primary); background: linear-gradient(135deg, rgba(74, 157, 111, 0.15) 0%, rgba(74, 157, 111, 0.05) 100%); color: var(--text-primary); font-weight: 600; box-shadow: 0 0 0 1px var(--primary), inset 0 0 8px rgba(74, 157, 111, 0.1); }
+    .day-cell.today { border: 2px solid var(--primary); background: var(--bg-light); color: var(--text-primary); font-weight: 600; box-shadow: 0 0 0 1px var(--primary), inset 0 0 8px rgba(74, 157, 111, 0.1); }
     .day-cell.selected { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-color: var(--primary); color: white; font-weight: 600; }
     .day-number { font-size: 14px; font-weight: 600; color: var(--text-primary); }
     .day-cell.selected .day-number { color: white; }
     .day-count { font-size: 10px; color: var(--primary); margin-top: 2px; }
     .day-cell.selected .day-count { color: rgba(255,255,255,0.9); }
     .week-view-container { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
-    .week-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; padding: 10px 0; background: linear-gradient(180deg, rgba(42, 42, 46, 0.6) 0%, rgba(28, 28, 30, 0.3) 100%); border-bottom: 1px solid var(--border-color); align-items: center; }
+    .week-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; padding: 10px 0; background: var(--bg-card); border-bottom: 1px solid var(--border-color); align-items: center; }
     .week-time-label { padding: 0; font-size: 10px; color: var(--text-secondary); text-align: center; line-height: 1; }
     .week-day-header { padding: 0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; width: 100%; box-sizing: border-box; }
     .week-day-name { font-size: 9px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0px; line-height: 1.1; margin: 0; }
     .week-day-date { font-size: 12px; font-weight: 700; color: var(--text-primary); margin-top: 2px; margin-bottom: 0; }
     .week-day-date.today { color: var(--primary); font-weight: 700; }
-    .week-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; flex: 1; overflow-y: auto; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(28, 28, 30, 0.8) 100%); padding: 4px; position: relative; }
+    .week-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; flex: 1; overflow-y: auto; background: var(--bg-card); padding: 4px; position: relative; }
     .week-time-slots { display: flex; flex-direction: column; background: linear-gradient(180deg, rgba(74, 157, 111, 0.12) 0%, rgba(74, 157, 111, 0.04) 100%); border-right: 2px solid var(--primary); border-radius: 0; padding: 0; }
     .time-slot { padding: 2px 0; font-size: 8px; color: var(--text-primary); font-weight: 600; text-align: center; min-height: 60px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; }
-    .week-day-column { border: 1px solid var(--border-color); position: relative; min-height: 100%; border-radius: 2px; background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.7) 100%); overflow: hidden; }
-    .week-day-column.today { background: linear-gradient(135deg, rgba(74, 157, 111, 0.12) 0%, rgba(74, 157, 111, 0.04) 100%); border-color: var(--primary); }
+    .week-day-column { border: 1px solid var(--border-color); position: relative; min-height: 100%; border-radius: 2px; background: var(--bg-light); overflow: hidden; }
+    .week-day-column.today { background: rgba(74, 157, 111, 0.08); border-color: var(--primary); }
     .week-day-column.today::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--primary); }
     .current-time-line { position: absolute; height: 2px; background: #ff453a; left: 0; right: 0; z-index: 10; box-shadow: 0 0 8px rgba(255, 69, 58, 0.5); }
     .current-time-dot { position: absolute; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; left: -7px; top: -5px; box-shadow: 0 0 8px rgba(255, 69, 58, 0.6); }
     .week-all-day { padding: 8px 4px; background: linear-gradient(90deg, rgba(74, 157, 111, 0.2) 0%, rgba(74, 157, 111, 0.1) 100%); border-bottom: 2px solid var(--primary); min-height: 48px; display: flex; flex-direction: column; justify-content: center; border-left: 3px solid var(--primary); }
     .all-day-event { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 6px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 2px 8px rgba(74, 157, 111, 0.2); transition: all 0.2s ease; }
     .all-day-event:active { transform: scale(0.98); }
-    .week-event { position: absolute; background: linear-gradient(135deg, #3a3a3c 0%, #2a2a2c 100%); border-left: 4px solid var(--primary); border-radius: 2px; padding: 5px 6px; cursor: grab; overflow: hidden; margin: 0; left: 0.5px; right: 0.5px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 44px; word-wrap: break-word; white-space: normal; touch-action: none; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); transition: all 0.15s ease; }
+    .week-event { position: absolute; background: #2a2a2c; border-left: 4px solid var(--primary); border-radius: 2px; padding: 5px 6px; cursor: grab; overflow: hidden; margin: 0; left: 0.5px; right: 0.5px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 44px; word-wrap: break-word; white-space: normal; touch-action: none; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); transition: all 0.15s ease; }
     .week-event.dragging { opacity: 0.9; box-shadow: 0 8px 24px rgba(74, 157, 111, 0.3); z-index: 50; border-left-width: 6px; }
     .week-event:active { cursor: grabbing; }
     .week-event-title { font-weight: 700; color: var(--text-primary); word-break: break-word; font-size: 13px; line-height: 1.2; margin: 0 0 3px 0; }
     .week-event-time { font-size: 9px; color: var(--text-secondary); white-space: normal; line-height: 1.1; word-break: break-word; margin: 0; }
-    .events-container { padding: 12px 16px; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(28, 28, 30, 0.8) 100%); border-top: 1px solid var(--border-color); overflow-y: auto; }
+    .events-container { padding: 12px 16px; background: var(--bg-card); border-top: 1px solid var(--border-color); overflow-y: auto; }
     .sidebar-section { margin-bottom: 20px; }
     .sidebar-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
     .event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.8) 100%); padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
@@ -103,7 +103,7 @@
     .event-meta { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
     .event-day-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
     .event-duration { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
-    .all-day-badge { display: inline-block; font-size: 10px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 2px 6px; border-radius: 3px; margin-left: 4px; font-weight: 600; }
+    .all-day-badge { display: block; font-size: 10px; background: var(--primary); color: white; padding: 2px 6px; border-radius: 3px; margin-top: 4px; font-weight: 600; width: fit-content; }
     .status-message { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; padding: 12px 16px; border-radius: 10px; font-size: 15px; font-weight: 500; z-index: 1000; animation: slideDown 0.3s ease; }
     .status-message.success { background: linear-gradient(135deg, var(--success) 0%, #1fa5a5 100%); color: white; }
     .status-message.error { background: linear-gradient(135deg, var(--error) 0%, #ff2d22 100%); color: white; }
@@ -1095,7 +1095,8 @@
           const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
           html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
-              <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
+              <div class="event-title">${event.title}</div>
+              ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
               ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
               ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
             </div>
@@ -1313,17 +1314,21 @@
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const weekEnd = new Date(today);
-      weekEnd.setDate(weekEnd.getDate() + 7);
-      const monthEnd = new Date(today);
-      monthEnd.setDate(monthEnd.getDate() + 30);
+      
+      // This week = rest of current calendar week (Sun-Sat)
+      const thisWeekEnd = new Date(today);
+      thisWeekEnd.setDate(today.getDate() + (6 - today.getDay())); // ends on Saturday
+      
+      // Next week = next calendar week
+      const nextWeekEnd = new Date(thisWeekEnd);
+      nextWeekEnd.setDate(thisWeekEnd.getDate() + 7);
 
       const date = new Date(dateStr + 'T00:00:00');
 
       if (dateStr === today.toISOString().split('T')[0]) return { group: 'today', label: 'Today' };
       if (dateStr === tomorrow.toISOString().split('T')[0]) return { group: 'tomorrow', label: 'Tomorrow' };
-      if (date <= weekEnd) return { group: 'week', label: 'This Week' };
-      if (date <= monthEnd) return { group: 'month', label: 'Next Week' };
+      if (date <= thisWeekEnd) return { group: 'week', label: 'This Week' };
+      if (date <= nextWeekEnd) return { group: 'month', label: 'Next Week' };
       return { group: 'later', label: 'Later' };
     }
 
@@ -1375,7 +1380,8 @@
           
           html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
-              <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
+              <div class="event-title">${event.title}</div>
+              ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
               <div class="event-day-label">${dateLabel}${timeStr ? ` • ${timeStr}${durationInfo}` : ''}</div>
               ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
             </div>
@@ -1423,7 +1429,8 @@
           const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
           html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
-              <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
+              <div class="event-title">${event.title}</div>
+              ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
               ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
               ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
             </div>
@@ -1541,7 +1548,8 @@
             const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
             html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
               <div class="event-details">
-                <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
+                <div class="event-title">${event.title}</div>
+                ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
                 ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
                 ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
               </div>
