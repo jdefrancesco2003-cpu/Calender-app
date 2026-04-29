@@ -62,25 +62,25 @@
     .day-count { font-size: 10px; color: var(--primary); margin-top: 2px; }
     .day-cell.selected .day-count { color: rgba(255,255,255,0.9); }
     .week-view-container { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
-    .week-header { display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px; padding: 12px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); align-items: center; }
-    .week-time-label { padding: 8px 0; font-size: 11px; color: var(--text-secondary); text-align: center; }
-    .week-day-header { padding: 8px; text-align: center; }
-    .week-day-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
-    .week-day-date { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-top: 2px; }
+    .week-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 4px; padding: 12px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); align-items: center; }
+    .week-time-label { padding: 8px 0; font-size: 10px; color: var(--text-secondary); text-align: center; }
+    .week-day-header { padding: 8px 4px; text-align: center; }
+    .week-day-name { font-size: 10px; font-weight: 600; color: var(--text-secondary); }
+    .week-day-date { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-top: 2px; }
     .week-day-date.today { color: var(--primary); }
-    .week-grid { display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px; flex: 1; overflow-y: auto; background: var(--bg-card); padding: 8px; position: relative; }
-    .week-time-slots { display: flex; flex-direction: column; background: rgba(74, 157, 111, 0.08); border-right: 2px solid var(--primary); border-radius: 4px; padding: 4px; }
-    .time-slot { padding: 8px 2px; font-size: 10px; color: var(--text-primary); font-weight: 600; text-align: center; min-height: 60px; border-bottom: 1px solid var(--border-color); }
-    .week-day-column { border: 1px solid var(--border-color); position: relative; min-height: 100%; border-radius: 4px; background: var(--bg-light); overflow: hidden; }
+    .week-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 4px; flex: 1; overflow-y: auto; background: var(--bg-card); padding: 4px; position: relative; }
+    .week-time-slots { display: flex; flex-direction: column; background: rgba(74, 157, 111, 0.08); border-right: 2px solid var(--primary); border-radius: 4px; padding: 2px; }
+    .time-slot { padding: 4px 1px; font-size: 9px; color: var(--text-primary); font-weight: 600; text-align: center; min-height: 60px; border-bottom: 1px solid var(--border-color); }
+    .week-day-column { border: 1px solid var(--border-color); position: relative; min-height: 100%; border-radius: 2px; background: var(--bg-light); overflow: hidden; }
     .week-day-column.today { background: rgba(74, 157, 111, 0.08); border-color: var(--primary); }
     .week-day-column.today::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--primary); }
     .current-time-line { position: absolute; height: 2px; background: #ff453a; left: 0; right: 0; z-index: 10; }
     .current-time-dot { position: absolute; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; left: -7px; top: -5px; }
     .week-all-day { padding: 6px 4px; background: rgba(74, 157, 111, 0.1); border-bottom: 2px solid var(--border-color); min-height: 40px; }
     .all-day-event { background: var(--bg-light); padding: 4px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border-left: 3px solid var(--primary); }
-    .week-event { position: absolute; background: var(--bg-light); border-left: 3px solid var(--primary); border-radius: 4px; padding: 6px 8px; font-size: 12px; cursor: pointer; overflow: hidden; margin: 2px; left: 2px; right: 2px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 40px; word-wrap: break-word; white-space: normal; }
-    .week-event-title { font-weight: 700; color: var(--text-primary); word-break: break-word; line-height: 1.2; font-size: 12px; }
-    .week-event-time { font-size: 10px; color: var(--text-secondary); white-space: normal; line-height: 1.2; margin-top: 2px; word-break: break-word; }
+    .week-event { position: absolute; background: #2a2a2c; border-left: 3px solid var(--primary); border-radius: 4px; padding: 4px 6px; font-size: 11px; cursor: pointer; overflow: hidden; margin: 1px; left: 1px; right: 1px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 40px; word-wrap: break-word; white-space: normal; line-height: 1.1; }
+    .week-event-title { font-weight: 700; color: var(--text-primary); word-break: break-word; line-height: 1.1; font-size: 11px; }
+    .week-event-time { font-size: 9px; color: var(--text-secondary); white-space: normal; line-height: 1.1; margin-top: 1px; word-break: break-word; }
     .events-container { padding: 12px 16px; background: var(--bg-card); border-top: 1px solid var(--border-color); overflow-y: auto; }
     .sidebar-section { margin-bottom: 20px; }
     .sidebar-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -134,6 +134,9 @@
     .undo-toast button { padding: 8px 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; min-height: auto; }
     .day-events-modal { max-height: 70vh; }
     .day-events-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 16px; }
+    .toast-notification { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 12px; right: 12px; background: var(--bg-light); color: var(--text-primary); padding: 12px 16px; border-radius: 10px; z-index: 1500; animation: slideUp 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .toast-notification.success { background: var(--success); color: white; }
+    .toast-notification.error { background: var(--error); color: white; }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -148,20 +151,20 @@
       <h1>Calendar</h1>
       <div class="header-right">
         <div class="sync-indicator" id="sync-indicator"></div>
-        <button class="menu-btn" onclick="toggleMenu()">☰</button>
+        <button class="menu-btn" onclick="toggleMenu(); triggerHaptic()">☰</button>
       </div>
       <div class="dropdown-menu" id="dropdown-menu">
-        <button class="dropdown-item" onclick="exportEvents()">📥 Export</button>
-        <button class="dropdown-item" onclick="openSettings()">⚙️ Settings</button>
+        <button class="dropdown-item" onclick="exportEvents(); triggerHaptic()">📥 Export</button>
+        <button class="dropdown-item" onclick="openSettings(); triggerHaptic()">⚙️ Settings</button>
       </div>
     </header>
 
     <div id="status-message"></div>
 
     <div class="section-tabs">
-      <button class="tab-button active" onclick="showTab('calendar')">Calendar</button>
-      <button class="tab-button" onclick="showTab('add')">Add Event</button>
-      <button class="tab-button" onclick="showTab('events')">Events</button>
+      <button class="tab-button active" onclick="showTab('calendar'); triggerHaptic()">Calendar</button>
+      <button class="tab-button" onclick="showTab('add'); triggerHaptic()">Add Event</button>
+      <button class="tab-button" onclick="showTab('events'); triggerHaptic()">Events</button>
     </div>
 
     <div class="main-content">
@@ -170,9 +173,9 @@
         <div class="calendar-header">
           <div class="month-year" id="month-year"></div>
           <div class="month-nav">
-            <button onclick="navigatePrevious()">←</button>
-            <button class="month-nav" id="view-toggle-btn" onclick="toggleView()" style="padding: 6px 10px; font-size: 12px; width: auto;">Week</button>
-            <button onclick="navigateNext()">→</button>
+            <button onclick="navigatePrevious(); triggerHaptic()">←</button>
+            <button class="month-nav" id="view-toggle-btn" onclick="toggleView(); triggerHaptic()" style="padding: 6px 10px; font-size: 12px; width: auto;">Week</button>
+            <button onclick="navigateNext(); triggerHaptic()">→</button>
           </div>
         </div>
         <div id="month-view"><div class="calendar-grid" id="calendar-grid"></div></div>
@@ -197,7 +200,7 @@
           <div class="section-title">Quick Add</div>
           <div class="section-subtitle">Type your event naturally</div>
           <div class="input-group"><textarea id="event-input" placeholder="e.g., work on friday 7-3pm" maxlength="200"></textarea></div>
-          <button class="btn-primary" id="parse-btn" onclick="parseEvent()">Add Event</button>
+          <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic()">Add Event</button>
           <div class="divider"></div>
           <div class="section-title">Manual Entry</div>
           <div class="input-group"><label>Title</label><input type="text" id="title-input" placeholder="Event name" maxlength="100"></div>
@@ -205,7 +208,7 @@
           <div class="input-group"><label>Time</label><div class="time-inputs"><div><label style="font-size: 11px;">Start</label><input type="time" id="time-input"></div><div><label style="font-size: 11px;">End</label><input type="time" id="end-time-input"></div></div></div>
           <div class="input-group"><label>Notes</label><textarea id="desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
           <div class="toggle-switch"><label for="all-day-toggle" style="margin: 0; text-transform: none; font-weight: 500;">All-Day Event</label><label class="switch"><input type="checkbox" id="all-day-toggle" onchange="toggleAllDayManual()"><span class="slider"></span></label></div>
-          <button class="btn-secondary" onclick="addEventManually()">Save Event</button>
+          <button class="btn-secondary" onclick="addEventManually(); triggerHaptic()">Save Event</button>
         </div>
       </div>
 
@@ -219,7 +222,7 @@
     </div>
 
     <!-- FAB BUTTON -->
-    <button class="fab" onclick="openAddEventTab()">+</button>
+    <button class="fab" onclick="openAddEventTab(); triggerHaptic()">+</button>
   </div>
 
   <!-- CONFIRMATION MODAL -->
@@ -228,11 +231,11 @@
       <h3 class="confirmation-title">Confirm Event</h3>
       <div class="confirmation-content" id="confirmation-content"></div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <button class="edit-button-modal" onclick="enterEditMode()">✏️ Edit Before Saving</button>
+        <button class="edit-button-modal" onclick="enterEditMode(); triggerHaptic()">✏️ Edit Before Saving</button>
       </div>
       <div class="confirmation-buttons">
-        <button class="btn-secondary" style="flex: 1;" onclick="confirmParsedEvent()">Confirm</button>
-        <button class="btn-danger" style="flex: 1;" onclick="closeConfirmation()">Cancel</button>
+        <button class="btn-secondary" style="flex: 1;" onclick="confirmParsedEvent(); triggerHaptic()">Confirm</button>
+        <button class="btn-danger" style="flex: 1;" onclick="closeConfirmation(); triggerHaptic()">Cancel</button>
       </div>
     </div>
   </div>
@@ -242,7 +245,7 @@
     <div class="modal day-events-modal">
       <h3 id="day-modal-title" class="day-events-title"></h3>
       <div id="day-modal-events"></div>
-      <button class="btn-secondary" style="width: 100%;" onclick="closeDayModal()">Close</button>
+      <button class="btn-secondary" style="width: 100%;" onclick="closeDayModal(); triggerHaptic()">Close</button>
     </div>
   </div>
 
@@ -256,9 +259,9 @@
       <div class="input-group"><label>Notes</label><textarea id="modal-desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
       <div class="toggle-switch"><label for="modal-all-day-toggle" style="margin: 0; text-transform: none; font-weight: 500;">All-Day Event</label><label class="switch"><input type="checkbox" id="modal-all-day-toggle" onchange="toggleAllDayModal()"><span class="slider"></span></label></div>
       <div style="display: flex; gap: 8px;">
-        <button class="btn-secondary" style="flex: 1;" onclick="saveEditedEvent()">Save</button>
-        <button class="btn-danger" style="flex: 1;" onclick="deleteEditingEvent()">Delete</button>
-        <button class="btn-secondary" style="flex: 1;" onclick="closeModal()">Cancel</button>
+        <button class="btn-secondary" style="flex: 1;" onclick="saveEditedEvent(); triggerHaptic()">Save</button>
+        <button class="btn-danger" style="flex: 1;" onclick="deleteEditingEvent(); triggerHaptic()">Delete</button>
+        <button class="btn-secondary" style="flex: 1;" onclick="closeModal(); triggerHaptic()">Cancel</button>
       </div>
     </div>
   </div>
@@ -268,14 +271,14 @@
     <div class="modal" id="settings-modal">
       <h3>Notification Settings</h3>
       <div class="section" style="border: none; padding: 0;"><div class="toggle-switch"><label for="notif-toggle" style="margin: 0; text-transform: none; font-weight: 500;">Enable Notifications</label><label class="switch"><input type="checkbox" id="notif-toggle" onchange="toggleNotifications()"><span class="slider"></span></label></div></div>
-      <div style="margin-top: 16px;"><button class="btn-secondary" style="width: 100%;" onclick="closeSettings()">Done</button></div>
+      <div style="margin-top: 16px;"><button class="btn-secondary" style="width: 100%;" onclick="closeSettings(); triggerHaptic()">Done</button></div>
     </div>
   </div>
 
   <!-- UNDO TOAST -->
   <div class="undo-toast" id="undo-toast" style="display: none;">
     <span id="undo-message"></span>
-    <button onclick="undoDelete()">Undo</button>
+    <button onclick="undoDelete(); triggerHaptic()">Undo</button>
   </div>
 
   <script>
@@ -290,6 +293,21 @@
     let pendingEditMode = false;
     let lastDeletedEvent = null;
     let lastDeletedEventIndex = -1;
+
+    function capitalizeTitle(str) {
+      if (!str) return '';
+      return str
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+
+    function triggerHaptic() {
+      if (navigator.vibrate) {
+        navigator.vibrate(10);
+      }
+    }
 
     async function init() {
       await loadEvents();
@@ -337,6 +355,7 @@
         document.getElementById('week-view').style.display = 'block';
         btn.textContent = 'Month';
         renderWeekView();
+        updateWeekHeader();
       } else {
         document.getElementById('month-view').style.display = 'block';
         document.getElementById('week-view').style.display = 'none';
@@ -366,19 +385,21 @@
     }
 
     function updateWeekHeader() {
-      const weekStart = new Date(currentDate);
-      weekStart.setDate(currentDate.getDate() - currentDate.getDay());
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
+      if (isWeekView) {
+        const weekStart = new Date(currentDate);
+        weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
 
-      const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' });
-      const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' });
-      const year = weekStart.getFullYear();
+        const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' });
+        const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' });
+        const year = weekStart.getFullYear();
 
-      if (startMonth === endMonth) {
-        document.getElementById('month-year').textContent = `${startMonth} ${weekStart.getDate()}-${weekEnd.getDate()}, ${year}`;
-      } else {
-        document.getElementById('month-year').textContent = `${startMonth} ${weekStart.getDate()} - ${endMonth} ${weekEnd.getDate()}, ${year}`;
+        if (startMonth === endMonth) {
+          document.getElementById('month-year').textContent = `${startMonth} ${weekStart.getDate()}-${weekEnd.getDate()}, ${year}`;
+        } else {
+          document.getElementById('month-year').textContent = `${startMonth} ${weekStart.getDate()} - ${endMonth} ${weekEnd.getDate()}, ${year}`;
+        }
       }
     }
 
@@ -470,6 +491,7 @@
         if (!response.ok || data.error) {
           showStatus(data.error || 'Try: "work on friday 7-3pm"', 'error');
         } else {
+          data.title = capitalizeTitle(data.title);
           pendingParsedEvent = data;
           pendingEditMode = false;
           showConfirmationModal(data);
@@ -551,7 +573,7 @@
     }
 
     async function addEventManually() {
-      const title = document.getElementById('title-input').value.trim();
+      const title = capitalizeTitle(document.getElementById('title-input').value.trim());
       const date = document.getElementById('date-input').value;
       const endDate = document.getElementById('end-date-input').value;
       const time = document.getElementById('time-input').value;
@@ -681,7 +703,7 @@
     }
 
     async function saveEditedEvent() {
-      const title = document.getElementById('modal-title-input').value.trim();
+      const title = capitalizeTitle(document.getElementById('modal-title-input').value.trim());
       const date = document.getElementById('modal-date-input').value;
       const endDate = document.getElementById('modal-end-date-input').value;
       const time = document.getElementById('modal-time-input').value;
@@ -784,7 +806,7 @@
         const isSelected = dateStr === selectedDate;
         const dayEvents = allEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate));
         const eventCount = dayEvents.length;
-        html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="openDayModal('${dateStr}')"><div class="day-number">${day}</div>${eventCount > 0 ? `<div class="day-count">${eventCount}</div>` : ''}</div>`;
+        html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="openDayModal('${dateStr}'); triggerHaptic()"><div class="day-number">${day}</div>${eventCount > 0 ? `<div class="day-count">${eventCount}</div>` : ''}</div>`;
       }
       const remainingCells = 42 - (startingDayOfWeek + daysInMonth);
       for (let i = 1; i <= remainingCells; i++) {
@@ -808,15 +830,15 @@
         dayEvents.sort((a, b) => (a.time || '').localeCompare(b.time || '')).forEach(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          html += `<div class="event-item" onclick="openEditModal('${event.id}')">
+          html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic()">
             <div class="event-details">
               <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
               ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
               ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
             </div>
             <div class="event-swipe-actions">
-              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}')">Edit</button>
-              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
+              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic()">Edit</button>
+              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic()">Delete</button>
             </div>
           </div>`;
         });
@@ -868,7 +890,7 @@
         if (allDayEvents.length > 0) {
           html += '<div class="week-all-day">';
           allDayEvents.forEach(event => {
-            html += `<div class="all-day-event" onclick="openEditModal('${event.id}')">${event.title}</div>`;
+            html += `<div class="all-day-event" onclick="openEditModal('${event.id}'); triggerHaptic()">${event.title}</div>`;
           });
           html += '</div>';
         }
@@ -884,7 +906,7 @@
           }
           const heightPercent = (durationHours / 24) * 100;
           const durationLabel = event.endTime ? calculateDuration(event.time, event.endTime) : '';
-          html += `<div class="week-event" style="top: ${topPercent}%; height: ${Math.max(heightPercent, 6)}%;" onclick="openEditModal('${event.id}')"><div class="week-event-title">${event.title}</div><div class="week-event-time">${formatEventTime(event.time, event.endTime)}${durationLabel ? ` (${durationLabel})` : ''}</div></div>`;
+          html += `<div class="week-event" style="top: ${topPercent}%; height: ${Math.max(heightPercent, 6)}%;" onclick="openEditModal('${event.id}'); triggerHaptic()"><div class="week-event-title">${event.title}</div><div class="week-event-time">${formatEventTime(event.time, event.endTime)}${durationLabel ? ` (${durationLabel})` : ''}</div></div>`;
         });
 
         html += '</div>';
@@ -947,15 +969,15 @@
         grouped[dateKey].forEach(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}')">
+          html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}'); triggerHaptic()">
             <div class="event-details">
               <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
               ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
               ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
             </div>
             <div class="event-swipe-actions">
-              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}')">Edit</button>
-              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
+              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic()">Edit</button>
+              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic()">Delete</button>
             </div>
           </div>`;
         });
@@ -1060,15 +1082,15 @@
           grouped[dateKey].forEach(event => {
             const timeStr = formatEventTime(event.time, event.endTime);
             const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-            html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}')">
+            html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}'); triggerHaptic()">
               <div class="event-details">
                 <div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>
                 ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
                 ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
               </div>
               <div class="event-swipe-actions">
-                <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}')">Edit</button>
-                <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
+                <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic()">Edit</button>
+                <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic()">Delete</button>
               </div>
             </div>`;
           });
@@ -1091,7 +1113,7 @@
         todayEvents.forEach(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          todayHtml += `<div class="event-item" onclick="openEditModal('${event.id}')"><div class="event-details"><div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}${event.description ? `<div class="event-meta">${event.description}</div>` : ''}</div></div>`;
+          todayHtml += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic()"><div class="event-details"><div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div>${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}${event.description ? `<div class="event-meta">${event.description}</div>` : ''}</div></div>`;
         });
       }
       document.getElementById('today-events').innerHTML = todayHtml;
@@ -1111,7 +1133,7 @@
           const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
           const timeStr = formatEventTime(event.time, event.endTime);
           const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          upcomingHtml += `<div class="event-item" onclick="openEditModal('${event.id}')"><div class="event-details"><div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div><div class="event-meta">${dateStr}${timeStr ? ` • ${timeStr}${durationInfo}` : ''}</div>${event.description ? `<div class="event-meta">${event.description}</div>` : ''}</div></div>`;
+          upcomingHtml += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic()"><div class="event-details"><div class="event-title">${event.title}${event.isAllDay ? '<span class="all-day-badge">All Day</span>' : ''}</div><div class="event-meta">${dateStr}${timeStr ? ` • ${timeStr}${durationInfo}` : ''}</div>${event.description ? `<div class="event-meta">${event.description}</div>` : ''}</div></div>`;
         });
       }
       document.getElementById('upcoming-events').innerHTML = upcomingHtml;
