@@ -137,7 +137,7 @@ async function parseEvent(text, currentESTDate, currentESTTime) {
 
   const today = currentESTDate || getTodayString();
   const formattedToday = getFormattedDate();
-  const modelName = 'claude-haiku-4.5'; // PHASE 6: Switched from claude-opus-4-1-20250805 for 90% cost savings
+  const modelName = 'claude-haiku-4-5-20251001'; // PHASE 6: Switched from claude-opus-4-1-20250805 for 90% cost savings
 
   try {
     console.log(`📝 Parsing event: "${text}" (EST Date: ${today}, EST Time: ${currentESTTime || 'N/A'})`);
@@ -241,11 +241,45 @@ Return ONLY this JSON:
     return parsed;
   } catch (err) {
     console.error('✗ Parse error:', err.message);
+    console.error('Full error:', err);
     throw err;
   }
 }
 
 // PHASE 6: Updated /api/events/parse endpoint to receive EST context
+// PHASE 7: Diagnostic endpoint for debugging
+app.post('/api/test-parse', async (req, res) => {
+  console.log('🔍 TEST PARSE - Checking API connectivity...');
+  console.log('API Key exists:', !!process.env.ANTHROPIC_API_KEY);
+  console.log('API Key length:', process.env.ANTHROPIC_API_KEY?.length || 0);
+  
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 100,
+      messages: [{
+        role: 'user',
+        content: 'Say "API works" in one word'
+      }]
+    });
+    
+    console.log('✓ API connection successful');
+    res.json({ 
+      status: 'ok',
+      message: response.content[0].text,
+      apiKeyExists: !!process.env.ANTHROPIC_API_KEY
+    });
+  } catch (err) {
+    console.error('✗ API Error:', err.message);
+    res.status(400).json({ 
+      status: 'error',
+      error: err.message,
+      apiKeyExists: !!process.env.ANTHROPIC_API_KEY,
+      hint: 'Check ANTHROPIC_API_KEY in Railway env variables'
+    });
+  }
+});
+
 app.post('/api/events/parse', async (req, res) => {
   const { text, currentESTDate, currentESTTime, timezone } = req.body;
   if (!text) {
@@ -360,7 +394,7 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date(), version: '0.6', model: 'claude-haiku-4.5', timezone: EST_TIMEZONE });
+  res.json({ status: 'ok', timestamp: new Date(), version: '0.6', model: 'claude-haiku-4-5-20251001', timezone: EST_TIMEZONE });
 });
 
 async function startServer() {
@@ -368,7 +402,7 @@ async function startServer() {
     await connectMongoDB();
     app.listen(PORT, () => {
       console.log(`✓ Calendar API running on port ${PORT}`);
-      console.log(`✓ Model: claude-haiku-4.5 (PHASE 6)`);
+      console.log(`✓ Model: claude-haiku-4-5-20251001 (PHASE 6)`);
       console.log(`✓ Timezone: EST (America/New_York)`);
     });
   } catch (err) {
