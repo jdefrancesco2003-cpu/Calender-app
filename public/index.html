@@ -474,7 +474,10 @@
       if (archivedEvents.length === 0) {
         html = '<div class="empty-state"><div class="empty-state-icon">📦</div>No archived events</div>';
       } else {
-        archivedEvents.forEach(event => {
+        // FIX: Sort archived events by date (newest first)
+        const sorted = [...archivedEvents].sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        sorted.forEach(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const dateObj = new Date(event.date + 'T00:00:00');
           const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
