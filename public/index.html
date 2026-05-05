@@ -1376,32 +1376,45 @@
     let dragDateStr = null;
     let dragCancelled = false;
 
-    // PHASE 6: Updated startDrag with 600ms hold time (was 300ms)
+    // PHASE 7: iOS-Optimized Drag-Drop System
+    let touchIdentifier = null;
+
     function startDrag(e, dateStr) {
+      e.preventDefault();
       dragCancelled = false;
       dragDateStr = dateStr;
-      const startY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      const isTouch = e.touches ? true : false;
+      const startY = isTouch ? e.touches[0].clientY : e.clientY;
       const eventElement = e.currentTarget;
       const eventId = eventElement.dataset.eventId;
       const event = allEvents.find(ev => ev.id === eventId);
 
+      if (!event) return;
+
+      if (isTouch) {
+        touchIdentifier = e.touches[0].identifier;
+      }
+
+      console.log(`👆 Hold starting on "${event.title}" (${isTouch ? 'touch' : 'mouse'})`);
+
+      // 300ms hold time
       dragHoldTimer = setTimeout(() => {
         if (dragCancelled) return;
         
         dragStartY = startY;
         draggingEvent = eventElement;
         draggingEvent.classList.add('dragging');
-        if (event) {
-          dragStartTime = event.time;
-        }
+        dragStartTime = event.time;
         
-        document.addEventListener('mousemove', handleDragMove);
-        document.addEventListener('touchmove', handleDragMove);
-        document.addEventListener('mouseup', handleDragEnd);
-        document.addEventListener('touchend', handleDragEnd);
+        document.addEventListener('mousemove', handleDragMove, { passive: false });
+        document.addEventListener('touchmove', handleDragMove, { passive: false });
+        document.addEventListener('mouseup', handleDragEnd, { passive: false });
+        document.addEventListener('touchend', handleDragEnd, { passive: false });
         
         triggerHaptic([50, 30, 50]);
-      }, 600); // PHASE 6: Changed from 300ms to 600ms for iOS reliability
+        console.log(`✓ Hold complete, dragging "${event.title}"`);
+      }, 300);
 
       const cancelDrag = () => {
         clearTimeout(dragHoldTimer);
@@ -1410,138 +1423,167 @@
         document.removeEventListener('touchend', cancelDrag);
       };
       
-      document.addEventListener('mouseup', cancelDrag);
-      document.addEventListener('touchend', cancelDrag);
+      document.addEventListener('mouseup', cancelDrag, { once: true });
+      document.addEventListener('touchend', cancelDrag, { once: true });
     }
 
     function handleDragMove(e) {
-      if (!draggingEvent) return;
-      const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+      if (!draggingEvent || !dragStartY) return;
+      
+      e.preventDefault();
+      
+      const isTouch = e.touches ? true : false;
+      let currentY;
+      
+      if (isTouch) {
+        if (e.touches.length === 0) return;
+        currentY = e.touches[0].clientY;
+      } else {
+        currentY = e.clientY;
+      }
+      
       const diff = currentY - dragStartY;
-      draggingEvent.style.transform = `translateY(${diff}px)`;
+      
+      // FIX: Snap to 15-minute intervals during drag
+      const gridElement = document.getElementById('week-grid');
+      const gridRect = gridElement.getBoundingClientRect();
+      const pixelsPerHour = gridRect.height / 24;
+      const pixelsPer15Min = pixelsPerHour / 4;
+      
+      const snappedDiff = Math.round(diff / pixelsPer15Min) * pixelsPer15Min;
+      
+      draggingEvent.style.transform = `translateY(${snappedDiff}px)`;
+      draggingEvent.style.opacity = '0.8';
     }
 
     async function handleDragEnd(e) {
-      await endDrag(dragDateStr, e);
+      if (dragDateStr) {
+        await endDrag(dragDateStr, e);
+      }
     }
 
     async function endDrag(dateStr, e) {
       clearTimeout(dragHoldTimer);
+      
       if (!draggingEvent || !dragStartTime) {
-        draggingEvent = null;
-        dragStartTime = null;
+        resetDrag();
         return;
       }
 
-      const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-      const diff = currentY - dragStartY;
-      
-      // FIX: If drag is too small, cancel
-      if (Math.abs(diff) < 30) {
-        console.log('Drag too small, canceling');
-        if (draggingEvent) {
-          draggingEvent.classList.remove('dragging');
-          draggingEvent.style.transform = '';
+      try {
+        const isTouch = e.changedTouches ? true : false;
+        let currentY;
+        
+        if (isTouch) {
+          if (e.changedTouches.length === 0) {
+            resetDrag();
+            return;
+          }
+          currentY = e.changedTouches[0].clientY;
+        } else {
+          currentY = e.clientY;
         }
-        draggingEvent = null;
-        dragStartTime = null;
-        return;
-      }
+        
+        const diff = currentY - dragStartY;
+        
+        // FIX: Only allow drops at 15-minute intervals (minimum 15 min = 1 interval)
+        const gridElement = document.getElementById('week-grid');
+        if (!gridElement) {
+          resetDrag();
+          return;
+        }
 
-      const gridElement = document.getElementById('week-grid');
-      const gridRect = gridElement.getBoundingClientRect();
-      
-      const pixelsPerHour = gridRect.height / 24;
-      const hoursDiff = diff / pixelsPerHour;
-      const minutesDiff = Math.round(hoursDiff * 60 / 15) * 15;
+        const gridRect = gridElement.getBoundingClientRect();
+        const pixelsPerHour = gridRect.height / 24;
+        const pixelsPer15Min = pixelsPerHour / 4;
+        
+        // Must be at least one 15-minute interval
+        if (Math.abs(diff) < pixelsPer15Min) {
+          console.log('Drag less than 15 minutes');
+          resetDrag();
+          return;
+        }
 
-      const [hours, minutes] = dragStartTime.split(':').map(Number);
-      let totalMinutes = hours * 60 + minutes + minutesDiff;
-      
-      totalMinutes = Math.round(totalMinutes / 15) * 15;
+        const minutesDiff = Math.round((diff / pixelsPerHour) * 60 / 15) * 15;
 
-      if (totalMinutes < 0) totalMinutes = 0;
-      if (totalMinutes > 1439) totalMinutes = 1439;
+        const [hours, minutes] = dragStartTime.split(':').map(Number);
+        let totalMinutes = hours * 60 + minutes + minutesDiff;
+        
+        totalMinutes = Math.max(0, Math.min(1439, Math.round(totalMinutes / 15) * 15));
 
-      let newHours = Math.floor(totalMinutes / 60);
-      let newMinutes = totalMinutes % 60;
+        let newHours = Math.floor(totalMinutes / 60);
+        let newMinutes = totalMinutes % 60;
+        const newTime = `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
 
-      const newTime = `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+        const eventId = draggingEvent.dataset.eventId;
+        const eventIndex = allEvents.findIndex(e => e.id === eventId);
 
-      const eventId = draggingEvent.dataset.eventId;
-      const eventToUpdate = allEvents.find(e => e.id === eventId);
+        if (eventIndex < 0 || allEvents[eventIndex].time === newTime) {
+          resetDrag();
+          return;
+        }
 
-      if (eventToUpdate && eventToUpdate.time !== newTime) {
-        const duration = eventToUpdate.endTime ? calculateDuration(eventToUpdate.time, eventToUpdate.endTime) : null;
+        const eventToUpdate = allEvents[eventIndex];
+        
+        // Calculate end time if needed
         let newEndTime = null;
-        if (duration) {
-          const [durHours, durMins] = duration.split(/[hm]/).filter(x => x).map(Number);
-          let totalDurMins = (durHours || 0) * 60 + (durMins || 0);
-          let endTotalMinutes = newHours * 60 + newMinutes + totalDurMins;
+        if (eventToUpdate.endTime) {
+          const [eHours, eMins] = eventToUpdate.endTime.split(':').map(Number);
+          const duration = (eHours * 60 + eMins) - (hours * 60 + minutes);
+          let newEndMinutes = totalMinutes + duration;
+          newEndMinutes = Math.max(0, Math.min(1439, newEndMinutes));
           
-          endTotalMinutes = Math.round(endTotalMinutes / 15) * 15;
-          
-          if (endTotalMinutes > 1439) endTotalMinutes = 1439;
-          
-          let endHours = Math.floor(endTotalMinutes / 60);
-          let endMins = endTotalMinutes % 60;
+          let endHours = Math.floor(newEndMinutes / 60);
+          let endMins = newEndMinutes % 60;
           newEndTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
         }
 
-        try {
-          console.log(`🔄 Dragging "${eventToUpdate.title}" from ${eventToUpdate.time} → ${newTime}`);
-          
-          // FIX: Update event directly
-          const eventIndex = allEvents.findIndex(e => e.id === eventId);
-          if (eventIndex >= 0) {
-            allEvents[eventIndex].time = newTime;
-            allEvents[eventIndex].endTime = newEndTime || null;
-            saveEvents();
-            console.log('✓ Saved:', allEvents[eventIndex]);
-          }
-          
-          showStatus(`✓ ${eventToUpdate.title} → ${formatTimeEastern(newTime)}`, 'success');
-          showSyncIndicator();
-          triggerHaptic([40]);
-          
-          // FIX: Clear transform BEFORE re-rendering
-          if (draggingEvent) {
-            draggingEvent.classList.remove('dragging');
-            draggingEvent.style.transform = '';
-          }
-          
-          // FIX: Render with slight delay to ensure visual update
-          setTimeout(() => {
-            renderWeekView();
-            renderCalendar();
-            renderUpcomingEvents();
-            renderEventsPage();
-          }, 50);
-          
-        } catch (err) {
-          console.error('Drag error:', err);
-          showStatus('Error rescheduling', 'error');
-          triggerHaptic([100, 50, 100]);
-          if (draggingEvent) {
-            draggingEvent.classList.remove('dragging');
-            draggingEvent.style.transform = '';
-          }
-        }
-      } else {
-        console.log('No change in time or too small');
-        if (draggingEvent) {
-          draggingEvent.classList.remove('dragging');
-          draggingEvent.style.transform = '';
-        }
-      }
+        // Update and save
+        allEvents[eventIndex].time = newTime;
+        allEvents[eventIndex].endTime = newEndTime || null;
+        saveEvents();
+        
+        console.log(`✓ Updated "${eventToUpdate.title}" to ${newTime}`);
+        showStatus(`✓ ${eventToUpdate.title} → ${formatTimeEastern(newTime)}`, 'success');
+        showSyncIndicator();
+        triggerHaptic([40]);
 
-      draggingEvent = null;
-      dragStartTime = null;
+        resetDrag();
+
+        // Re-render ALL views
+        setTimeout(() => {
+          console.log('🔄 Re-rendering all views...');
+          renderWeekView();
+          renderCalendar();
+          renderUpcomingEvents();
+          renderEventsPage();
+          console.log('✓ All views updated');
+        }, 50);
+
+      } catch (err) {
+        console.error('Drag error:', err);
+        showStatus('Error rescheduling', 'error');
+        triggerHaptic([100, 50, 100]);
+        resetDrag();
+      }
 
       document.removeEventListener('mousemove', handleDragMove);
       document.removeEventListener('touchmove', handleDragMove);
       document.removeEventListener('mouseup', handleDragEnd);
       document.removeEventListener('touchend', handleDragEnd);
+    }
+
+    function resetDrag() {
+      if (draggingEvent) {
+        draggingEvent.classList.remove('dragging');
+        draggingEvent.style.transform = '';
+        draggingEvent.style.opacity = '';
+      }
+      draggingEvent = null;
+      dragStartTime = null;
+      dragStartY = 0;
+      dragDateStr = null;
+      touchIdentifier = null;
     }
 
     function updateCurrentTimeLine() {
