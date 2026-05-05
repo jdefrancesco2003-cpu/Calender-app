@@ -238,6 +238,27 @@ Return ONLY this JSON:
     }
 
     console.log('✓ Event parsed successfully:', parsed);
+    
+    // PHASE 7: If time exists but no endTime, add 30-minute default duration
+    if (parsed.time && !parsed.endTime) {
+      const [hours, minutes] = parsed.time.split(':').map(Number);
+      let endMinutes = minutes + 30;
+      let endHours = hours;
+      
+      if (endMinutes >= 60) {
+        endHours += 1;
+        endMinutes -= 60;
+      }
+      
+      if (endHours >= 24) {
+        endHours = 23;
+        endMinutes = 59;
+      }
+      
+      parsed.endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+      console.log(`✓ Added 30-min default: ${parsed.time} → ${parsed.endTime}`);
+    }
+    
     return parsed;
   } catch (err) {
     console.error('✗ Parse error:', err.message);
