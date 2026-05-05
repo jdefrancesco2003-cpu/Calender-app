@@ -439,15 +439,19 @@
     function archivePastEvents() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const pastEvents = allEvents.filter(e => new Date(e.date) < today);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      // FIX: Properly compare date strings
+      const pastEvents = allEvents.filter(e => e.date < todayStr);
       
       if (pastEvents.length === 0) {
         showStatus('No past events to archive', 'error');
         return;
       }
 
+      console.log(`📦 Archiving ${pastEvents.length} past events`);
       archivedEvents.push(...pastEvents);
-      allEvents = allEvents.filter(e => new Date(e.date) >= today);
+      allEvents = allEvents.filter(e => e.date >= todayStr);
       saveArchive();
       saveEvents();
       
@@ -994,6 +998,11 @@
         if (eventToDelete) {
           lastDeletedEvent = JSON.parse(JSON.stringify(eventToDelete));
           lastDeletedEventIndex = allEvents.findIndex(e => e.id === id);
+          
+          // FIX: Archive deleted events
+          console.log(`🗑️ Archiving deleted event: ${eventToDelete.title}`);
+          archivedEvents.push(eventToDelete);
+          saveArchive();
         }
 
         allEvents = allEvents.filter(e => e.id !== id);
@@ -1014,6 +1023,11 @@
       try {
         allEvents.push(lastDeletedEvent);
         saveEvents();
+        
+        // FIX: Remove from archive if it was archived
+        archivedEvents = archivedEvents.filter(e => e.id !== lastDeletedEvent.id);
+        saveArchive();
+        
         showStatus(`✓ ${lastDeletedEvent.title} restored`, 'success');
         showSyncIndicator();
         document.getElementById('undo-toast').style.display = 'none';
@@ -1402,10 +1416,25 @@
 
       const currentY = e.touches ? e.touches[0].clientY : e.clientY;
       const diff = currentY - dragStartY;
+      
+      // FIX: If drag is too small, cancel
+      if (Math.abs(diff) < 30) {
+        console.log('Drag too small, canceling');
+        if (draggingEvent) {
+          draggingEvent.classList.remove('dragging');
+          draggingEvent.style.transform = '';
+        }
+        draggingEvent = null;
+        dragStartTime = null;
+        return;
+      }
+
       const gridElement = document.getElementById('week-grid');
       const gridRect = gridElement.getBoundingClientRect();
-      const pixelsPerMinute = gridRect.height / (24 * 60);
-      const minutesDiff = Math.round(diff / (pixelsPerMinute * 15)) * 15;
+      
+      const pixelsPerHour = gridRect.height / 24;
+      const hoursDiff = diff / pixelsPerHour;
+      const minutesDiff = Math.round(hoursDiff * 60 / 15) * 15;
 
       const [hours, minutes] = dragStartTime.split(':').map(Number);
       let totalMinutes = hours * 60 + minutes + minutesDiff;
@@ -1441,36 +1470,52 @@
         }
 
         try {
-          const idx = allEvents.findIndex(e => e.id === eventId);
-          if (idx >= 0) {
-            allEvents[idx] = {
-              ...allEvents[idx],
-              time: newTime,
-              endTime: newEndTime || null
-            };
-          }
-          saveEvents();
+          console.log(`🔄 Dragging "${eventToUpdate.title}" from ${eventToUpdate.time} → ${newTime}`);
           
-          showStatus(`✓ ${eventToUpdate.title} moved`, 'success');
+          // FIX: Update event directly
+          const eventIndex = allEvents.findIndex(e => e.id === eventId);
+          if (eventIndex >= 0) {
+            allEvents[eventIndex].time = newTime;
+            allEvents[eventIndex].endTime = newEndTime || null;
+            saveEvents();
+            console.log('✓ Saved:', allEvents[eventIndex]);
+          }
+          
+          showStatus(`✓ ${eventToUpdate.title} → ${formatTimeEastern(newTime)}`, 'success');
           showSyncIndicator();
           triggerHaptic([40]);
           
-          renderCalendar();
-          renderUpcomingEvents();
-          renderEventsPage();
-          renderWeekView();
+          // FIX: Clear transform BEFORE re-rendering
+          if (draggingEvent) {
+            draggingEvent.classList.remove('dragging');
+            draggingEvent.style.transform = '';
+          }
+          
+          // FIX: Render with slight delay to ensure visual update
+          setTimeout(() => {
+            renderWeekView();
+            renderCalendar();
+            renderUpcomingEvents();
+            renderEventsPage();
+          }, 50);
+          
         } catch (err) {
-          console.error('Drag save error:', err);
-          showStatus('Error rescheduling event', 'error');
+          console.error('Drag error:', err);
+          showStatus('Error rescheduling', 'error');
           triggerHaptic([100, 50, 100]);
-          renderWeekView();
+          if (draggingEvent) {
+            draggingEvent.classList.remove('dragging');
+            draggingEvent.style.transform = '';
+          }
+        }
+      } else {
+        console.log('No change in time or too small');
+        if (draggingEvent) {
+          draggingEvent.classList.remove('dragging');
+          draggingEvent.style.transform = '';
         }
       }
 
-      if (draggingEvent) {
-        draggingEvent.classList.remove('dragging');
-        draggingEvent.style.transform = '';
-      }
       draggingEvent = null;
       dragStartTime = null;
 
