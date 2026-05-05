@@ -735,11 +735,27 @@
     async function loadEvents() {
       try {
         const response = await fetch('/api/events');
-        allEvents = await response.json();
+        let loaded = await response.json();
+        
+        // FIX: Load archived events first, then filter them out from active events
+        loadArchive();
+        
+        // Remove any archived events from loaded list
+        const archivedIds = new Set(archivedEvents.map(e => e.id));
+        loaded = loaded.filter(e => !archivedIds.has(e.id));
+        
+        allEvents = loaded;
         saveEvents();
       } catch (err) {
         const saved = localStorage.getItem('calendarEvents');
-        allEvents = saved ? JSON.parse(saved) : [];
+        let loaded = saved ? JSON.parse(saved) : [];
+        
+        // FIX: Also filter archived when loading from localStorage
+        loadArchive();
+        const archivedIds = new Set(archivedEvents.map(e => e.id));
+        loaded = loaded.filter(e => !archivedIds.has(e.id));
+        
+        allEvents = loaded;
         showStatus('Using local storage', 'success');
       }
     }
@@ -1194,6 +1210,9 @@
     }
 
     function renderCalendar() {
+      // FIX: Filter out archived events
+      const activeEvents = allEvents.filter(e => !archivedEvents.some(ae => ae.id === e.id));
+      
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       document.getElementById('month-year').textContent = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -1217,7 +1236,7 @@
         const dateStr = date.toISOString().split('T')[0];
         const isToday = dateStr === today.toISOString().split('T')[0];
         const isSelected = dateStr === selectedDate;
-        const dayEvents = allEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate));
+        const dayEvents = activeEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate));
         const eventCount = dayEvents.length;
         html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="openDayModal('${dateStr}'); triggerHaptic([40])"><div class="day-number">${day}</div>${eventCount > 0 ? `<div class="day-count">${eventCount}</div>` : ''}</div>`;
       }
@@ -1566,6 +1585,9 @@
     }
 
     function renderUpcomingEvents() {
+      // FIX: Filter out archived events
+      const activeEvents = allEvents.filter(e => !archivedEvents.some(ae => ae.id === e.id));
+      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
@@ -1577,7 +1599,7 @@
         later: []
       };
 
-      allEvents.forEach(event => {
+      activeEvents.forEach(event => {
         if (new Date(event.date) >= today) {
           const group = getDateGroup(event.date);
           groupedEvents[group.group].push({ ...event, groupLabel: group.label });
@@ -1626,7 +1648,10 @@
     }
 
     function renderEventsPage() {
-      const sorted = [...allEvents].sort((a, b) => {
+      // FIX: Filter out archived events
+      const activeEvents = allEvents.filter(e => !archivedEvents.some(ae => ae.id === e.id));
+      
+      const sorted = [...activeEvents].sort((a, b) => {
         const dateCompare = new Date(a.date) - new Date(b.date);
         if (dateCompare !== 0) return dateCompare;
         if (a.isAllDay && !b.isAllDay) return -1;
