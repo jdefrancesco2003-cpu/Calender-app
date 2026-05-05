@@ -10,6 +10,44 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// ===== PHASE 6: EST TIMEZONE HELPERS =====
+const EST_TIMEZONE = 'America/New_York';
+
+function getESTDateString() {
+  const now = new Date();
+  const estFormatter = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: EST_TIMEZONE
+  });
+  const parts = estFormatter.formatToParts(now);
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  return `${year}-${month}-${day}`;
+}
+
+function getESTTimeString() {
+  const now = new Date();
+  const estFormatter = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: EST_TIMEZONE
+  });
+  return estFormatter.format(now);
+}
+
+function getCurrentESTInfo() {
+  return {
+    date: getESTDateString(),
+    time: getESTTimeString(),
+    timezone: EST_TIMEZONE
+  };
+}
+// ===== END PHASE 6 TIMEZONE HELPERS =====
+
 const client = new Anthropic();
 const mongoUri = process.env.MONGODB_URI;
 let eventsCollection;
@@ -91,25 +129,31 @@ function getFormattedDate() {
   return today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-async function parseEvent(text) {
+// PHASE 6: Updated parseEvent to accept EST context
+async function parseEvent(text, currentESTDate, currentESTTime) {
   if (!text || text.trim().length === 0) {
     throw new Error('Event text cannot be empty');
   }
 
-  const today = getTodayString();
-  const tomorrow = getTomorrowString();
+  const today = currentESTDate || getTodayString();
   const formattedToday = getFormattedDate();
-  const modelName = 'claude-opus-4-1-20250805';
+  const modelName = 'claude-haiku-4.5'; // PHASE 6: Switched from claude-opus-4-1-20250805 for 90% cost savings
 
   try {
-    console.log(`📝 Parsing event: "${text}"`);
+    console.log(`📝 Parsing event: "${text}" (EST Date: ${today}, EST Time: ${currentESTTime || 'N/A'})`);
     
+    // PHASE 6: Updated system prompt with EST context
     const response = await client.messages.create({
       model: modelName,
       max_tokens: 500,
       messages: [{
         role: 'user',
-        content: `You are a calendar event parser. Today is ${formattedToday} (${today}). Parse this event: "${text}"
+        content: `You are a calendar event parser. The user is in EST (Eastern Standard Time).
+
+Current EST date: ${today}
+Current EST time: ${currentESTTime || 'unknown'}
+
+Parse this event: "${text}"
 
 Return ONLY valid JSON. No markdown, no extra text.
 
@@ -121,13 +165,13 @@ Extract:
 5. endTime: End time in HH:mm format, or null
 6. isAllDay: true if no specific times mentioned, false otherwise
 
-Date rules (TODAY = ${today}, TOMORROW = ${tomorrow}):
+Date rules (TODAY = ${today}):
 - "today" → ${today}
-- "tomorrow" → ${tomorrow}
-- "next week" → 7 days from today
+- "tomorrow" → next day from ${today}
+- "next week" → 7 days from ${today}
 - Specific dates like "June 5" → 2026-06-05
 - Ranges like "June 5-7" → date = 2026-06-05, endDate = 2026-06-07
-- Day names → next occurring day
+- Day names → next occurring day from ${today}
 - For ranges → date = start, endDate = end
 
 Time rules:
@@ -201,14 +245,16 @@ Return ONLY this JSON:
   }
 }
 
+// PHASE 6: Updated /api/events/parse endpoint to receive EST context
 app.post('/api/events/parse', async (req, res) => {
-  const { text } = req.body;
+  const { text, currentESTDate, currentESTTime, timezone } = req.body;
   if (!text) {
     return res.status(400).json({ error: 'Event text is required' });
   }
 
   try {
-    const parsed = await parseEvent(text);
+    // PHASE 6: Pass EST context to parseEvent
+    const parsed = await parseEvent(text, currentESTDate, currentESTTime);
     const newEvent = {
       id: Date.now().toString(),
       title: parsed.title,
@@ -314,7 +360,7 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
+  res.json({ status: 'ok', timestamp: new Date(), version: '0.6', model: 'claude-haiku-4.5', timezone: EST_TIMEZONE });
 });
 
 async function startServer() {
@@ -322,6 +368,8 @@ async function startServer() {
     await connectMongoDB();
     app.listen(PORT, () => {
       console.log(`✓ Calendar API running on port ${PORT}`);
+      console.log(`✓ Model: claude-haiku-4.5 (PHASE 6)`);
+      console.log(`✓ Timezone: EST (America/New_York)`);
     });
   } catch (err) {
     console.error('✗ Failed to start server:', err.message);
