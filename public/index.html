@@ -83,6 +83,9 @@
     .week-all-day { padding: 8px 4px; background: linear-gradient(90deg, rgba(74, 157, 111, 0.2) 0%, rgba(74, 157, 111, 0.1) 100%); border-bottom: 2px solid var(--primary); min-height: 48px; display: flex; flex-direction: column; justify-content: center; border-left: 3px solid var(--primary); }
     .all-day-event { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 6px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 2px 8px rgba(74, 157, 111, 0.2); transition: all 0.2s ease; }
     .all-day-event:active { transform: scale(0.98); }
+    /* PHASE 6: Multi-day event visuals */
+    .multi-day-event { background: rgba(74, 157, 111, 0.3); border: 1px solid var(--primary); color: var(--text-primary); padding: 4px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: all 0.2s ease; }
+    .multi-day-event:active { background: rgba(74, 157, 111, 0.5); }
     .week-event { position: absolute; background: #2a2a2c; border-left: 4px solid var(--primary); border-radius: 2px; padding: 5px 6px; cursor: grab; overflow: hidden; margin: 0; left: 0.5px; right: 0.5px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 44px; word-wrap: break-word; white-space: normal; touch-action: none; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); transition: all 0.15s ease; }
     .week-event.dragging { opacity: 0.9; box-shadow: 0 8px 24px rgba(74, 157, 111, 0.3); z-index: 50; border-left-width: 6px; }
     .week-event:active { cursor: grabbing; }
@@ -148,6 +151,11 @@
     .day-events-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 16px; }
     .upcoming-day-group { margin-bottom: 24px; }
     .upcoming-day-header { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+    /* PHASE 6: Archive system modal */
+    .archive-modal { max-height: 70vh; }
+    .archive-event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.8) 100%); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid rgba(74, 157, 111, 0.4); }
+    .archive-event-buttons { display: flex; gap: 6px; }
+    .archive-event-buttons button { padding: 6px 10px; font-size: 12px; min-height: auto; }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -171,6 +179,8 @@
       </div>
       <div class="dropdown-menu" id="dropdown-menu">
         <button class="dropdown-item" onclick="exportEvents(); triggerHaptic(20)">📥 Export</button>
+        <button class="dropdown-item" onclick="openArchiveModal(); triggerHaptic(20)">📦 Archive Past Events</button>
+        <button class="dropdown-item" onclick="viewArchived(); triggerHaptic(20)">📂 View Archived</button>
         <button class="dropdown-item" onclick="openSettings(); triggerHaptic(20)">⚙️ Settings</button>
       </div>
     </header>
@@ -308,6 +318,15 @@
     </div>
   </div>
 
+  <!-- ARCHIVE MODAL -->
+  <div class="modal-overlay" id="archive-modal-overlay">
+    <div class="modal archive-modal">
+      <h3 style="margin-bottom: 16px;">📂 Archived Events</h3>
+      <div id="archived-events-list"></div>
+      <button class="btn-secondary" style="width: 100%; margin-top: 12px;" onclick="closeArchiveModal(); triggerHaptic(20)">Close</button>
+    </div>
+  </div>
+
   <!-- SETTINGS MODAL -->
   <div class="modal-overlay" id="settings-overlay">
     <div class="modal" id="settings-modal">
@@ -351,8 +370,157 @@
     let draggingEvent = null;
     let dragStartY = 0;
     let dragStartTime = null;
+    let archivedEvents = []; // PHASE 6: Archive system
 
-    const WEATHER_API_KEY = '46a759eb926bfad1530ec2671deb009c'; // User will add their OpenWeatherMap API key
+    const WEATHER_API_KEY = '46a759eb926bfad1530ec2671deb009c';
+    const EST_TIMEZONE = 'America/New_York'; // PHASE 6: EST timezone lock
+
+    // ===== PHASE 6: EST TIMEZONE HELPERS =====
+    function getESTNow() {
+      const now = new Date();
+      const estFormatter = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: EST_TIMEZONE
+      });
+      return estFormatter.format(now);
+    }
+
+    function getESTDateString() {
+      const now = new Date();
+      const estFormatter = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: EST_TIMEZONE
+      });
+      const parts = estFormatter.formatToParts(now);
+      const year = parts.find(p => p.type === 'year').value;
+      const month = parts.find(p => p.type === 'month').value;
+      const day = parts.find(p => p.type === 'day').value;
+      return `${year}-${month}-${day}`;
+    }
+
+    function getESTTimeString() {
+      const now = new Date();
+      const estFormatter = new Intl.DateTimeFormat('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: EST_TIMEZONE
+      });
+      return estFormatter.format(now);
+    }
+
+    function getCurrentESTInfo() {
+      return {
+        date: getESTDateString(),
+        time: getESTTimeString(),
+        timezone: EST_TIMEZONE
+      };
+    }
+    // ===== END PHASE 6 TIMEZONE HELPERS =====
+
+    // ===== PHASE 6: ARCHIVE FUNCTIONS =====
+    function saveArchive() {
+      localStorage.setItem('archivedEvents', JSON.stringify(archivedEvents));
+    }
+
+    function loadArchive() {
+      const saved = localStorage.getItem('archivedEvents');
+      archivedEvents = saved ? JSON.parse(saved) : [];
+    }
+
+    function archivePastEvents() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const pastEvents = allEvents.filter(e => new Date(e.date) < today);
+      
+      if (pastEvents.length === 0) {
+        showStatus('No past events to archive', 'error');
+        return;
+      }
+
+      archivedEvents.push(...pastEvents);
+      allEvents = allEvents.filter(e => new Date(e.date) >= today);
+      saveArchive();
+      saveEvents();
+      
+      showStatus(`✓ ${pastEvents.length} event(s) archived`, 'success');
+      closeMenuOnTab();
+      renderCalendar();
+      renderUpcomingEvents();
+      renderEventsPage();
+    }
+
+    function openArchiveModal() {
+      archivePastEvents();
+      closeMenuOnTab();
+    }
+
+    function viewArchived() {
+      const modal = document.getElementById('archive-modal-overlay');
+      let html = '';
+      
+      if (archivedEvents.length === 0) {
+        html = '<div class="empty-state"><div class="empty-state-icon">📦</div>No archived events</div>';
+      } else {
+        archivedEvents.forEach(event => {
+          const timeStr = formatEventTime(event.time, event.endTime);
+          const dateObj = new Date(event.date + 'T00:00:00');
+          const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          
+          html += `<div class="archive-event-item">
+            <div style="flex: 1;">
+              <div class="event-title" style="margin-bottom: 4px;">${event.title}</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">${dateLabel}${timeStr ? ` • ${timeStr}` : ''}</div>
+            </div>
+            <div class="archive-event-buttons">
+              <button class="btn-secondary" style="font-size: 11px;" onclick="restoreFromArchive('${event.id}'); triggerHaptic([40])">Restore</button>
+              <button class="btn-danger" style="font-size: 11px;" onclick="deleteFromArchive('${event.id}'); triggerHaptic([100, 50, 100])">Delete</button>
+            </div>
+          </div>`;
+        });
+      }
+      
+      document.getElementById('archived-events-list').innerHTML = html;
+      modal.classList.add('active');
+      closeMenuOnTab();
+    }
+
+    function restoreFromArchive(eventId) {
+      const event = archivedEvents.find(e => e.id === eventId);
+      if (event) {
+        archivedEvents = archivedEvents.filter(e => e.id !== eventId);
+        allEvents.push(event);
+        saveArchive();
+        saveEvents();
+        showStatus(`✓ ${event.title} restored`, 'success');
+        showSyncIndicator();
+        viewArchived(); // Refresh modal
+        renderCalendar();
+        renderUpcomingEvents();
+        renderEventsPage();
+      }
+    }
+
+    function deleteFromArchive(eventId) {
+      if (!confirm('Permanently delete this archived event?')) return;
+      archivedEvents = archivedEvents.filter(e => e.id !== eventId);
+      saveArchive();
+      showStatus('Event deleted', 'success');
+      viewArchived(); // Refresh modal
+    }
+
+    function closeArchiveModal() {
+      document.getElementById('archive-modal-overlay').classList.remove('active');
+    }
+    // ===== END PHASE 6 ARCHIVE FUNCTIONS =====
 
     function capitalizeTitle(str) {
       if (!str) return '';
@@ -440,7 +608,7 @@
 
     async function fetchWeather() {
       if (!WEATHER_API_KEY) {
-        return; // Skip if no API key
+        return;
       }
       try {
         const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=42.2088&lon=-71.2170&units=imperial&appid=${WEATHER_API_KEY}`);
@@ -467,6 +635,7 @@
 
     async function init() {
       await loadEvents();
+      loadArchive(); // PHASE 6: Load archived events
       loadNotificationSettings();
       renderCalendar();
       renderUpcomingEvents();
@@ -475,7 +644,7 @@
       scheduleNotifications();
       updateWeekHeader();
       fetchWeather();
-      setInterval(fetchWeather, 600000); // Refresh weather every 10 minutes
+      setInterval(fetchWeather, 600000);
     }
 
     function toggleMenu() {
@@ -563,12 +732,16 @@
       try {
         const response = await fetch('/api/events');
         allEvents = await response.json();
-        localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
+        saveEvents();
       } catch (err) {
         const saved = localStorage.getItem('calendarEvents');
         allEvents = saved ? JSON.parse(saved) : [];
         showStatus('Using local storage', 'success');
       }
+    }
+
+    function saveEvents() {
+      localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
     }
 
     function loadNotificationSettings() {
@@ -628,6 +801,7 @@
       }
     }
 
+    // PHASE 6: Updated parseEvent to send EST context
     async function parseEvent() {
       const input = document.getElementById('event-input').value.trim();
       if (!input) {
@@ -637,10 +811,16 @@
       const btn = document.getElementById('parse-btn');
       btn.disabled = true;
       try {
+        const estInfo = getCurrentESTInfo();
         const response = await fetch('/api/events/parse', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: input })
+          body: JSON.stringify({ 
+            text: input,
+            currentESTDate: estInfo.date,
+            currentESTTime: estInfo.time,
+            timezone: estInfo.timezone
+          })
         });
         const data = await response.json();
         if (!response.ok || data.error) {
@@ -692,6 +872,7 @@
       document.getElementById('confirmation-overlay').classList.add('active');
     }
 
+    // PHASE 6: Fixed "Edit Before Saving" - captures modal values
     function enterEditMode() {
       if (!pendingParsedEvent) return;
       pendingEditMode = true;
@@ -702,6 +883,7 @@
       document.getElementById('modal-time-input').value = pendingParsedEvent.time || '';
       document.getElementById('modal-end-time-input').value = pendingParsedEvent.endTime || '';
       document.getElementById('modal-all-day-toggle').checked = pendingParsedEvent.isAllDay || false;
+      toggleAllDayModal();
 
       closeConfirmation();
       document.getElementById('modal-overlay').classList.add('active');
@@ -716,16 +898,13 @@
       }
       
       try {
-        await fetch('/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(pendingParsedEvent)
-        });
+        const newEvent = { id: generateId(), ...pendingParsedEvent };
+        allEvents.push(newEvent);
+        saveEvents();
         showStatus(`✓ ${pendingParsedEvent.title} added`, 'success');
         showSyncIndicator();
         document.getElementById('event-input').value = '';
         closeConfirmation();
-        await loadEvents();
         renderCalendar();
         renderUpcomingEvents();
         scheduleNotifications();
@@ -738,6 +917,10 @@
       document.getElementById('confirmation-overlay').classList.remove('active');
       pendingParsedEvent = null;
       pendingEditMode = false;
+    }
+
+    function generateId() {
+      return 'evt-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     }
 
     async function addEventManually() {
@@ -755,6 +938,7 @@
       }
 
       const newEvent = {
+        id: generateId(),
         title,
         date,
         endDate: endDate || null,
@@ -771,44 +955,26 @@
 
       if (checkEventOverlap(newEvent)) {
         showOverlapConfirmation(title, async () => {
-          try {
-            const response = await fetch('/api/events', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(newEvent)
-            });
-            const data = await response.json();
-            showStatus(`✓ ${data.title} saved`, 'success');
-            showSyncIndicator();
-            clearAddForm();
-            await loadEvents();
-            renderCalendar();
-            renderUpcomingEvents();
-            scheduleNotifications();
-          } catch (err) {
-            showStatus('Error saving event', 'error');
-          }
+          allEvents.push(newEvent);
+          saveEvents();
+          showStatus(`✓ ${newEvent.title} saved`, 'success');
+          showSyncIndicator();
+          clearAddForm();
+          renderCalendar();
+          renderUpcomingEvents();
+          scheduleNotifications();
         });
         return;
       }
 
-      try {
-        const response = await fetch('/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newEvent)
-        });
-        const data = await response.json();
-        showStatus(`✓ ${data.title} saved`, 'success');
-        showSyncIndicator();
-        clearAddForm();
-        await loadEvents();
-        renderCalendar();
-        renderUpcomingEvents();
-        scheduleNotifications();
-      } catch (err) {
-        showStatus('Error saving event', 'error');
-      }
+      allEvents.push(newEvent);
+      saveEvents();
+      showStatus(`✓ ${newEvent.title} saved`, 'success');
+      showSyncIndicator();
+      clearAddForm();
+      renderCalendar();
+      renderUpcomingEvents();
+      scheduleNotifications();
     }
 
     function clearAddForm() {
@@ -830,15 +996,14 @@
           lastDeletedEventIndex = allEvents.findIndex(e => e.id === id);
         }
 
-        const response = await fetch(`/api/events/${id}`, { method: 'DELETE' });
-        if (response.ok) {
-          showUndoToast(`Deleted ${eventToDelete?.title || 'event'}`);
-          await loadEvents();
-          renderCalendar();
-          renderUpcomingEvents();
-          renderEventsPage();
-          scheduleNotifications();
-        }
+        allEvents = allEvents.filter(e => e.id !== id);
+        saveEvents();
+        
+        showUndoToast(`Deleted ${eventToDelete?.title || 'event'}`);
+        renderCalendar();
+        renderUpcomingEvents();
+        renderEventsPage();
+        scheduleNotifications();
       } catch (err) {
         showStatus('Error deleting', 'error');
       }
@@ -847,17 +1012,13 @@
     async function undoDelete() {
       if (!lastDeletedEvent) return;
       try {
-        await fetch('/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(lastDeletedEvent)
-        });
+        allEvents.push(lastDeletedEvent);
+        saveEvents();
         showStatus(`✓ ${lastDeletedEvent.title} restored`, 'success');
         showSyncIndicator();
         document.getElementById('undo-toast').style.display = 'none';
         lastDeletedEvent = null;
         lastDeletedEventIndex = -1;
-        await loadEvents();
         renderCalendar();
         renderUpcomingEvents();
         renderEventsPage();
@@ -909,23 +1070,14 @@
     async function undoEditedEvent() {
       if (!lastEditedEvent) return;
       try {
-        await fetch(`/api/events/${editingEventId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: lastEditedEvent.title,
-            date: lastEditedEvent.date,
-            endDate: lastEditedEvent.endDate || null,
-            time: lastEditedEvent.time || null,
-            endTime: lastEditedEvent.endTime || null,
-            description: lastEditedEvent.description || '',
-            isAllDay: lastEditedEvent.isAllDay || false
-          })
-        });
+        const idx = allEvents.findIndex(e => e.id === editingEventId);
+        if (idx >= 0) {
+          allEvents[idx] = lastEditedEvent;
+        }
+        saveEvents();
         showStatus(`✓ ${lastEditedEvent.title} restored`, 'success');
         showSyncIndicator();
         closeModal();
-        await loadEvents();
         renderCalendar();
         renderUpcomingEvents();
         renderEventsPage();
@@ -961,46 +1113,34 @@
 
       if (checkEventOverlap(updatedEvent, editingEventId)) {
         showOverlapConfirmation(title, async () => {
-          try {
-            const response = await fetch(`/api/events/${editingEventId}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(updatedEvent)
-            });
-            const data = await response.json();
-            showStatus(`✓ ${data.title} updated`, 'success');
-            showSyncIndicator();
-            closeModal();
-            await loadEvents();
-            renderCalendar();
-            renderUpcomingEvents();
-            renderEventsPage();
-            scheduleNotifications();
-          } catch (err) {
-            showStatus('Error saving event', 'error');
+          const idx = allEvents.findIndex(e => e.id === editingEventId);
+          if (idx >= 0) {
+            allEvents[idx] = { ...allEvents[idx], ...updatedEvent };
           }
+          saveEvents();
+          showStatus(`✓ ${updatedEvent.title} updated`, 'success');
+          showSyncIndicator();
+          closeModal();
+          renderCalendar();
+          renderUpcomingEvents();
+          renderEventsPage();
+          scheduleNotifications();
         });
         return;
       }
 
-      try {
-        const response = await fetch(`/api/events/${editingEventId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedEvent)
-        });
-        const data = await response.json();
-        showStatus(`✓ ${data.title} updated`, 'success');
-        showSyncIndicator();
-        closeModal();
-        await loadEvents();
-        renderCalendar();
-        renderUpcomingEvents();
-        renderEventsPage();
-        scheduleNotifications();
-      } catch (err) {
-        showStatus('Error saving event', 'error');
+      const idx = allEvents.findIndex(e => e.id === editingEventId);
+      if (idx >= 0) {
+        allEvents[idx] = { ...allEvents[idx], ...updatedEvent };
       }
+      saveEvents();
+      showStatus(`✓ ${updatedEvent.title} updated`, 'success');
+      showSyncIndicator();
+      closeModal();
+      renderCalendar();
+      renderUpcomingEvents();
+      renderEventsPage();
+      scheduleNotifications();
     }
 
     async function deleteEditingEvent() {
@@ -1124,6 +1264,7 @@
       return `${year}-${month}-${day}`;
     }
 
+    // PHASE 6: Updated renderWeekView with multi-day event visuals
     function renderWeekView() {
       const weekStart = new Date(currentDate);
       weekStart.setDate(currentDate.getDate() - currentDate.getDay());
@@ -1154,7 +1295,8 @@
         const isToday = dateStr === getLocalDateString(today);
 
         const allDayEvents = allEvents.filter(e => (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) && e.isAllDay);
-        const timedEvents = allEvents.filter(e => (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) && !e.isAllDay && e.time).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        const multiDayEvents = allEvents.filter(e => (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) && !e.isAllDay && (!e.time || !e.endTime)); // PHASE 6: Multi-day events
+        const timedEvents = allEvents.filter(e => (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) && !e.isAllDay && e.time && e.endTime).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
         html += `<div class="week-day-column ${isToday ? 'today' : ''}">`;
 
@@ -1163,6 +1305,15 @@
           allDayEvents.forEach(event => {
             const endText = event.endDate && event.endDate !== event.date ? ` (${event.endDate})` : '';
             html += `<div class="all-day-event" onclick="openEditModal('${event.id}'); triggerHaptic([40])">${event.title}${endText}</div>`;
+          });
+          html += '</div>';
+        }
+
+        // PHASE 6: Render multi-day events
+        if (multiDayEvents.length > 0) {
+          html += '<div style="padding: 4px; border-bottom: 1px solid rgba(74, 157, 111, 0.2);">';
+          multiDayEvents.forEach(event => {
+            html += `<div class="multi-day-event" onclick="openEditModal('${event.id}'); triggerHaptic([40])">${event.title}</div>`;
           });
           html += '</div>';
         }
@@ -1192,6 +1343,7 @@
     let dragDateStr = null;
     let dragCancelled = false;
 
+    // PHASE 6: Updated startDrag with 600ms hold time (was 300ms)
     function startDrag(e, dateStr) {
       dragCancelled = false;
       dragDateStr = dateStr;
@@ -1200,7 +1352,6 @@
       const eventId = eventElement.dataset.eventId;
       const event = allEvents.find(ev => ev.id === eventId);
 
-      // Wait 300ms for a proper hold
       dragHoldTimer = setTimeout(() => {
         if (dragCancelled) return;
         
@@ -1217,9 +1368,8 @@
         document.addEventListener('touchend', handleDragEnd);
         
         triggerHaptic([50, 30, 50]);
-      }, 300);
+      }, 600); // PHASE 6: Changed from 300ms to 600ms for iOS reliability
 
-      // Cancel drag if user releases before hold completes
       const cancelDrag = () => {
         clearTimeout(dragHoldTimer);
         dragCancelled = true;
@@ -1260,10 +1410,8 @@
       const [hours, minutes] = dragStartTime.split(':').map(Number);
       let totalMinutes = hours * 60 + minutes + minutesDiff;
       
-      // Snap to nearest 15-minute interval
       totalMinutes = Math.round(totalMinutes / 15) * 15;
 
-      // Clamp to 0-1439 (0:00 to 23:45)
       if (totalMinutes < 0) totalMinutes = 0;
       if (totalMinutes > 1439) totalMinutes = 1439;
 
@@ -1283,7 +1431,6 @@
           let totalDurMins = (durHours || 0) * 60 + (durMins || 0);
           let endTotalMinutes = newHours * 60 + newMinutes + totalDurMins;
           
-          // Snap end time to nearest 15-minute interval
           endTotalMinutes = Math.round(endTotalMinutes / 15) * 15;
           
           if (endTotalMinutes > 1439) endTotalMinutes = 1439;
@@ -1294,43 +1441,32 @@
         }
 
         try {
-          const response = await fetch(`/api/events/${eventId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: eventToUpdate.title,
-              date: eventToUpdate.date,
-              endDate: eventToUpdate.endDate || null,
+          const idx = allEvents.findIndex(e => e.id === eventId);
+          if (idx >= 0) {
+            allEvents[idx] = {
+              ...allEvents[idx],
               time: newTime,
-              endTime: newEndTime || null,
-              description: eventToUpdate.description || '',
-              isAllDay: eventToUpdate.isAllDay
-            })
-          });
-          
-          if (!response.ok) throw new Error('Save failed');
+              endTime: newEndTime || null
+            };
+          }
+          saveEvents();
           
           showStatus(`✓ ${eventToUpdate.title} moved`, 'success');
           showSyncIndicator();
           triggerHaptic([40]);
           
-          // Reload and update ALL views
-          await loadEvents();
-          await renderCalendar();
-          await renderUpcomingEvents();
-          await renderEventsPage();
-          await renderWeekView();
+          renderCalendar();
+          renderUpcomingEvents();
+          renderEventsPage();
+          renderWeekView();
         } catch (err) {
           console.error('Drag save error:', err);
           showStatus('Error rescheduling event', 'error');
           triggerHaptic([100, 50, 100]);
-          // Revert visual state on error
-          await loadEvents();
-          await renderWeekView();
+          renderWeekView();
         }
       }
 
-      // Always cleanup after drag completes
       if (draggingEvent) {
         draggingEvent.classList.remove('dragging');
         draggingEvent.style.transform = '';
@@ -1369,11 +1505,9 @@
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       
-      // This week = rest of current calendar week (Sun-Sat)
       const thisWeekEnd = new Date(today);
-      thisWeekEnd.setDate(today.getDate() + (6 - today.getDay())); // ends on Saturday
+      thisWeekEnd.setDate(today.getDate() + (6 - today.getDay()));
       
-      // Next week = next calendar week
       const nextWeekEnd = new Date(thisWeekEnd);
       nextWeekEnd.setDate(thisWeekEnd.getDate() + 7);
 
