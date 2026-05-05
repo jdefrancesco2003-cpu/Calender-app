@@ -1,1967 +1,443 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Calendar">
-  <title>Calendar</title>
+const express = require('express');
+const { Anthropic } = require('@anthropic-ai/sdk');
+const cors = require('cors');
+const { MongoClient } = require('mongodb');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// ===== PHASE 6: EST TIMEZONE HELPERS =====
+const EST_TIMEZONE = 'America/New_York';
+
+function getESTDateString() {
+  const now = new Date();
+  const estFormatter = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: EST_TIMEZONE
+  });
+  const parts = estFormatter.formatToParts(now);
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  return `${year}-${month}-${day}`;
+}
+
+function getESTTimeString() {
+  const now = new Date();
+  const estFormatter = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: EST_TIMEZONE
+  });
+  return estFormatter.format(now);
+}
+
+function getCurrentESTInfo() {
+  return {
+    date: getESTDateString(),
+    time: getESTTimeString(),
+    timezone: EST_TIMEZONE
+  };
+}
+// ===== END PHASE 6 TIMEZONE HELPERS =====
+
+const client = new Anthropic();
+const mongoUri = process.env.MONGODB_URI;
+let eventsCollection;
+let mongoClient;
+
+async function connectMongoDB() {
+  try {
+    mongoClient = new MongoClient(mongoUri, { useUnifiedTopology: true });
+    await mongoClient.connect();
+    const db = mongoClient.db('calendar');
+    eventsCollection = db.collection('events');
+    console.log('✓ Connected to MongoDB');
+    return mongoClient;
+  } catch (err) {
+    console.error('✗ MongoDB connection failed:', err.message);
+    process.exit(1);
+  }
+}
+
+async function loadEvents() {
+  if (!eventsCollection) return [];
+  try {
+    const events = await eventsCollection.find({}).toArray();
+    return events;
+  } catch (err) {
+    console.error('Error loading events:', err.message);
+    return [];
+  }
+}
+
+async function saveEvent(event) {
+  if (!eventsCollection) return null;
+  try {
+    const result = await eventsCollection.insertOne(event);
+    return { ...event, _id: result.insertedId };
+  } catch (err) {
+    console.error('Error saving event:', err.message);
+    return null;
+  }
+}
+
+async function updateEvent(id, updates) {
+  if (!eventsCollection) return null;
+  try {
+    await eventsCollection.updateOne({ id }, { $set: updates });
+    return updates;
+  } catch (err) {
+    console.error('Error updating event:', err.message);
+    return null;
+  }
+}
+
+async function deleteEvent(id) {
+  if (!eventsCollection) return false;
+  try {
+    const result = await eventsCollection.deleteOne({ id });
+    return result.deletedCount > 0;
+  } catch (err) {
+    console.error('Error deleting event:', err.message);
+    return false;
+  }
+}
+
+function getTodayString() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today.toISOString().split('T')[0];
+}
+
+function getTomorrowString() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+  return tomorrow.toISOString().split('T')[0];
+}
+
+function getFormattedDate() {
+  const today = new Date();
+  return today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// PHASE 6: Updated parseEvent to accept EST context
+async function parseEvent(text, currentESTDate, currentESTTime) {
+  if (!text || text.trim().length === 0) {
+    throw new Error('Event text cannot be empty');
+  }
+
+  const today = currentESTDate || getTodayString();
+  const formattedToday = getFormattedDate();
+  const modelName = 'claude-haiku-4-5-20251001'; // PHASE 6: Switched from claude-opus-4-1-20250805 for 90% cost savings
+
+  try {
+    console.log(`📝 Parsing event: "${text}" (EST Date: ${today}, EST Time: ${currentESTTime || 'N/A'})`);
+    
+    // PHASE 6: Updated system prompt with EST context
+    const response = await client.messages.create({
+      model: modelName,
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: `You are a calendar event parser. The user is in EST (Eastern Standard Time).
+
+Current EST date: ${today}
+Current EST time: ${currentESTTime || 'unknown'}
+
+Parse this event: "${text}"
+
+Return ONLY valid JSON. No markdown, no extra text.
+
+Extract:
+1. title: Event name
+2. date: Start date in YYYY-MM-DD format
+3. endDate: End date in YYYY-MM-DD format for multi-day events (or null)
+4. time: Start time in HH:mm 24-hour format, or null
+5. endTime: End time in HH:mm format, or null
+6. isAllDay: true if no specific times mentioned, false otherwise
+
+Date rules (TODAY = ${today}):
+- "today" → ${today}
+- "tomorrow" → next day from ${today}
+- "next week" → 7 days from ${today}
+- Specific dates like "June 5" → 2026-06-05
+- Ranges like "June 5-7" → date = 2026-06-05, endDate = 2026-06-07
+- Day names → next occurring day from ${today}
+- For ranges → date = start, endDate = end
+
+Time rules:
+- "noon" or "12pm" → 12:00
+- "morning" → 09:00
+- "afternoon" → 14:00
+- "evening" → 18:00
+- Specific times → exact (6pm = 18:00)
+- "6pm to 10pm" → time = 18:00, endTime = 22:00
+- No time = null (all-day event)
+
+Return ONLY this JSON:
+{
+  "title": "event name",
+  "date": "YYYY-MM-DD",
+  "endDate": "YYYY-MM-DD" or null,
+  "time": "HH:mm" or null,
+  "endTime": "HH:mm" or null,
+  "isAllDay": true/false
+}`
+      }]
+    });
+
+    const content = response.content[0].text.trim();
+    console.log('✓ Claude response:', content);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('Could not extract JSON');
+      }
+    }
+
+    if (!parsed.title || !parsed.date) {
+      throw new Error('Missing title or date');
+    }
+
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(parsed.date)) {
+      throw new Error(`Invalid date format: ${parsed.date}`);
+    }
+
+    if (parsed.endDate && !dateRegex.test(parsed.endDate)) {
+      parsed.endDate = null;
+    }
+
+    if (parsed.time) {
+      const timeRegex = /^\d{2}:\d{2}$/;
+      if (!timeRegex.test(parsed.time)) {
+        parsed.time = null;
+      }
+    }
+
+    if (parsed.endTime) {
+      const timeRegex = /^\d{2}:\d{2}$/;
+      if (!timeRegex.test(parsed.endTime)) {
+        parsed.endTime = null;
+      }
+    }
+
+    console.log('✓ Event parsed successfully:', parsed);
+    
+    // PHASE 7: If time exists but no endTime, add 30-minute default duration
+    if (parsed.time && !parsed.endTime) {
+      const [hours, minutes] = parsed.time.split(':').map(Number);
+      let endMinutes = minutes + 30;
+      let endHours = hours;
+      
+      if (endMinutes >= 60) {
+        endHours += 1;
+        endMinutes -= 60;
+      }
+      
+      if (endHours >= 24) {
+        endHours = 23;
+        endMinutes = 59;
+      }
+      
+      parsed.endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+      console.log(`✓ Added 30-min default: ${parsed.time} → ${parsed.endTime}`);
+    }
+    
+    return parsed;
+  } catch (err) {
+    console.error('✗ Parse error:', err.message);
+    console.error('Full error:', err);
+    throw err;
+  }
+}
+
+// PHASE 6: Updated /api/events/parse endpoint to receive EST context
+// PHASE 7: Diagnostic endpoint for debugging
+app.post('/api/test-parse', async (req, res) => {
+  console.log('🔍 TEST PARSE - Checking API connectivity...');
+  console.log('API Key exists:', !!process.env.ANTHROPIC_API_KEY);
+  console.log('API Key length:', process.env.ANTHROPIC_API_KEY?.length || 0);
   
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
-    html, body { width: 100%; height: 100%; position: fixed; }
-    :root { --primary: #4a9d6f; --primary-light: #5faf81; --primary-dark: #3a8d5f; --bg-dark: #1c1c1e; --bg-card: #2c2c2e; --bg-light: #3a3a3c; --text-primary: #ffffff; --text-secondary: #a1a1a6; --border-color: #424245; --success: #30b0c0; --error: #ff453a; --warning: #ff9500; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif; background: var(--bg-dark); color: var(--text-primary); padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); overflow: hidden; display: flex; flex-direction: column; }
-    .container { display: flex; flex-direction: column; height: 100%; overflow: hidden; gap: 0; }
-    header { padding: 16px 0 12px 0; border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); }
-    h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-primary); flex: 1; }
-    .header-right { display: flex; align-items: center; gap: 12px; }
-    .weather-widget { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: rgba(74, 157, 111, 0.1); border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid rgba(74, 157, 111, 0.2); animation: fadeIn 0.4s ease; }
-    .weather-icon { font-size: 16px; }
-    .weather-temp { font-weight: 600; color: var(--primary); }
-    .menu-btn { background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%); border: none; color: var(--text-primary); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; -webkit-appearance: none; transition: all 0.2s ease; }
-    .menu-btn:active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); transform: scale(0.95); }
-    .sync-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--success); opacity: 0; transition: opacity 0.2s; box-shadow: 0 0 8px rgba(48, 176, 192, 0.6); }
-    .sync-indicator.visible { opacity: 1; animation: pulse 0.6s ease; }
-    .dropdown-menu { position: fixed; top: max(60px, env(safe-area-inset-top)); left: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; z-index: 2000; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: none; }
-    .dropdown-menu.active { display: flex; flex-direction: column; animation: slideDown 0.3s ease; }
-    .dropdown-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: none; border: none; color: var(--text-primary); text-align: left; cursor: pointer; font-size: 14px; transition: all 0.2s ease; }
-    .dropdown-item:last-child { border-bottom: none; }
-    .dropdown-item:active { background: rgba(74, 157, 111, 0.2); transform: translateX(4px); }
-    .fab { position: fixed; bottom: max(20px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 56px; height: 56px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 50%; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(74, 157, 111, 0.3); z-index: 100; -webkit-appearance: none; transition: all 0.2s ease; }
-    .fab:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(74, 157, 111, 0.4); }
-    .main-content { display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; gap: 0; padding: 0; }
-    .section { background: var(--bg-card); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 0; }
-    .section-title { font-size: 17px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-    .section-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
-    .input-group { display: flex; flex-direction: column; gap: 8px; }
-    .input-group label { font-size: 13px; font-weight: 600; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; }
-    input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--bg-light); color: var(--text-primary); -webkit-appearance: none; appearance: none; min-height: 44px; transition: all 0.2s ease; }
-    input::placeholder, textarea::placeholder { color: var(--text-secondary); }
-    input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74, 157, 111, 0.1); }
-    textarea { resize: none; min-height: 100px; font-size: 16px; }
-    button { padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; min-height: 48px; display: flex; align-items: center; justify-content: center; -webkit-appearance: none; appearance: none; }
-    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 12px rgba(74, 157, 111, 0.2); }
-    .btn-primary:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(74, 157, 111, 0.3); }
-    .btn-secondary { background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%); color: var(--primary); border: 1.5px solid var(--primary); font-weight: 600; }
-    .btn-secondary:active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; transform: scale(0.98); }
-    .btn-danger { background: linear-gradient(135deg, var(--error) 0%, #ff2d22 100%); color: white; font-size: 14px; padding: 10px 14px; min-height: auto; }
-    .btn-danger:active { transform: scale(0.96); opacity: 0.8; }
-    button:disabled { opacity: 0.5; pointer-events: none; }
-    .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); }
-    .month-year { font-size: 18px; font-weight: 600; color: var(--text-primary); }
-    .month-nav { display: flex; gap: 8px; }
-    .month-nav button { width: 40px; height: 40px; padding: 0; border-radius: 8px; background: var(--bg-light); font-size: 18px; color: var(--text-primary); min-height: auto; transition: all 0.2s ease; }
-    .month-nav button:active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); transform: scale(0.92); }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 12px 16px; background: var(--bg-card); }
-    .day-header { text-align: center; font-weight: 600; color: var(--text-secondary); padding: 8px 0; font-size: 12px; letter-spacing: 0.5px; }
-    .day-cell { aspect-ratio: 1; border: 2px solid var(--border-color); border-radius: 8px; padding: 6px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; position: relative; transition: all 0.2s ease; font-size: 12px; }
-    .day-cell:active { transform: scale(0.95); }
-    .day-cell.other-month { background: transparent; border-color: transparent; opacity: 0.3; }
-    .day-cell.today { border: 2px solid var(--primary); background: var(--bg-light); color: var(--text-primary); font-weight: 600; box-shadow: 0 0 0 1px var(--primary), inset 0 0 8px rgba(74, 157, 111, 0.1); }
-    .day-cell.selected { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-color: var(--primary); color: white; font-weight: 600; }
-    .day-number { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-    .day-cell.selected .day-number { color: white; }
-    .day-count { font-size: 10px; color: var(--primary); margin-top: 2px; }
-    .day-cell.selected .day-count { color: rgba(255,255,255,0.9); }
-    .week-view-container { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
-    .week-header { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; padding: 10px 0; background: var(--bg-card); border-bottom: 1px solid var(--border-color); align-items: center; }
-    .week-time-label { padding: 0; font-size: 10px; color: var(--text-secondary); text-align: center; line-height: 1; }
-    .week-day-header { padding: 0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; width: 100%; box-sizing: border-box; }
-    .week-day-name { font-size: 9px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0px; line-height: 1.1; margin: 0; }
-    .week-day-date { font-size: 12px; font-weight: 700; color: var(--text-primary); margin-top: 2px; margin-bottom: 0; }
-    .week-day-date.today { color: var(--primary); font-weight: 700; }
-    .week-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 3px; flex: 1; overflow-y: auto; background: var(--bg-card); padding: 4px; position: relative; }
-    .week-time-slots { display: flex; flex-direction: column; background: linear-gradient(180deg, rgba(74, 157, 111, 0.12) 0%, rgba(74, 157, 111, 0.04) 100%); border-right: 2px solid var(--primary); border-radius: 0; padding: 0; }
-    .time-slot { padding: 2px 0; font-size: 8px; color: var(--text-primary); font-weight: 600; text-align: center; min-height: 60px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; }
-    .week-day-column { border: 1px solid var(--border-color); position: relative; min-height: 100%; border-radius: 2px; background: var(--bg-light); overflow: hidden; }
-    .week-day-column.today { background: rgba(74, 157, 111, 0.08); border-color: var(--primary); }
-    .week-day-column.today::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--primary); }
-    .current-time-line { position: absolute; height: 2px; background: #ff453a; left: 0; right: 0; z-index: 10; box-shadow: 0 0 8px rgba(255, 69, 58, 0.5); }
-    .current-time-dot { position: absolute; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; left: -7px; top: -5px; box-shadow: 0 0 8px rgba(255, 69, 58, 0.6); }
-    .week-all-day { padding: 8px 4px; background: linear-gradient(90deg, rgba(74, 157, 111, 0.2) 0%, rgba(74, 157, 111, 0.1) 100%); border-bottom: 2px solid var(--primary); min-height: 48px; display: flex; flex-direction: column; justify-content: center; border-left: 3px solid var(--primary); }
-    .all-day-event { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 6px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; box-shadow: 0 2px 8px rgba(74, 157, 111, 0.2); transition: all 0.2s ease; }
-    .all-day-event:active { transform: scale(0.98); }
-    /* PHASE 6: Multi-day event visuals */
-    .multi-day-event { background: rgba(74, 157, 111, 0.3); border: 1px solid var(--primary); color: var(--text-primary); padding: 4px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: all 0.2s ease; }
-    .multi-day-event:active { background: rgba(74, 157, 111, 0.5); }
-    .week-event { position: absolute; background: #2a2a2c; border-left: 4px solid var(--primary); border-radius: 2px; padding: 5px 6px; cursor: grab; overflow: hidden; margin: 0; left: 0.5px; right: 0.5px; display: flex; flex-direction: column; justify-content: flex-start; min-height: 44px; word-wrap: break-word; white-space: normal; touch-action: none; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); transition: all 0.15s ease; }
-    .week-event.dragging { opacity: 0.9; box-shadow: 0 8px 24px rgba(74, 157, 111, 0.3); z-index: 50; border-left-width: 6px; }
-    .week-event:active { cursor: grabbing; }
-    .week-event-title { font-weight: 700; color: var(--text-primary); word-break: break-word; font-size: 13px; line-height: 1.2; margin: 0 0 3px 0; }
-    .week-event-time { font-size: 9px; color: var(--text-secondary); white-space: normal; line-height: 1.1; word-break: break-word; margin: 0; }
-    .events-container { padding: 12px 16px; background: var(--bg-card); border-top: 1px solid var(--border-color); overflow-y: auto; }
-    .sidebar-section { margin-bottom: 20px; }
-    .sidebar-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.8) 100%); padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
-    .event-item:active { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(74, 157, 111, 0.15); }
-    .event-item.swipe-left { transform: translateX(-100px); }
-    .event-swipe-actions { position: absolute; right: 0; top: 0; height: 100%; display: flex; gap: 0; background: transparent; }
-    .swipe-action { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; cursor: pointer; border: none; min-width: 50px; min-height: auto; transition: all 0.2s ease; }
-    .swipe-action:active { transform: scale(0.95); }
-    .swipe-action.delete { background: linear-gradient(135deg, var(--error) 0%, #ff2d22 100%); }
-    .event-details { flex: 1; min-width: 0; }
-    .event-title { font-weight: 600; font-size: 15px; color: var(--text-primary); margin-bottom: 4px; }
-    .event-meta { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
-    .event-day-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
-    .event-duration { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
-    .all-day-badge { display: block; font-size: 10px; background: var(--primary); color: white; padding: 2px 6px; border-radius: 3px; margin-top: 4px; font-weight: 600; width: fit-content; }
-    .status-message { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; padding: 12px 16px; border-radius: 10px; font-size: 15px; font-weight: 500; z-index: 1000; animation: slideDown 0.3s ease; }
-    .status-message.success { background: linear-gradient(135deg, var(--success) 0%, #1fa5a5 100%); color: white; }
-    .status-message.error { background: linear-gradient(135deg, var(--error) 0%, #ff2d22 100%); color: white; }
-    .section-tabs { display: flex; gap: 0; padding: 0 16px; border-bottom: 2px solid var(--border-color); background: var(--bg-dark); align-items: center; }
-    .tab-button { flex: 1; padding: 14px 0; background: none; border: none; border-bottom: 3px solid transparent; font-size: 15px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); position: relative; text-align: center; letter-spacing: 0.3px; }
-    .tab-button.active { color: var(--primary); border-bottom-color: var(--primary); border-bottom-width: 3px; font-weight: 700; letter-spacing: 0.4px; }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; padding: max(12px, env(safe-area-inset-top)) 12px 12px 12px; animation: fadeIn 0.2s ease; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
-    .modal-overlay.active { display: flex; align-items: flex-end; }
-    .modal { background: linear-gradient(135deg, var(--bg-card) 0%, rgba(42, 42, 46, 0.9) 100%); border-radius: 20px 20px 0 0; width: 100%; max-height: 80vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-    .modal h3 { font-size: 18px; font-weight: 600; color: var(--text-primary); }
-    .confirmation-modal { padding: 24px 20px; }
-    .confirmation-content { margin-bottom: 20px; }
-    .confirmation-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
-    .confirmation-detail { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.8) 100%); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
-    .confirmation-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
-    .confirmation-value { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-    .confirmation-buttons { display: flex; gap: 8px; }
-    .confirmation-buttons button { flex: 1; }
-    .edit-button-modal { padding: 12px; border-radius: 8px; background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%); border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
-    .edit-button-modal:active { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); }
-    .empty-state { text-align: center; padding: 32px 16px; color: var(--text-secondary); font-size: 15px; line-height: 1.5; }
-    .empty-state-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
-    .divider { height: 1px; background: var(--border-color); margin: 16px 0; }
-    .time-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .toggle-switch { display: flex; align-items: center; gap: 12px; }
-    .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
-    .switch input { opacity: 0; width: 0; height: 0; min-height: 0; padding: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, var(--border-color) 0%, rgba(66, 66, 69, 0.8) 100%); transition: 0.3s; border-radius: 28px; }
-    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: 0.3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
-    input:checked + .slider { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); }
-    input:checked + .slider:before { transform: translateX(22px); box-shadow: 0 2px 8px rgba(74, 157, 111, 0.4); }
-    .search-input { margin-bottom: 12px; }
-    .search-filters { display: flex; gap: 8px; margin-bottom: 12px; }
-    .search-filters input { flex: 1; }
-    .events-list { display: flex; flex-direction: column; gap: 8px; }
-    .event-day-group { margin-bottom: 20px; }
-    .event-day-label { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .undo-toast { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 12px; right: 12px; background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%); padding: 12px 16px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; z-index: 1500; animation: slideUp 0.3s ease; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
-    .undo-toast button { padding: 8px 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; min-height: auto; transition: all 0.2s ease; }
-    .undo-toast button:active { transform: scale(0.95); }
-    .day-events-modal { max-height: 70vh; }
-    .day-events-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 16px; }
-    .upcoming-day-group { margin-bottom: 24px; }
-    .upcoming-day-header { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
-    /* PHASE 6: Archive system modal */
-    .archive-modal { max-height: 70vh; }
-    .archive-event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58, 58, 60, 0.8) 100%); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid rgba(74, 157, 111, 0.4); }
-    .archive-event-buttons { display: flex; gap: 6px; }
-    .archive-event-buttons button { padding: 6px 10px; font-size: 12px; min-height: auto; }
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes pulse { 0%, 100% { box-shadow: 0 0 8px rgba(48, 176, 192, 0.6); } 50% { box-shadow: 0 0 16px rgba(48, 176, 192, 0.8); } }
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>Calendar</h1>
-      <div class="header-right">
-        <div class="weather-widget" id="weather-widget" style="display: none;">
-          <span class="weather-icon" id="weather-icon">☀️</span>
-          <span class="weather-temp" id="weather-temp">--°</span>
-        </div>
-        <div class="sync-indicator" id="sync-indicator"></div>
-        <button class="menu-btn" onclick="toggleMenu(); triggerHaptic(20)">☰</button>
-      </div>
-      <div class="dropdown-menu" id="dropdown-menu">
-        <button class="dropdown-item" onclick="exportEvents(); triggerHaptic(20)">📥 Export</button>
-        <button class="dropdown-item" onclick="openArchiveModal(); triggerHaptic(20)">📦 Archive Past Events</button>
-        <button class="dropdown-item" onclick="viewArchived(); triggerHaptic(20)">📂 View Archived</button>
-        <button class="dropdown-item" onclick="openSettings(); triggerHaptic(20)">⚙️ Settings</button>
-      </div>
-    </header>
-
-    <div id="status-message"></div>
-
-    <div class="section-tabs">
-      <button class="tab-button active" onclick="showTab('calendar'); triggerHaptic(20)">Calendar</button>
-      <button class="tab-button" onclick="showTab('add'); triggerHaptic(20)">Add Event</button>
-      <button class="tab-button" onclick="showTab('events'); triggerHaptic(20)">Events</button>
-    </div>
-
-    <div class="main-content">
-      <!-- CALENDAR TAB -->
-      <div id="calendar-tab" class="tab-content">
-        <div class="calendar-header">
-          <div class="month-year" id="month-year"></div>
-          <div class="month-nav">
-            <button onclick="navigatePrevious(); triggerHaptic(20)">←</button>
-            <button class="month-nav" id="view-toggle-btn" onclick="toggleView(); triggerHaptic(20)" style="padding: 6px 10px; font-size: 12px; width: auto;">Week</button>
-            <button onclick="navigateNext(); triggerHaptic(20)">→</button>
-          </div>
-        </div>
-        <div id="month-view"><div class="calendar-grid" id="calendar-grid"></div></div>
-        <div id="week-view" style="display: none;">
-          <div class="week-view-container">
-            <div class="week-header">
-              <div class="week-time-label"></div>
-              <div class="week-day-header" id="week-day-1"></div><div class="week-day-header" id="week-day-2"></div><div class="week-day-header" id="week-day-3"></div><div class="week-day-header" id="week-day-4"></div><div class="week-day-header" id="week-day-5"></div><div class="week-day-header" id="week-day-6"></div><div class="week-day-header" id="week-day-7"></div>
-            </div>
-            <div class="week-grid" id="week-grid"></div>
-          </div>
-        </div>
-        <div class="events-container">
-          <div class="upcoming-day-group" id="today-section"></div>
-          <div class="upcoming-day-group" id="tomorrow-section"></div>
-          <div class="upcoming-day-group" id="week-section"></div>
-          <div class="upcoming-day-group" id="month-section"></div>
-          <div class="upcoming-day-group" id="later-section"></div>
-        </div>
-      </div>
-
-      <!-- ADD EVENT TAB -->
-      <div id="add-tab" class="tab-content" style="display: none;">
-        <div class="section">
-          <div class="section-title">Quick Add</div>
-          <div class="section-subtitle">Type your event naturally</div>
-          <div class="input-group"><textarea id="event-input" placeholder="e.g., work on friday 7-3pm" maxlength="200"></textarea></div>
-          <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50, 30, 50])">Add Event</button>
-          <div class="divider"></div>
-          <div class="section-title">Manual Entry</div>
-          <div class="input-group"><label>Title</label><input type="text" id="title-input" placeholder="Event name" maxlength="100"></div>
-          <div class="input-group"><label>Date Range</label><div class="time-inputs"><div><label style="font-size: 11px;">Start</label><input type="date" id="date-input"></div><div><label style="font-size: 11px;">End</label><input type="date" id="end-date-input"></div></div></div>
-          <div class="input-group"><label>Time</label><div class="time-inputs"><div><label style="font-size: 11px;">Start</label><input type="time" id="time-input"></div><div><label style="font-size: 11px;">End</label><input type="time" id="end-time-input"></div></div></div>
-          <div class="input-group"><label>Notes</label><textarea id="desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
-          <div class="toggle-switch"><label for="all-day-toggle" style="margin: 0; text-transform: none; font-weight: 500;">All-Day Event</label><label class="switch"><input type="checkbox" id="all-day-toggle" onchange="toggleAllDayManual()"><span class="slider"></span></label></div>
-          <button class="btn-secondary" onclick="addEventManually(); triggerHaptic([60, 20, 60])">Save Event</button>
-        </div>
-      </div>
-
-      <!-- EVENTS TAB -->
-      <div id="events-tab" class="tab-content" style="display: none;">
-        <div class="section">
-          <div class="section-title">Smart Search</div>
-          <input type="text" class="search-input" id="search-input" placeholder="Search events..." onkeyup="filterEvents()">
-          <div class="search-filters">
-            <input type="date" id="search-from" placeholder="From" onchange="filterEvents()" style="font-size: 12px;">
-            <input type="date" id="search-to" placeholder="To" onchange="filterEvents()" style="font-size: 12px;">
-            <button class="btn-secondary" style="padding: 8px 12px; min-height: auto; font-size: 12px;" onclick="clearSearchFilters(); triggerHaptic(20)">Clear</button>
-          </div>
-        </div>
-        <div class="events-container" id="events-list"></div>
-      </div>
-    </div>
-
-    <!-- FAB BUTTON -->
-    <button class="fab" onclick="openAddEventTab(); triggerHaptic([50, 30, 50])">+</button>
-  </div>
-
-  <!-- CONFIRMATION MODAL -->
-  <div class="modal-overlay" id="confirmation-overlay">
-    <div class="modal confirmation-modal">
-      <h3 class="confirmation-title">Confirm Event</h3>
-      <div class="confirmation-content" id="confirmation-content"></div>
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <button class="edit-button-modal" onclick="enterEditMode(); triggerHaptic(20)">✏️ Edit Before Saving</button>
-      </div>
-      <div class="confirmation-buttons">
-        <button class="btn-secondary" style="flex: 1;" onclick="confirmParsedEvent(); triggerHaptic([60, 20, 60])">Confirm</button>
-        <button class="btn-danger" style="flex: 1;" onclick="closeConfirmation(); triggerHaptic([100, 50, 100])">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- DUPLICATE MODAL -->
-  <div class="modal-overlay" id="duplicate-overlay">
-    <div class="modal confirmation-modal">
-      <h3 class="confirmation-title">Duplicate Event Detected</h3>
-      <div class="confirmation-content">
-        <div style="text-align: center; padding: 16px 0;">
-          <div style="font-size: 36px; margin-bottom: 12px;">⚠️</div>
-          <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;" id="duplicate-message"></div>
-        </div>
-      </div>
-      <div class="confirmation-buttons">
-        <button class="btn-secondary" style="flex: 1;" onclick="closeDuplicateModal(); triggerHaptic(20)">Got it</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- DAY EVENTS MODAL -->
-  <div class="modal-overlay" id="day-modal-overlay">
-    <div class="modal day-events-modal">
-      <h3 id="day-modal-title" class="day-events-title"></h3>
-      <div id="day-modal-events"></div>
-      <button class="btn-secondary" style="width: 100%;" onclick="closeDayModal(); triggerHaptic(20)">Close</button>
-    </div>
-  </div>
-
-  <!-- EDIT MODAL -->
-  <div class="modal-overlay" id="modal-overlay">
-    <div class="modal" id="modal">
-      <h3 id="modal-title">Edit Event</h3>
-      <div class="input-group"><label>Title</label><input type="text" id="modal-title-input" placeholder="Event name" maxlength="100"></div>
-      <div class="input-group"><label>Date Range</label><div class="time-inputs"><div><label style="font-size: 11px;">Start</label><input type="date" id="modal-date-input"></div><div><label style="font-size: 11px;">End</label><input type="date" id="modal-end-date-input"></div></div></div>
-      <div class="input-group"><label>Time</label><div class="time-inputs"><div><label style="font-size: 11px;">Start</label><input type="time" id="modal-time-input"></div><div><label style="font-size: 11px;">End</label><input type="time" id="modal-end-time-input"></div></div></div>
-      <div class="input-group"><label>Notes</label><textarea id="modal-desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
-      <div class="toggle-switch"><label for="modal-all-day-toggle" style="margin: 0; text-transform: none; font-weight: 500;">All-Day Event</label><label class="switch"><input type="checkbox" id="modal-all-day-toggle" onchange="toggleAllDayModal()"><span class="slider"></span></label></div>
-      <div style="display: flex; gap: 8px;">
-        <button class="btn-secondary" style="flex: 1;" onclick="saveEditedEvent(); triggerHaptic([60, 20, 60])">Save</button>
-        <button class="btn-secondary" style="flex: 1; border-color: var(--warning); color: var(--warning);" onclick="undoEditedEvent(); triggerHaptic([50, 30, 50])">↶ Undo</button>
-        <button class="btn-danger" style="flex: 1;" onclick="deleteEditingEvent(); triggerHaptic([100, 50, 100])">Delete</button>
-        <button class="btn-secondary" style="flex: 1;" onclick="closeModal(); triggerHaptic(20)">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ARCHIVE MODAL -->
-  <div class="modal-overlay" id="archive-modal-overlay">
-    <div class="modal archive-modal">
-      <h3 style="margin-bottom: 16px;">📂 Archived Events</h3>
-      <div id="archived-events-list"></div>
-      <button class="btn-secondary" style="width: 100%; margin-top: 12px;" onclick="closeArchiveModal(); triggerHaptic(20)">Close</button>
-    </div>
-  </div>
-
-  <!-- SETTINGS MODAL -->
-  <div class="modal-overlay" id="settings-overlay">
-    <div class="modal" id="settings-modal">
-      <h3>Notification Settings</h3>
-      <div class="section" style="border: none; padding: 0;"><div class="toggle-switch"><label for="notif-toggle" style="margin: 0; text-transform: none; font-weight: 500;">Enable Notifications</label><label class="switch"><input type="checkbox" id="notif-toggle" onchange="toggleNotifications()"><span class="slider"></span></label></div></div>
-      <div style="margin-top: 16px;"><button class="btn-secondary" style="width: 100%;" onclick="closeSettings(); triggerHaptic(20)">Done</button></div>
-    </div>
-  </div>
-
-  <!-- OVERLAP CONFIRMATION MODAL -->
-  <div class="modal-overlay" id="overlap-modal-overlay">
-    <div class="modal" style="max-width: 320px;">
-      <div id="overlap-modal-content"></div>
-      <div style="display: flex; gap: 8px; margin-top: 20px;">
-        <button class="btn-danger" style="flex: 1;" onclick="cancelOverlapSave(); triggerHaptic([100, 50, 100])">Cancel</button>
-        <button class="btn-secondary" style="flex: 1;" onclick="confirmOverlapSave(); triggerHaptic([60, 20, 60])">Save Anyway</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- UNDO TOAST -->
-  <div class="undo-toast" id="undo-toast" style="display: none;">
-    <span id="undo-message"></span>
-    <button onclick="undoDelete(); triggerHaptic([40])">Undo</button>
-  </div>
-
-  <script>
-    let currentDate = new Date();
-    let allEvents = [];
-    let selectedDate = null;
-    let isWeekView = false;
-    let editingEventId = null;
-    let pendingParsedEvent = null;
-    let notificationsEnabled = false;
-    let searchFilter = '';
-    let pendingEditMode = false;
-    let lastDeletedEvent = null;
-    let lastDeletedEventIndex = -1;
-    let lastEditedEvent = null;
-    let pendingOverlapConfirmation = null;
-    let draggingEvent = null;
-    let dragStartY = 0;
-    let dragStartTime = null;
-    let archivedEvents = []; // PHASE 6: Archive system
-
-    const WEATHER_API_KEY = '46a759eb926bfad1530ec2671deb009c';
-    const EST_TIMEZONE = 'America/New_York'; // PHASE 6: EST timezone lock
-
-    // ===== PHASE 6: EST TIMEZONE HELPERS =====
-    function getESTNow() {
-      const now = new Date();
-      const estFormatter = new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-        timeZone: EST_TIMEZONE
-      });
-      return estFormatter.format(now);
-    }
-
-    function getESTDateString() {
-      const now = new Date();
-      const estFormatter = new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        timeZone: EST_TIMEZONE
-      });
-      const parts = estFormatter.formatToParts(now);
-      const year = parts.find(p => p.type === 'year').value;
-      const month = parts.find(p => p.type === 'month').value;
-      const day = parts.find(p => p.type === 'day').value;
-      return `${year}-${month}-${day}`;
-    }
-
-    function getESTTimeString() {
-      const now = new Date();
-      const estFormatter = new Intl.DateTimeFormat('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: EST_TIMEZONE
-      });
-      return estFormatter.format(now);
-    }
-
-    function getCurrentESTInfo() {
-      return {
-        date: getESTDateString(),
-        time: getESTTimeString(),
-        timezone: EST_TIMEZONE
-      };
-    }
-    // ===== END PHASE 6 TIMEZONE HELPERS =====
-
-    // ===== PHASE 6: ARCHIVE FUNCTIONS =====
-    function saveArchive() {
-      localStorage.setItem('archivedEvents', JSON.stringify(archivedEvents));
-    }
-
-    function loadArchive() {
-      const saved = localStorage.getItem('archivedEvents');
-      archivedEvents = saved ? JSON.parse(saved) : [];
-    }
-
-    function archivePastEvents() {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString().split('T')[0];
-      
-      // FIX: Properly compare date strings
-      const pastEvents = allEvents.filter(e => e.date < todayStr);
-      
-      if (pastEvents.length === 0) {
-        showStatus('No past events to archive', 'error');
-        return;
-      }
-
-      console.log(`📦 Archiving ${pastEvents.length} past events`);
-      archivedEvents.push(...pastEvents);
-      allEvents = allEvents.filter(e => e.date >= todayStr);
-      saveArchive();
-      saveEvents();
-      
-      showStatus(`✓ ${pastEvents.length} event(s) archived`, 'success');
-      closeMenuOnTab();
-      renderCalendar();
-      renderUpcomingEvents();
-      renderEventsPage();
-    }
-
-    function openArchiveModal() {
-      archivePastEvents();
-      closeMenuOnTab();
-    }
-
-    function viewArchived() {
-      const modal = document.getElementById('archive-modal-overlay');
-      let html = '';
-      
-      if (archivedEvents.length === 0) {
-        html = '<div class="empty-state"><div class="empty-state-icon">📦</div>No archived events</div>';
-      } else {
-        // FIX: Sort archived events by date (newest first)
-        const sorted = [...archivedEvents].sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        sorted.forEach(event => {
-          const timeStr = formatEventTime(event.time, event.endTime);
-          const dateObj = new Date(event.date + 'T00:00:00');
-          const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          
-          html += `<div class="archive-event-item">
-            <div style="flex: 1;">
-              <div class="event-title" style="margin-bottom: 4px;">${event.title}</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">${dateLabel}${timeStr ? ` • ${timeStr}` : ''}</div>
-            </div>
-            <div class="archive-event-buttons">
-              <button class="btn-secondary" style="font-size: 11px;" onclick="restoreFromArchive('${event.id}'); triggerHaptic([40])">Restore</button>
-              <button class="btn-danger" style="font-size: 11px;" onclick="deleteFromArchive('${event.id}'); triggerHaptic([100, 50, 100])">Delete</button>
-            </div>
-          </div>`;
-        });
-      }
-      
-      document.getElementById('archived-events-list').innerHTML = html;
-      modal.classList.add('active');
-      closeMenuOnTab();
-    }
-
-    function restoreFromArchive(eventId) {
-      const event = archivedEvents.find(e => e.id === eventId);
-      if (event) {
-        archivedEvents = archivedEvents.filter(e => e.id !== eventId);
-        allEvents.push(event);
-        saveArchive();
-        saveEvents();
-        showStatus(`✓ ${event.title} restored`, 'success');
-        showSyncIndicator();
-        viewArchived(); // Refresh modal
-        renderCalendar();
-        renderUpcomingEvents();
-        renderEventsPage();
-      }
-    }
-
-    function deleteFromArchive(eventId) {
-      if (!confirm('Permanently delete this archived event?')) return;
-      archivedEvents = archivedEvents.filter(e => e.id !== eventId);
-      saveArchive();
-      showStatus('Event deleted', 'success');
-      viewArchived(); // Refresh modal
-    }
-
-    function closeArchiveModal() {
-      document.getElementById('archive-modal-overlay').classList.remove('active');
-    }
-    // ===== END PHASE 6 ARCHIVE FUNCTIONS =====
-
-    function capitalizeTitle(str) {
-      if (!str) return '';
-      return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    }
-
-    function triggerHaptic(pattern = 20) {
-      if (!navigator.vibrate) return;
-      if (typeof pattern === 'number') {
-        navigator.vibrate(pattern);
-      } else if (Array.isArray(pattern)) {
-        navigator.vibrate(pattern);
-      }
-    }
-
-    function checkDuplicateEvent(newEvent, excludeEventId = null) {
-      return allEvents.some(event => {
-        if (excludeEventId && event.id === excludeEventId) return false;
-        if (event.title !== newEvent.title) return false;
-        if (event.date !== newEvent.date) return false;
-        if (event.isAllDay !== newEvent.isAllDay) return false;
-        if (!event.isAllDay && event.time !== newEvent.time) return false;
-        return true;
-      });
-    }
-
-    function checkEventOverlap(newEvent, excludeEventId = null) {
-      return allEvents.some(event => {
-        if (excludeEventId && event.id === excludeEventId) return false;
-        if (event.isAllDay || newEvent.isAllDay) return false;
-        if (!event.time || !newEvent.time) return false;
-
-        const eventDate = event.date;
-        const eventEndDate = event.endDate || event.date;
-        const newDate = newEvent.date;
-        const newEndDate = newEvent.endDate || newEvent.date;
-
-        const datesOverlap = !(newEndDate < eventDate || newDate > eventEndDate);
-        if (!datesOverlap) return false;
-
-        const [eventStartHour, eventStartMin] = event.time.split(':').map(Number);
-        const [eventEndHour, eventEndMin] = (event.endTime || event.time).split(':').map(Number);
-        const [newStartHour, newStartMin] = newEvent.time.split(':').map(Number);
-        const [newEndHour, newEndMin] = (newEvent.endTime || newEvent.time).split(':').map(Number);
-
-        const eventStartMins = eventStartHour * 60 + eventStartMin;
-        const eventEndMins = eventEndHour * 60 + eventEndMin;
-        const newStartMins = newStartHour * 60 + newStartMin;
-        const newEndMins = newEndHour * 60 + newEndMin;
-
-        return newStartMins < eventEndMins && newEndMins > eventStartMins;
-      });
-    }
-
-    function showDuplicateModal(eventTitle) {
-      const modal = document.getElementById('duplicate-overlay');
-      document.getElementById('duplicate-message').textContent = `"${eventTitle}" already exists at this date and time. This event is not unique and would create a duplicate.`;
-      modal.classList.add('active');
-    }
-
-    function closeDuplicateModal() {
-      document.getElementById('duplicate-overlay').classList.remove('active');
-    }
-
-    function showOverlapConfirmation(eventTitle, callback) {
-      pendingOverlapConfirmation = callback;
-      const modal = document.getElementById('overlap-modal-overlay');
-      const content = document.getElementById('overlap-modal-content');
-      content.innerHTML = `<div style="text-align: center; padding: 20px 0;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><div style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">"${eventTitle}" overlaps with another event</div><div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5;">This event conflicts with an existing event. Are you sure you want to save it anyway?</div></div>`;
-      modal.classList.add('active');
-    }
-
-    function confirmOverlapSave() {
-      if (pendingOverlapConfirmation) {
-        pendingOverlapConfirmation();
-        pendingOverlapConfirmation = null;
-      }
-      document.getElementById('overlap-modal-overlay').classList.remove('active');
-    }
-
-    function cancelOverlapSave() {
-      pendingOverlapConfirmation = null;
-      document.getElementById('overlap-modal-overlay').classList.remove('active');
-    }
-
-    async function fetchWeather() {
-      if (!WEATHER_API_KEY) {
-        return;
-      }
-      try {
-        const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=42.2088&lon=-71.2170&units=imperial&appid=${WEATHER_API_KEY}`);
-        const data = await response.json();
-        const temp = Math.round(data.main.temp);
-        const icon = getWeatherIcon(data.weather[0].main);
-        document.getElementById('weather-temp').textContent = `${temp}°`;
-        document.getElementById('weather-icon').textContent = icon;
-        document.getElementById('weather-widget').style.display = 'flex';
-      } catch (err) {
-        console.log('Weather fetch error (non-critical):', err);
-      }
-    }
-
-    function getWeatherIcon(condition) {
-      const conditionLower = condition.toLowerCase();
-      if (conditionLower.includes('cloud')) return '☁️';
-      if (conditionLower.includes('rain')) return '🌧️';
-      if (conditionLower.includes('snow')) return '❄️';
-      if (conditionLower.includes('clear') || conditionLower.includes('sunny')) return '☀️';
-      if (conditionLower.includes('wind')) return '💨';
-      return '🌤️';
-    }
-
-    async function init() {
-      await loadEvents();
-      loadArchive(); // PHASE 6: Load archived events
-      loadNotificationSettings();
-      renderCalendar();
-      renderUpcomingEvents();
-      setTodayDate();
-      checkNotificationPermission();
-      scheduleNotifications();
-      updateWeekHeader();
-      fetchWeather();
-      setInterval(fetchWeather, 600000);
-    }
-
-    function toggleMenu() {
-      document.getElementById('dropdown-menu').classList.toggle('active');
-    }
-
-    function closeMenuOnTab() {
-      document.getElementById('dropdown-menu').classList.remove('active');
-    }
-
-    function openAddEventTab() {
-      showTab('add');
-      setTimeout(() => document.getElementById('event-input').focus(), 100);
-    }
-
-    function showTab(tab) {
-      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-      document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
-      document.getElementById(tab + '-tab').style.display = 'block';
-      event.target.classList.add('active');
-      closeMenuOnTab();
-
-      if (tab === 'events') {
-        renderEventsPage();
-      }
-    }
-
-    function toggleView() {
-      isWeekView = !isWeekView;
-      const btn = document.getElementById('view-toggle-btn');
-      if (isWeekView) {
-        document.getElementById('month-view').style.display = 'none';
-        document.getElementById('week-view').style.display = 'block';
-        btn.textContent = 'Month';
-        renderWeekView();
-        updateWeekHeader();
-      } else {
-        document.getElementById('month-view').style.display = 'block';
-        document.getElementById('week-view').style.display = 'none';
-        btn.textContent = 'Week';
-        renderCalendar();
-      }
-    }
-
-    function navigatePrevious() {
-      if (isWeekView) {
-        currentDate.setDate(currentDate.getDate() - 7);
-        updateWeekHeader();
-        renderWeekView();
-      } else {
-        previousMonth();
-      }
-    }
-
-    function navigateNext() {
-      if (isWeekView) {
-        currentDate.setDate(currentDate.getDate() + 7);
-        updateWeekHeader();
-        renderWeekView();
-      } else {
-        nextMonth();
-      }
-    }
-
-    function updateWeekHeader() {
-      if (isWeekView) {
-        const weekStart = new Date(currentDate);
-        weekStart.setDate(currentDate.getDate() - currentDate.getDay());
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-
-        const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' });
-        const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' });
-        const year = weekStart.getFullYear();
-
-        if (startMonth === endMonth) {
-          document.getElementById('month-year').textContent = `${startMonth} ${weekStart.getDate()}-${weekEnd.getDate()}, ${year}`;
-        } else {
-          document.getElementById('month-year').textContent = `${startMonth} ${weekStart.getDate()} - ${endMonth} ${weekEnd.getDate()}, ${year}`;
-        }
-      }
-    }
-
-    async function loadEvents() {
-      try {
-        const response = await fetch('/api/events');
-        let loaded = await response.json();
-        
-        // FIX: Load archived events first, then filter them out from active events
-        loadArchive();
-        
-        // Remove any archived events from loaded list
-        const archivedIds = new Set(archivedEvents.map(e => e.id));
-        loaded = loaded.filter(e => !archivedIds.has(e.id));
-        
-        allEvents = loaded;
-        saveEvents();
-      } catch (err) {
-        const saved = localStorage.getItem('calendarEvents');
-        let loaded = saved ? JSON.parse(saved) : [];
-        
-        // FIX: Also filter archived when loading from localStorage
-        loadArchive();
-        const archivedIds = new Set(archivedEvents.map(e => e.id));
-        loaded = loaded.filter(e => !archivedIds.has(e.id));
-        
-        allEvents = loaded;
-        showStatus('Using local storage', 'success');
-      }
-    }
-
-    function saveEvents() {
-      localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
-    }
-
-    function loadNotificationSettings() {
-      const saved = localStorage.getItem('notificationSettings');
-      if (saved) {
-        const settings = JSON.parse(saved);
-        notificationsEnabled = settings.enabled || false;
-      }
-      updateSettingsUI();
-    }
-
-    function saveNotificationSettings() {
-      localStorage.setItem('notificationSettings', JSON.stringify({ enabled: notificationsEnabled }));
-    }
-
-    function updateSettingsUI() {
-      document.getElementById('notif-toggle').checked = notificationsEnabled;
-    }
-
-    function openSettings() {
-      document.getElementById('settings-overlay').classList.add('active');
-      updateSettingsUI();
-    }
-
-    function closeSettings() {
-      document.getElementById('settings-overlay').classList.remove('active');
-    }
-
-    function toggleNotifications() {
-      notificationsEnabled = document.getElementById('notif-toggle').checked;
-      saveNotificationSettings();
-      updateSettingsUI();
-      if (notificationsEnabled) {
-        requestNotificationPermission();
-      } else {
-        showStatus('Notifications disabled', 'success');
-      }
-    }
-
-    function toggleAllDayManual() {
-      const isAllDay = document.getElementById('all-day-toggle').checked;
-      document.getElementById('time-input').disabled = isAllDay;
-      document.getElementById('end-time-input').disabled = isAllDay;
-      if (isAllDay) {
-        document.getElementById('time-input').value = '';
-        document.getElementById('end-time-input').value = '';
-      }
-    }
-
-    function toggleAllDayModal() {
-      const isAllDay = document.getElementById('modal-all-day-toggle').checked;
-      document.getElementById('modal-time-input').disabled = isAllDay;
-      document.getElementById('modal-end-time-input').disabled = isAllDay;
-      if (isAllDay) {
-        document.getElementById('modal-time-input').value = '';
-        document.getElementById('modal-end-time-input').value = '';
-      }
-    }
-
-    // PHASE 6: Updated parseEvent to send EST context
-    async function parseEvent() {
-      const input = document.getElementById('event-input').value.trim();
-      if (!input) {
-        showStatus('Type an event', 'error');
-        return;
-      }
-      const btn = document.getElementById('parse-btn');
-      btn.disabled = true;
-      try {
-        const estInfo = getCurrentESTInfo();
-        const response = await fetch('/api/events/parse', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            text: input,
-            currentESTDate: estInfo.date,
-            currentESTTime: estInfo.time,
-            timezone: estInfo.timezone
-          })
-        });
-        const data = await response.json();
-        if (!response.ok || data.error) {
-          showStatus(data.error || 'Try: "work on friday 7-3pm"', 'error');
-        } else {
-          data.title = capitalizeTitle(data.title);
-          
-          if (checkDuplicateEvent(data)) {
-            showDuplicateModal(data.title);
-            btn.disabled = false;
-            return;
-          }
-
-          pendingParsedEvent = data;
-          pendingEditMode = false;
-          showConfirmationModal(data);
-        }
-      } catch (err) {
-        showStatus('Error parsing event', 'error');
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    function showConfirmationModal(event) {
-      const timeStr = formatEventTime(event.time, event.endTime);
-      const dateObj = new Date(event.date + 'T00:00:00');
-      const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      
-      let endDateStr = '';
-      if (event.endDate) {
-        const endDateObj = new Date(event.endDate + 'T00:00:00');
-        endDateStr = endDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      }
-
-      let html = `<div class="confirmation-detail"><div class="confirmation-label">Event</div><div class="confirmation-value">${event.title}</div></div>`;
-      
-      if (event.isAllDay) {
-        html += `<div class="confirmation-detail"><div class="confirmation-label">Date${event.endDate ? 's' : ''}</div><div class="confirmation-value">${dateStr}${endDateStr ? ` - ${endDateStr}` : ''}</div></div>`;
-      } else {
-        html += `<div class="confirmation-detail"><div class="confirmation-label">Date${event.endDate ? 's' : ''}</div><div class="confirmation-value">${dateStr}${endDateStr ? ` - ${endDateStr}` : ''}</div></div>`;
-        if (timeStr) {
-          const duration = event.time && event.endTime ? calculateDuration(event.time, event.endTime) : '';
-          html += `<div class="confirmation-detail"><div class="confirmation-label">Time</div><div class="confirmation-value">${timeStr}${duration ? ` (${duration})` : ''}</div></div>`;
-        }
-      }
-
-      document.getElementById('confirmation-content').innerHTML = html;
-      document.getElementById('confirmation-overlay').classList.add('active');
-    }
-
-    // PHASE 6: Fixed "Edit Before Saving" - captures modal values
-    function enterEditMode() {
-      if (!pendingParsedEvent) return;
-      pendingEditMode = true;
-
-      document.getElementById('modal-title-input').value = pendingParsedEvent.title;
-      document.getElementById('modal-date-input').value = pendingParsedEvent.date;
-      document.getElementById('modal-end-date-input').value = pendingParsedEvent.endDate || '';
-      document.getElementById('modal-time-input').value = pendingParsedEvent.time || '';
-      document.getElementById('modal-end-time-input').value = pendingParsedEvent.endTime || '';
-      document.getElementById('modal-all-day-toggle').checked = pendingParsedEvent.isAllDay || false;
-      toggleAllDayModal();
-
-      closeConfirmation();
-      document.getElementById('modal-overlay').classList.add('active');
-    }
-
-    async function confirmParsedEvent() {
-      if (!pendingParsedEvent) return;
-      
-      if (checkEventOverlap(pendingParsedEvent)) {
-        showOverlapConfirmation(pendingParsedEvent.title, confirmParsedEvent);
-        return;
-      }
-      
-      try {
-        const newEvent = { id: generateId(), ...pendingParsedEvent };
-        allEvents.push(newEvent);
-        saveEvents();
-        showStatus(`✓ ${pendingParsedEvent.title} added`, 'success');
-        showSyncIndicator();
-        document.getElementById('event-input').value = '';
-        closeConfirmation();
-        renderCalendar();
-        renderUpcomingEvents();
-        scheduleNotifications();
-      } catch (err) {
-        showStatus('Error saving event', 'error');
-      }
-    }
-
-    function closeConfirmation() {
-      document.getElementById('confirmation-overlay').classList.remove('active');
-      pendingParsedEvent = null;
-      pendingEditMode = false;
-    }
-
-    function generateId() {
-      return 'evt-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    }
-
-    async function addEventManually() {
-      const title = capitalizeTitle(document.getElementById('title-input').value.trim());
-      const date = document.getElementById('date-input').value;
-      const endDate = document.getElementById('end-date-input').value;
-      const time = document.getElementById('time-input').value;
-      const endTime = document.getElementById('end-time-input').value;
-      const description = document.getElementById('desc-input').value.trim();
-      const isAllDay = document.getElementById('all-day-toggle').checked;
-
-      if (!title || !date) {
-        showStatus('Title and date required', 'error');
-        return;
-      }
-
-      const newEvent = {
-        id: generateId(),
-        title,
-        date,
-        endDate: endDate || null,
-        time: isAllDay ? null : time || null,
-        endTime: isAllDay ? null : endTime || null,
-        description,
-        isAllDay
-      };
-
-      if (checkDuplicateEvent(newEvent)) {
-        showDuplicateModal(title);
-        return;
-      }
-
-      if (checkEventOverlap(newEvent)) {
-        showOverlapConfirmation(title, async () => {
-          allEvents.push(newEvent);
-          saveEvents();
-          showStatus(`✓ ${newEvent.title} saved`, 'success');
-          showSyncIndicator();
-          clearAddForm();
-          renderCalendar();
-          renderUpcomingEvents();
-          scheduleNotifications();
-        });
-        return;
-      }
-
-      allEvents.push(newEvent);
-      saveEvents();
-      showStatus(`✓ ${newEvent.title} saved`, 'success');
-      showSyncIndicator();
-      clearAddForm();
-      renderCalendar();
-      renderUpcomingEvents();
-      scheduleNotifications();
-    }
-
-    function clearAddForm() {
-      document.getElementById('title-input').value = '';
-      document.getElementById('date-input').value = '';
-      document.getElementById('end-date-input').value = '';
-      document.getElementById('time-input').value = '';
-      document.getElementById('end-time-input').value = '';
-      document.getElementById('desc-input').value = '';
-      document.getElementById('all-day-toggle').checked = false;
-      setTodayDate();
-    }
-
-    async function deleteEvent(id) {
-      try {
-        const eventToDelete = allEvents.find(e => e.id === id);
-        if (eventToDelete) {
-          lastDeletedEvent = JSON.parse(JSON.stringify(eventToDelete));
-          lastDeletedEventIndex = allEvents.findIndex(e => e.id === id);
-          
-          // FIX: Archive deleted events
-          console.log(`🗑️ Archiving deleted event: ${eventToDelete.title}`);
-          archivedEvents.push(eventToDelete);
-          saveArchive();
-        }
-
-        allEvents = allEvents.filter(e => e.id !== id);
-        saveEvents();
-        
-        showUndoToast(`Deleted ${eventToDelete?.title || 'event'}`);
-        renderCalendar();
-        renderUpcomingEvents();
-        renderEventsPage();
-        scheduleNotifications();
-      } catch (err) {
-        showStatus('Error deleting', 'error');
-      }
-    }
-
-    async function undoDelete() {
-      if (!lastDeletedEvent) return;
-      try {
-        allEvents.push(lastDeletedEvent);
-        saveEvents();
-        
-        // FIX: Remove from archive if it was archived
-        archivedEvents = archivedEvents.filter(e => e.id !== lastDeletedEvent.id);
-        saveArchive();
-        
-        showStatus(`✓ ${lastDeletedEvent.title} restored`, 'success');
-        showSyncIndicator();
-        document.getElementById('undo-toast').style.display = 'none';
-        lastDeletedEvent = null;
-        lastDeletedEventIndex = -1;
-        renderCalendar();
-        renderUpcomingEvents();
-        renderEventsPage();
-        scheduleNotifications();
-      } catch (err) {
-        showStatus('Error restoring event', 'error');
-      }
-    }
-
-    function showUndoToast(message) {
-      const toast = document.getElementById('undo-toast');
-      document.getElementById('undo-message').textContent = message;
-      toast.style.display = 'flex';
-      setTimeout(() => {
-        toast.style.display = 'none';
-      }, 5000);
-    }
-
-    function showSyncIndicator() {
-      const indicator = document.getElementById('sync-indicator');
-      indicator.classList.add('visible');
-      setTimeout(() => {
-        indicator.classList.remove('visible');
-      }, 2000);
-    }
-
-    function openEditModal(eventId) {
-      const event = allEvents.find(e => e.id === eventId);
-      if (!event) return;
-      editingEventId = eventId;
-      lastEditedEvent = JSON.parse(JSON.stringify(event));
-      document.getElementById('modal-title-input').value = event.title;
-      document.getElementById('modal-date-input').value = event.date;
-      document.getElementById('modal-end-date-input').value = event.endDate || '';
-      document.getElementById('modal-time-input').value = event.time || '';
-      document.getElementById('modal-end-time-input').value = event.endTime || '';
-      document.getElementById('modal-desc-input').value = event.description || '';
-      document.getElementById('modal-all-day-toggle').checked = event.isAllDay || false;
-      toggleAllDayModal();
-      document.getElementById('modal-overlay').classList.add('active');
-    }
-
-    function closeModal() {
-      document.getElementById('modal-overlay').classList.remove('active');
-      editingEventId = null;
-      lastEditedEvent = null;
-    }
-
-    async function undoEditedEvent() {
-      if (!lastEditedEvent) return;
-      try {
-        const idx = allEvents.findIndex(e => e.id === editingEventId);
-        if (idx >= 0) {
-          allEvents[idx] = lastEditedEvent;
-        }
-        saveEvents();
-        showStatus(`✓ ${lastEditedEvent.title} restored`, 'success');
-        showSyncIndicator();
-        closeModal();
-        renderCalendar();
-        renderUpcomingEvents();
-        renderEventsPage();
-        scheduleNotifications();
-      } catch (err) {
-        showStatus('Error restoring event', 'error');
-      }
-    }
-
-    async function saveEditedEvent() {
-      const title = capitalizeTitle(document.getElementById('modal-title-input').value.trim());
-      const date = document.getElementById('modal-date-input').value;
-      const endDate = document.getElementById('modal-end-date-input').value;
-      const time = document.getElementById('modal-time-input').value;
-      const endTime = document.getElementById('modal-end-time-input').value;
-      const description = document.getElementById('modal-desc-input').value.trim();
-      const isAllDay = document.getElementById('modal-all-day-toggle').checked;
-
-      if (!title || !date) {
-        showStatus('Title and date required', 'error');
-        return;
-      }
-
-      const updatedEvent = {
-        title,
-        date,
-        endDate: endDate || null,
-        time: isAllDay ? null : time || null,
-        endTime: isAllDay ? null : endTime || null,
-        description,
-        isAllDay
-      };
-
-      if (checkEventOverlap(updatedEvent, editingEventId)) {
-        showOverlapConfirmation(title, async () => {
-          const idx = allEvents.findIndex(e => e.id === editingEventId);
-          if (idx >= 0) {
-            allEvents[idx] = { ...allEvents[idx], ...updatedEvent };
-          }
-          saveEvents();
-          showStatus(`✓ ${updatedEvent.title} updated`, 'success');
-          showSyncIndicator();
-          closeModal();
-          renderCalendar();
-          renderUpcomingEvents();
-          renderEventsPage();
-          scheduleNotifications();
-        });
-        return;
-      }
-
-      const idx = allEvents.findIndex(e => e.id === editingEventId);
-      if (idx >= 0) {
-        allEvents[idx] = { ...allEvents[idx], ...updatedEvent };
-      }
-      saveEvents();
-      showStatus(`✓ ${updatedEvent.title} updated`, 'success');
-      showSyncIndicator();
-      closeModal();
-      renderCalendar();
-      renderUpcomingEvents();
-      renderEventsPage();
-      scheduleNotifications();
-    }
-
-    async function deleteEditingEvent() {
-      if (!confirm('Delete this event?')) return;
-      await deleteEvent(editingEventId);
-      closeModal();
-    }
-
-    function formatTimeEastern(timeStr) {
-      if (!timeStr) return '';
-      const [hours, minutes] = timeStr.split(':');
-      const hour = parseInt(hours);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour % 12 || 12;
-      return `${displayHour}:${minutes} ${ampm}`;
-    }
-
-    function formatEventTime(startTime, endTime) {
-      if (!startTime) return '';
-      const start = formatTimeEastern(startTime);
-      const end = endTime ? formatTimeEastern(endTime) : '';
-      return end ? `${start} - ${end}` : start;
-    }
-
-    function calculateDuration(startTime, endTime) {
-      if (!startTime || !endTime) return '';
-      const [startHour, startMin] = startTime.split(':').map(Number);
-      const [endHour, endMin] = endTime.split(':').map(Number);
-      const startTotalMin = startHour * 60 + startMin;
-      const endTotalMin = endHour * 60 + endMin;
-      const durationMin = endTotalMin - startTotalMin;
-
-      if (durationMin < 60) return `${durationMin}m`;
-      const hours = Math.floor(durationMin / 60);
-      const mins = durationMin % 60;
-      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-    }
-
-    function renderCalendar() {
-      // FIX: Filter out archived events
-      const activeEvents = allEvents.filter(e => !archivedEvents.some(ae => ae.id === e.id));
-      
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      document.getElementById('month-year').textContent = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      const daysInMonth = lastDay.getDate();
-      const startingDayOfWeek = firstDay.getDay();
-      let html = '';
-      const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-      days.forEach(day => {
-        html += `<div class="day-header">${day}</div>`;
-      });
-      const prevMonthDays = new Date(year, month, 0).getDate();
-      for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-        html += `<div class="day-cell other-month">${prevMonthDays - i}</div>`;
-      }
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(year, month, day);
-        const dateStr = date.toISOString().split('T')[0];
-        const isToday = dateStr === today.toISOString().split('T')[0];
-        const isSelected = dateStr === selectedDate;
-        const dayEvents = activeEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate));
-        const eventCount = dayEvents.length;
-        html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="openDayModal('${dateStr}'); triggerHaptic([40])"><div class="day-number">${day}</div>${eventCount > 0 ? `<div class="day-count">${eventCount}</div>` : ''}</div>`;
-      }
-      const remainingCells = 42 - (startingDayOfWeek + daysInMonth);
-      for (let i = 1; i <= remainingCells; i++) {
-        html += `<div class="day-cell other-month">${i}</div>`;
-      }
-      document.getElementById('calendar-grid').innerHTML = html;
-    }
-
-    function openDayModal(dateStr) {
-      selectedDate = dateStr;
-      const dayEvents = allEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)).sort((a, b) => {
-        if (a.isAllDay && !b.isAllDay) return -1;
-        if (!a.isAllDay && b.isAllDay) return 1;
-        return (a.time || '').localeCompare(b.time || '');
-      });
-      const date = new Date(dateStr + 'T00:00:00');
-      const dateLabel = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-      
-      document.getElementById('day-modal-title').textContent = dateLabel;
-      
-      let html = '';
-      if (dayEvents.length === 0) {
-        html = '<div class="empty-state"><div class="empty-state-icon">✓</div>No events on this day</div>';
-      } else {
-        dayEvents.forEach(event => {
-          const timeStr = formatEventTime(event.time, event.endTime);
-          const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
-            <div class="event-details">
-              <div class="event-title">${event.title}</div>
-              ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
-              ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
-              ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
-            </div>
-            <div class="event-swipe-actions">
-              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic([40])">Edit</button>
-              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic([100, 50, 100])">Delete</button>
-            </div>
-          </div>`;
-        });
-      }
-      
-      document.getElementById('day-modal-events').innerHTML = html;
-      document.getElementById('day-modal-overlay').classList.add('active');
-    }
-
-    function closeDayModal() {
-      document.getElementById('day-modal-overlay').classList.remove('active');
-      renderCalendar();
-    }
-
-    function getLocalDateString(date) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
-
-    // PHASE 6: Updated renderWeekView with multi-day event visuals
-    function renderWeekView() {
-      const weekStart = new Date(currentDate);
-      weekStart.setDate(currentDate.getDate() - currentDate.getDay());
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dayNames = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
-
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(weekStart);
-        date.setDate(date.getDate() + i);
-        const dateStr = getLocalDateString(date);
-        const isToday = dateStr === getLocalDateString(today);
-        const header = document.getElementById(`week-day-${i + 1}`);
-        header.innerHTML = `<div class="week-day-name">${dayNames[date.getDay()]}</div><div class="week-day-date ${isToday ? 'today' : ''}">${date.getDate()}</div>`;
-      }
-
-      let html = '<div class="week-time-slots">';
-      for (let hour = 0; hour < 24; hour++) {
-        const timeStr = hour.toString().padStart(2, '0') + ':00';
-        html += `<div class="time-slot">${formatTimeEastern(timeStr)}</div>`;
-      }
-      html += '</div>';
-
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(weekStart);
-        date.setDate(date.getDate() + i);
-        const dateStr = getLocalDateString(date);
-        const isToday = dateStr === getLocalDateString(today);
-
-        const allDayEvents = allEvents.filter(e => (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) && e.isAllDay);
-        const multiDayEvents = allEvents.filter(e => (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) && !e.isAllDay && (!e.time || !e.endTime)); // PHASE 6: Multi-day events
-        const timedEvents = allEvents.filter(e => (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) && !e.isAllDay && e.time && e.endTime).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-
-        html += `<div class="week-day-column ${isToday ? 'today' : ''}">`;
-
-        if (allDayEvents.length > 0) {
-          html += '<div class="week-all-day">';
-          allDayEvents.forEach(event => {
-            const endText = event.endDate && event.endDate !== event.date ? ` (${event.endDate})` : '';
-            html += `<div class="all-day-event" onclick="openEditModal('${event.id}'); triggerHaptic([40])">${event.title}${endText}</div>`;
-          });
-          html += '</div>';
-        }
-
-        // PHASE 6: Render multi-day events
-        if (multiDayEvents.length > 0) {
-          html += '<div style="padding: 4px; border-bottom: 1px solid rgba(74, 157, 111, 0.2);">';
-          multiDayEvents.forEach(event => {
-            html += `<div class="multi-day-event" onclick="openEditModal('${event.id}'); triggerHaptic([40])">${event.title}</div>`;
-          });
-          html += '</div>';
-        }
-
-        timedEvents.forEach(event => {
-          if (!event.time) return;
-          const [hours, minutes] = event.time.split(':').map(Number);
-          const topPercent = (hours + minutes / 60) * (100 / 24);
-          let durationHours = 1;
-          if (event.endTime) {
-            const [endHours, endMins] = event.endTime.split(':').map(Number);
-            durationHours = (endHours * 60 + endMins - (hours * 60 + minutes)) / 60;
-          }
-          const heightPercent = (durationHours / 24) * 100;
-          const durationLabel = event.endTime ? calculateDuration(event.time, event.endTime) : '';
-          html += `<div class="week-event" style="top: ${topPercent}%; height: ${Math.max(heightPercent, 6)}%;" data-event-id="${event.id}" onmousedown="startDrag(event, '${dateStr}')" ontouchstart="startDrag(event, '${dateStr}')"><div class="week-event-title">${event.title}</div><div class="week-event-time">${formatEventTime(event.time, event.endTime)}${durationLabel ? ` (${durationLabel})` : ''}</div></div>`;
-        });
-
-        html += '</div>';
-      }
-
-      document.getElementById('week-grid').innerHTML = html;
-      updateCurrentTimeLine();
-    }
-
-    let dragHoldTimer = null;
-    let dragDateStr = null;
-    let dragCancelled = false;
-
-    // PHASE 7: iOS-Optimized Drag-Drop System
-    let touchIdentifier = null;
-
-    function startDrag(e, dateStr) {
-      e.preventDefault();
-      dragCancelled = false;
-      dragDateStr = dateStr;
-      
-      const isTouch = e.touches ? true : false;
-      const startY = isTouch ? e.touches[0].clientY : e.clientY;
-      const eventElement = e.currentTarget;
-      const eventId = eventElement.dataset.eventId;
-      const event = allEvents.find(ev => ev.id === eventId);
-
-      if (!event) return;
-
-      if (isTouch) {
-        touchIdentifier = e.touches[0].identifier;
-      }
-
-      console.log(`👆 Hold starting on "${event.title}" (${isTouch ? 'touch' : 'mouse'})`);
-
-      // 300ms hold time
-      dragHoldTimer = setTimeout(() => {
-        if (dragCancelled) return;
-        
-        dragStartY = startY;
-        draggingEvent = eventElement;
-        draggingEvent.classList.add('dragging');
-        dragStartTime = event.time;
-        
-        document.addEventListener('mousemove', handleDragMove, { passive: false });
-        document.addEventListener('touchmove', handleDragMove, { passive: false });
-        document.addEventListener('mouseup', handleDragEnd, { passive: false });
-        document.addEventListener('touchend', handleDragEnd, { passive: false });
-        
-        triggerHaptic([50, 30, 50]);
-        console.log(`✓ Hold complete, dragging "${event.title}"`);
-      }, 300);
-
-      const cancelDrag = () => {
-        clearTimeout(dragHoldTimer);
-        dragCancelled = true;
-        document.removeEventListener('mouseup', cancelDrag);
-        document.removeEventListener('touchend', cancelDrag);
-      };
-      
-      document.addEventListener('mouseup', cancelDrag, { once: true });
-      document.addEventListener('touchend', cancelDrag, { once: true });
-    }
-
-    function handleDragMove(e) {
-      if (!draggingEvent || !dragStartY) return;
-      
-      e.preventDefault();
-      
-      const isTouch = e.touches ? true : false;
-      let currentY;
-      
-      if (isTouch) {
-        if (e.touches.length === 0) return;
-        currentY = e.touches[0].clientY;
-      } else {
-        currentY = e.clientY;
-      }
-      
-      const diff = currentY - dragStartY;
-      
-      // FIX: Snap to 15-minute intervals during drag
-      const gridElement = document.getElementById('week-grid');
-      const gridRect = gridElement.getBoundingClientRect();
-      const pixelsPerHour = gridRect.height / 24;
-      const pixelsPer15Min = pixelsPerHour / 4;
-      
-      const snappedDiff = Math.round(diff / pixelsPer15Min) * pixelsPer15Min;
-      
-      draggingEvent.style.transform = `translateY(${snappedDiff}px)`;
-      draggingEvent.style.opacity = '0.8';
-    }
-
-    async function handleDragEnd(e) {
-      if (dragDateStr) {
-        await endDrag(dragDateStr, e);
-      }
-    }
-
-    async function endDrag(dateStr, e) {
-      clearTimeout(dragHoldTimer);
-      
-      if (!draggingEvent || !dragStartTime) {
-        resetDrag();
-        return;
-      }
-
-      try {
-        const isTouch = e.changedTouches ? true : false;
-        let currentY;
-        
-        if (isTouch) {
-          if (e.changedTouches.length === 0) {
-            resetDrag();
-            return;
-          }
-          currentY = e.changedTouches[0].clientY;
-        } else {
-          currentY = e.clientY;
-        }
-        
-        const diff = currentY - dragStartY;
-        
-        // FIX: Only allow drops at 15-minute intervals (minimum 15 min = 1 interval)
-        const gridElement = document.getElementById('week-grid');
-        if (!gridElement) {
-          resetDrag();
-          return;
-        }
-
-        const gridRect = gridElement.getBoundingClientRect();
-        const pixelsPerHour = gridRect.height / 24;
-        const pixelsPer15Min = pixelsPerHour / 4;
-        
-        // Must be at least one 15-minute interval
-        if (Math.abs(diff) < pixelsPer15Min) {
-          console.log('Drag less than 15 minutes');
-          resetDrag();
-          return;
-        }
-
-        const minutesDiff = Math.round((diff / pixelsPerHour) * 60 / 15) * 15;
-
-        const [hours, minutes] = dragStartTime.split(':').map(Number);
-        let totalMinutes = hours * 60 + minutes + minutesDiff;
-        
-        totalMinutes = Math.max(0, Math.min(1439, Math.round(totalMinutes / 15) * 15));
-
-        let newHours = Math.floor(totalMinutes / 60);
-        let newMinutes = totalMinutes % 60;
-        const newTime = `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
-
-        const eventId = draggingEvent.dataset.eventId;
-        const eventIndex = allEvents.findIndex(e => e.id === eventId);
-
-        if (eventIndex < 0 || allEvents[eventIndex].time === newTime) {
-          resetDrag();
-          return;
-        }
-
-        const eventToUpdate = allEvents[eventIndex];
-        
-        // Calculate end time if needed
-        let newEndTime = null;
-        if (eventToUpdate.endTime) {
-          const [eHours, eMins] = eventToUpdate.endTime.split(':').map(Number);
-          const duration = (eHours * 60 + eMins) - (hours * 60 + minutes);
-          let newEndMinutes = totalMinutes + duration;
-          newEndMinutes = Math.max(0, Math.min(1439, newEndMinutes));
-          
-          let endHours = Math.floor(newEndMinutes / 60);
-          let endMins = newEndMinutes % 60;
-          newEndTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-        }
-
-        // Update and save
-        allEvents[eventIndex].time = newTime;
-        allEvents[eventIndex].endTime = newEndTime || null;
-        saveEvents();
-        
-        console.log(`✓ Updated "${eventToUpdate.title}" to ${newTime}`);
-        showStatus(`✓ ${eventToUpdate.title} → ${formatTimeEastern(newTime)}`, 'success');
-        showSyncIndicator();
-        triggerHaptic([40]);
-
-        resetDrag();
-
-        // Re-render ALL views
-        setTimeout(() => {
-          console.log('🔄 Re-rendering all views...');
-          renderWeekView();
-          renderCalendar();
-          renderUpcomingEvents();
-          renderEventsPage();
-          console.log('✓ All views updated');
-        }, 50);
-
-      } catch (err) {
-        console.error('Drag error:', err);
-        showStatus('Error rescheduling', 'error');
-        triggerHaptic([100, 50, 100]);
-        resetDrag();
-      }
-
-      document.removeEventListener('mousemove', handleDragMove);
-      document.removeEventListener('touchmove', handleDragMove);
-      document.removeEventListener('mouseup', handleDragEnd);
-      document.removeEventListener('touchend', handleDragEnd);
-    }
-
-    function resetDrag() {
-      if (draggingEvent) {
-        draggingEvent.classList.remove('dragging');
-        draggingEvent.style.transform = '';
-        draggingEvent.style.opacity = '';
-      }
-      draggingEvent = null;
-      dragStartTime = null;
-      dragStartY = 0;
-      dragDateStr = null;
-      touchIdentifier = null;
-    }
-
-    function updateCurrentTimeLine() {
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      const topPercent = (hours + minutes / 60) * (100 / 24);
-
-      const existingLine = document.querySelector('.current-time-line');
-      if (existingLine) existingLine.remove();
-
-      const grid = document.getElementById('week-grid');
-      if (grid && isWeekView) {
-        const line = document.createElement('div');
-        line.className = 'current-time-line';
-        line.style.top = `${topPercent}%`;
-        line.innerHTML = '<div class="current-time-dot"></div>';
-        grid.appendChild(line);
-      }
-    }
-
-    function getDateGroup(dateStr) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      const thisWeekEnd = new Date(today);
-      thisWeekEnd.setDate(today.getDate() + (6 - today.getDay()));
-      
-      const nextWeekEnd = new Date(thisWeekEnd);
-      nextWeekEnd.setDate(thisWeekEnd.getDate() + 7);
-
-      const date = new Date(dateStr + 'T00:00:00');
-
-      if (dateStr === today.toISOString().split('T')[0]) return { group: 'today', label: 'Today' };
-      if (dateStr === tomorrow.toISOString().split('T')[0]) return { group: 'tomorrow', label: 'Tomorrow' };
-      if (date <= thisWeekEnd) return { group: 'week', label: 'This Week' };
-      if (date <= nextWeekEnd) return { group: 'month', label: 'Next Week' };
-      return { group: 'later', label: 'Later' };
-    }
-
-    function renderUpcomingEvents() {
-      // FIX: Filter out archived events
-      const activeEvents = allEvents.filter(e => !archivedEvents.some(ae => ae.id === e.id));
-      
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const groupedEvents = {
-        today: [],
-        tomorrow: [],
-        week: [],
-        month: [],
-        later: []
-      };
-
-      activeEvents.forEach(event => {
-        if (new Date(event.date) >= today) {
-          const group = getDateGroup(event.date);
-          groupedEvents[group.group].push({ ...event, groupLabel: group.label });
-        }
-      });
-
-      Object.keys(groupedEvents).forEach(key => {
-        groupedEvents[key].sort((a, b) => {
-          const dateCompare = new Date(a.date) - new Date(b.date);
-          if (dateCompare !== 0) return dateCompare;
-          if (a.isAllDay && !b.isAllDay) return -1;
-          if (!a.isAllDay && b.isAllDay) return 1;
-          return (a.time || '').localeCompare(b.time || '');
-        });
-      });
-
-      const sections = ['today', 'tomorrow', 'week', 'month', 'later'];
-      sections.forEach(section => {
-        const container = document.getElementById(`${section}-section`);
-        const events = groupedEvents[section];
-        
-        if (events.length === 0) {
-          container.innerHTML = '';
-          return;
-        }
-
-        let html = `<div class="upcoming-day-header">${events[0].groupLabel}</div>`;
-        events.forEach(event => {
-          const timeStr = formatEventTime(event.time, event.endTime);
-          const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          const dateObj = new Date(event.date + 'T00:00:00');
-          const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          
-          html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
-            <div class="event-details">
-              <div class="event-title">${event.title}</div>
-              ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
-              <div class="event-day-label">${dateLabel}${timeStr ? ` • ${timeStr}${durationInfo}` : ''}</div>
-              ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
-            </div>
-          </div>`;
-        });
-        
-        container.innerHTML = html;
-      });
-    }
-
-    function renderEventsPage() {
-      // FIX: Filter out archived events
-      const activeEvents = allEvents.filter(e => !archivedEvents.some(ae => ae.id === e.id));
-      
-      const sorted = [...activeEvents].sort((a, b) => {
-        const dateCompare = new Date(a.date) - new Date(b.date);
-        if (dateCompare !== 0) return dateCompare;
-        if (a.isAllDay && !b.isAllDay) return -1;
-        if (!a.isAllDay && b.isAllDay) return 1;
-        return (a.time || '').localeCompare(b.time || '');
-      });
-
-      const grouped = {};
-      sorted.forEach(event => {
-        const dateKey = event.date;
-        if (!grouped[dateKey]) {
-          grouped[dateKey] = [];
-        }
-        grouped[dateKey].push(event);
-      });
-
-      let html = '';
-      const today = new Date().toISOString().split('T')[0];
-
-      Object.keys(grouped).sort().forEach(dateKey => {
-        const date = new Date(dateKey + 'T00:00:00');
-        let dateLabel = '';
-        if (dateKey === today) {
-          dateLabel = 'Today';
-        } else {
-          dateLabel = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        }
-
-        html += `<div class="event-day-group"><div class="event-day-label">${dateLabel}</div>`;
-
-        grouped[dateKey].forEach(event => {
-          const timeStr = formatEventTime(event.time, event.endTime);
-          const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
-            <div class="event-details">
-              <div class="event-title">${event.title}</div>
-              ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
-              ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
-              ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
-            </div>
-            <div class="event-swipe-actions">
-              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic([40])">Edit</button>
-              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic([100, 50, 100])">Delete</button>
-            </div>
-          </div>`;
-        });
-
-        html += '</div>';
-      });
-
-      if (html === '') {
-        html = '<div class="empty-state"><div class="empty-state-icon">📅</div>No events scheduled</div>';
-      }
-
-      document.getElementById('events-list').innerHTML = html;
-    }
-
-    function setupSwipe(e) {
-      e.currentTarget.addEventListener('touchstart', handleTouchStart, false);
-      e.currentTarget.addEventListener('touchmove', handleTouchMove, false);
-      e.currentTarget.addEventListener('touchend', handleTouchEnd, false);
-    }
-
-    function resetSwipe(e) {
-      e.currentTarget.removeEventListener('touchstart', handleTouchStart, false);
-      e.currentTarget.removeEventListener('touchmove', handleTouchMove, false);
-      e.currentTarget.removeEventListener('touchend', handleTouchEnd, false);
-      e.currentTarget.classList.remove('swipe-left');
-    }
-
-    let startX = 0;
-    let currentX = 0;
-
-    function handleTouchStart(e) {
-      startX = e.touches[0].clientX;
-      currentX = startX;
-    }
-
-    function handleTouchMove(e) {
-      currentX = e.touches[0].clientX;
-      const diff = startX - currentX;
-      if (diff > 0) {
-        e.currentTarget.style.transform = `translateX(-${Math.min(diff, 100)}px)`;
-      }
-    }
-
-    function handleTouchEnd(e) {
-      const diff = startX - currentX;
-      if (diff > 40) {
-        e.currentTarget.classList.add('swipe-left');
-      } else {
-        e.currentTarget.style.transform = 'translateX(0)';
-        e.currentTarget.classList.remove('swipe-left');
-      }
-    }
-
-    function clearSearchFilters() {
-      document.getElementById('search-input').value = '';
-      document.getElementById('search-from').value = '';
-      document.getElementById('search-to').value = '';
-      renderEventsPage();
-    }
-
-    function filterEvents() {
-      const query = document.getElementById('search-input').value.toLowerCase();
-      const fromDate = document.getElementById('search-from').value;
-      const toDate = document.getElementById('search-to').value;
-
-      let filtered = allEvents.filter(e => {
-        const textMatch = e.title.toLowerCase().includes(query) || (e.description && e.description.toLowerCase().includes(query));
-        const fromMatch = !fromDate || e.date >= fromDate;
-        const toMatch = !toDate || e.date <= toDate;
-        return textMatch && fromMatch && toMatch;
-      });
-
-      const sorted = [...filtered].sort((a, b) => {
-        const dateCompare = new Date(a.date) - new Date(b.date);
-        if (dateCompare !== 0) return dateCompare;
-        if (a.isAllDay && !b.isAllDay) return -1;
-        if (!a.isAllDay && b.isAllDay) return 1;
-        return (a.time || '').localeCompare(b.time || '');
-      });
-
-      const grouped = {};
-      sorted.forEach(event => {
-        const dateKey = event.date;
-        if (!grouped[dateKey]) {
-          grouped[dateKey] = [];
-        }
-        grouped[dateKey].push(event);
-      });
-
-      let html = '';
-      const today = new Date().toISOString().split('T')[0];
-
-      if (Object.keys(grouped).length === 0) {
-        html = '<div class="empty-state" style="margin-top: 20px;"><div class="empty-state-icon">🔍</div>No events found</div>';
-      } else {
-        Object.keys(grouped).sort().forEach(dateKey => {
-          const date = new Date(dateKey + 'T00:00:00');
-          let dateLabel = '';
-          if (dateKey === today) {
-            dateLabel = 'Today';
-          } else {
-            dateLabel = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          }
-
-          html += `<div class="event-day-group"><div class="event-day-label">${dateLabel}</div>`;
-
-          grouped[dateKey].forEach(event => {
-            const timeStr = formatEventTime(event.time, event.endTime);
-            const durationInfo = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-            html += `<div class="event-item" onmouseenter="setupSwipe(event)" onmouseleave="resetSwipe(event)" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
-              <div class="event-details">
-                <div class="event-title">${event.title}</div>
-                ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
-                ${timeStr ? `<div class="event-meta">${timeStr}${durationInfo}</div>` : ''}
-                ${event.description ? `<div class="event-meta">${event.description}</div>` : ''}
-              </div>
-              <div class="event-swipe-actions">
-                <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic([40])">Edit</button>
-                <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic([100, 50, 100])">Delete</button>
-              </div>
-            </div>`;
-          });
-
-          html += '</div>';
-        });
-      }
-
-      document.getElementById('events-list').innerHTML = html;
-    }
-
-    function previousMonth() {
-      currentDate.setMonth(currentDate.getMonth() - 1);
-      renderCalendar();
-    }
-
-    function nextMonth() {
-      currentDate.setMonth(currentDate.getMonth() + 1);
-      renderCalendar();
-    }
-
-    function setTodayDate() {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('date-input').value = today;
-    }
-
-    function showStatus(message, type) {
-      const el = document.getElementById('status-message');
-      el.innerHTML = message;
-      el.className = `status-message ${type}`;
-      setTimeout(() => {
-        el.innerHTML = '';
-        el.className = '';
-      }, 3000);
-    }
-
-    function checkNotificationPermission() {
-      if ('Notification' in window && notificationsEnabled) {
-        if (Notification.permission === 'granted') {
-          return;
-        }
-      }
-    }
-
-    function requestNotificationPermission() {
-      if (!('Notification' in window)) {
-        showStatus('Notifications not supported', 'error');
-        notificationsEnabled = false;
-        saveNotificationSettings();
-        updateSettingsUI();
-        return;
-      }
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-          if (permission !== 'granted') {
-            notificationsEnabled = false;
-            saveNotificationSettings();
-            updateSettingsUI();
-            showStatus('Notification permission denied', 'error');
-          } else {
-            showStatus('Notifications enabled', 'success');
-            scheduleNotifications();
-          }
-        });
-      }
-    }
-
-    function scheduleNotifications() {
-      if (!notificationsEnabled || !('Notification' in window)) return;
-      const now = new Date();
-      allEvents.forEach(event => {
-        if (!event.time) return;
-        const [hours, minutes] = event.time.split(':').map(Number);
-        const eventTime = new Date(event.date);
-        eventTime.setHours(hours, minutes);
-        const notifyTime = new Date(eventTime.getTime() - 15 * 60000);
-        if (notifyTime > now) {
-          const timeout = notifyTime.getTime() - now.getTime();
-          setTimeout(() => {
-            if (Notification.permission === 'granted') {
-              new Notification(`Upcoming: ${event.title}`, { body: `${formatTimeEastern(event.time)} - ${event.date}`, tag: event.id });
-            }
-          }, timeout);
-        }
-      });
-    }
-
-    function exportEvents() {
-      const dataStr = JSON.stringify(allEvents, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `calendar-backup-${new Date().toISOString().split('T')[0]}.json`;
-      link.click();
-      showStatus('Events exported', 'success');
-      closeMenuOnTab();
-    }
-
-    window.addEventListener('load', init);
-    setInterval(() => {
-      if (isWeekView) updateCurrentTimeLine();
-    }, 60000);
-  </script>
-</body>
-</html>
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 100,
+      messages: [{
+        role: 'user',
+        content: 'Say "API works" in one word'
+      }]
+    });
+    
+    console.log('✓ API connection successful');
+    res.json({ 
+      status: 'ok',
+      message: response.content[0].text,
+      apiKeyExists: !!process.env.ANTHROPIC_API_KEY
+    });
+  } catch (err) {
+    console.error('✗ API Error:', err.message);
+    res.status(400).json({ 
+      status: 'error',
+      error: err.message,
+      apiKeyExists: !!process.env.ANTHROPIC_API_KEY,
+      hint: 'Check ANTHROPIC_API_KEY in Railway env variables'
+    });
+  }
+});
+
+app.post('/api/events/parse', async (req, res) => {
+  const { text, currentESTDate, currentESTTime, timezone } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'Event text is required' });
+  }
+
+  try {
+    // PHASE 6: Pass EST context to parseEvent
+    const parsed = await parseEvent(text, currentESTDate, currentESTTime);
+    const newEvent = {
+      id: Date.now().toString(),
+      title: parsed.title,
+      date: parsed.date,
+      endDate: parsed.endDate || null,
+      time: parsed.time || null,
+      endTime: parsed.endTime || null,
+      isAllDay: parsed.isAllDay || (parsed.time === null && parsed.endTime === null),
+      description: '',
+      isMultiDay: !!parsed.endDate,
+      createdAt: new Date()
+    };
+    
+    await saveEvent(newEvent);
+    console.log('✓ Event saved:', newEvent);
+    res.json(newEvent);
+  } catch (err) {
+    console.error('✗ Parse error:', err.message);
+    res.status(400).json({ error: err.message || 'Failed to parse event' });
+  }
+});
+
+app.get('/api/events', async (req, res) => {
+  try {
+    const events = await loadEvents();
+    console.log('✓ Loaded', events.length, 'events');
+    res.json(events);
+  } catch (err) {
+    console.error('✗ Error loading events:', err.message);
+    res.status(500).json({ error: 'Failed to load events' });
+  }
+});
+
+app.post('/api/events', async (req, res) => {
+  const { title, date, endDate, time, endTime, description, isAllDay } = req.body;
+  
+  if (!title || !date) {
+    return res.status(400).json({ error: 'Title and date are required' });
+  }
+
+  const newEvent = {
+    id: Date.now().toString(),
+    title: title.trim(),
+    date,
+    endDate: endDate || null,
+    time: time || null,
+    endTime: endTime || null,
+    isAllDay: isAllDay || (time === null && endTime === null),
+    description: description || '',
+    isMultiDay: !!endDate,
+    createdAt: new Date()
+  };
+  
+  const result = await saveEvent(newEvent);
+  if (result) {
+    console.log('✓ Event created:', newEvent);
+    res.json(result);
+  } else {
+    res.status(500).json({ error: 'Failed to save event' });
+  }
+});
+
+app.put('/api/events/:id', async (req, res) => {
+  const { title, date, endDate, time, endTime, description, isAllDay } = req.body;
+  const eventId = req.params.id;
+
+  if (!title || !date) {
+    return res.status(400).json({ error: 'Title and date are required' });
+  }
+
+  const updates = {
+    title: title.trim(),
+    date,
+    endDate: endDate || null,
+    time: time || null,
+    endTime: endTime || null,
+    isAllDay: isAllDay || (time === null && endTime === null),
+    description: description || '',
+    isMultiDay: !!endDate,
+    updatedAt: new Date()
+  };
+
+  await updateEvent(eventId, updates);
+  const events = await loadEvents();
+  const updated = events.find(e => e.id === eventId);
+  
+  if (updated) {
+    console.log('✓ Event updated:', updated);
+    res.json(updated);
+  } else {
+    res.status(404).json({ error: 'Event not found' });
+  }
+});
+
+app.delete('/api/events/:id', async (req, res) => {
+  const success = await deleteEvent(req.params.id);
+  if (success) {
+    console.log('✓ Event deleted:', req.params.id);
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: 'Event not found' });
+  }
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date(), version: '0.6', model: 'claude-haiku-4-5-20251001', timezone: EST_TIMEZONE });
+});
+
+async function startServer() {
+  try {
+    await connectMongoDB();
+    app.listen(PORT, () => {
+      console.log(`✓ Calendar API running on port ${PORT}`);
+      console.log(`✓ Model: claude-haiku-4-5-20251001 (PHASE 6)`);
+      console.log(`✓ Timezone: EST (America/New_York)`);
+    });
+  } catch (err) {
+    console.error('✗ Failed to start server:', err.message);
+    process.exit(1);
+  }
+}
+
+process.on('SIGINT', async () => {
+  console.log('\n✓ Shutting down gracefully...');
+  if (mongoClient) {
+    await mongoClient.close();
+  }
+  process.exit(0);
+});
+
+startServer();
