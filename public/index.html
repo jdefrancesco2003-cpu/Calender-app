@@ -129,6 +129,14 @@
     .day-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
     .day-cell.selected .day-dot { background: rgba(255,255,255,0.85); }
     .day-dot.more { background: var(--text-secondary); }
+    .day-dot.holiday { background: var(--warning); }
+    .week-holiday-pill {
+      font-size: 8px; font-weight: 700; color: white;
+      background: rgba(255,149,0,0.75);
+      border-radius: 3px; padding: 1px 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 76px; margin-top: 1px; cursor: default;
+    }
 
     /* ── UPCOMING EVENTS (calendar tab sidebar) ── */
     .events-container { padding: 10px 14px 80px; background: var(--bg-card); border-top: 1px solid var(--border-color); overflow-y: auto; flex: 1; }
@@ -478,6 +486,74 @@
     let pendingDeleteTimeout = null;
     let notificationTimeouts = [];
     let filterDebounceTimer = null;
+    const HOUR_W = 64; // mirrors --hour-w CSS var
+    let barDragState = null;
+    let barDragJustEnded = false;
+
+    // ── Holiday helpers ──
+    function getNthWeekday(year, month, weekday, nth) {
+      const d = new Date(year, month - 1, 1);
+      if (nth === -1) {
+        d.setMonth(month); d.setDate(0);
+        while (d.getDay() !== weekday) d.setDate(d.getDate() - 1);
+        return getLocalDateString(d);
+      }
+      let count = 0;
+      while (d.getMonth() === month - 1) {
+        if (d.getDay() === weekday) { count++; if (count === nth) return getLocalDateString(d); }
+        d.setDate(d.getDate() + 1);
+      }
+      return null;
+    }
+
+    function getEasterDate(year) {
+      const a = year % 19, b = Math.floor(year/100), c = year % 100;
+      const d2 = Math.floor(b/4), e = b % 4, f = Math.floor((b+8)/25);
+      const g = Math.floor((b-f+1)/3), h = (19*a+b-d2-g+15) % 30;
+      const i = Math.floor(c/4), k = c % 4, l = (32+2*e+2*i-h-k) % 7;
+      const m = Math.floor((a+11*h+22*l)/451);
+      const month = Math.floor((h+l-7*m+114)/31);
+      const day = ((h+l-7*m+114) % 31) + 1;
+      return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    }
+
+    function generateHolidays(year) {
+      const fixed = [
+        { title: "New Year's Day",    date: `${year}-01-01` },
+        { title: "Groundhog Day",     date: `${year}-02-02` },
+        { title: "Valentine's Day",   date: `${year}-02-14` },
+        { title: "St. Patrick's Day", date: `${year}-03-17` },
+        { title: "Juneteenth",        date: `${year}-06-19` },
+        { title: "Independence Day",  date: `${year}-07-04` },
+        { title: "Halloween",         date: `${year}-10-31` },
+        { title: "Veterans Day",      date: `${year}-11-11` },
+        { title: "Christmas Eve",     date: `${year}-12-24` },
+        { title: "Christmas Day",     date: `${year}-12-25` },
+        { title: "New Year's Eve",    date: `${year}-12-31` },
+      ];
+      const calculated = [
+        { title: "MLK Day",          date: getNthWeekday(year,1,1,3)  },
+        { title: "Presidents' Day",  date: getNthWeekday(year,2,1,3)  },
+        { title: "Easter Sunday",    date: getEasterDate(year)         },
+        { title: "Mother's Day",     date: getNthWeekday(year,5,0,2)  },
+        { title: "Memorial Day",     date: getNthWeekday(year,5,1,-1) },
+        { title: "Father's Day",     date: getNthWeekday(year,6,0,3)  },
+        { title: "Labor Day",        date: getNthWeekday(year,9,1,1)  },
+        { title: "Columbus Day",     date: getNthWeekday(year,10,1,2) },
+        { title: "Thanksgiving",     date: getNthWeekday(year,11,4,4) },
+      ];
+      return [...fixed, ...calculated]
+        .filter(h => h.date)
+        .map(h => ({ ...h, isAllDay: true, isHoliday: true }));
+    }
+
+    const _thisYear = new Date().getFullYear();
+    const holidays = [
+      ...generateHolidays(_thisYear - 1),
+      ...generateHolidays(_thisYear),
+      ...generateHolidays(_thisYear + 1),
+      ...generateHolidays(_thisYear + 2),
+    ];
 
     const WEATHER_API_KEY = '46a759eb926bfad1530ec2671deb009c';
     const EST_TIMEZONE = 'America/New_York';
@@ -644,6 +720,9 @@
       if (!t) return 0;
       const [h, m] = t.split(':').map(Number);
       return h * 60 + m;
+    }
+    function minsToTimeStr(m) {
+      return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
     }
     function showStatus(message, type) {
       const el = document.getElementById('status-message');
@@ -1190,11 +1269,14 @@
         const isSelected = dateStr === selectedDate;
         const dayEvents = allEvents.filter(e => !archivedIds.has(e.id) && (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)));
         const count = dayEvents.length;
+        const dayHolidays = holidays.filter(h => h.date === dateStr);
         let dotsHtml = '';
-        if (count > 0) {
+        if (count > 0 || dayHolidays.length > 0) {
           const dotCount = Math.min(count, 3);
           for (let i = 0; i < dotCount; i++) dotsHtml += '<div class="day-dot"></div>';
           if (count > 3) dotsHtml += '<div class="day-dot more"></div>';
+          for (let i = 0; i < Math.min(dayHolidays.length, 2); i++)
+            dotsHtml += '<div class="day-dot holiday"></div>';
           dotsHtml = `<div class="day-dots">${dotsHtml}</div>`;
         }
         html += `<div class="day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="openDayModal('${dateStr}'); triggerHaptic([40])"><div class="day-number">${day}</div>${dotsHtml}</div>`;
@@ -1345,10 +1427,16 @@
           `<div class="week-allday-pill" onclick="openEditModal('${e.id}');triggerHaptic([40])" title="${escHtml(e.title)}">${escHtml(e.title)}</div>`
         ).join('');
 
+        const dayHolidays = holidays.filter(h => h.date === dateStr);
+        const holidayPillsHtml = dayHolidays.map(h =>
+          `<div class="week-holiday-pill" title="${escHtml(h.title)}">${escHtml(h.title)}</div>`
+        ).join('');
+
         labelsHtml += `<div class="week-day-label ${isToday ? 'today' : ''}">
           <div class="week-day-name-text ${isToday ? 'today' : ''}">${dayNames[date.getDay()]}</div>
           <div class="week-day-date-text ${isToday ? 'today' : ''}">${date.getDate()}</div>
           ${pillsHtml}
+          ${holidayPillsHtml}
         </div>`;
 
         // Timed events
@@ -1381,9 +1469,11 @@
             const topPx = 4 + idx * (barH + 2);
             const timeLabel = formatEventTime(ev.time, ev.endTime);
             barsHtml += `<div class="week-event-bar"
-              style="left:${leftPx}px;width:${widthPx}px;top:${topPx}px;height:${barH}px;font-size:${fontSize}px;"
-              onclick="openEditModal('${ev.id}');triggerHaptic([40])"
+              style="left:${leftPx}px;width:${widthPx}px;top:${topPx}px;height:${barH}px;font-size:${fontSize}px;cursor:grab;"
               data-event-id="${ev.id}"
+              onmousedown="startBarDrag(event,'${ev.id}',${startMins},${endMins - startMins})"
+              ontouchstart="startBarDrag(event,'${ev.id}',${startMins},${endMins - startMins})"
+              onclick="if(!barDragJustEnded){openEditModal('${ev.id}');triggerHaptic([40]);}"
               title="${escHtml(ev.title)} (${timeLabel})"
             >${escHtml(ev.title)}</div>`;
           });
@@ -1403,6 +1493,65 @@
 
       updateCurrentTimeLine();
       scrollToCurrentTime();
+    }
+
+    // ── Horizontal drag-to-reschedule for week event bars ──
+    function startBarDrag(e, eventId, startMins, durationMins) {
+      e.stopPropagation();
+      const isTouch = !!e.touches;
+      const startX = isTouch ? e.touches[0].clientX : e.clientX;
+      barDragState = {
+        eventId, startMins, durationMins, startX,
+        deltaPx: 0, moved: false,
+        el: e.currentTarget,
+        isTouch
+      };
+      document.addEventListener(isTouch ? 'touchmove' : 'mousemove', handleBarDragMove, { passive: false });
+      document.addEventListener(isTouch ? 'touchend' : 'mouseup', handleBarDragEnd, { once: true });
+    }
+
+    function handleBarDragMove(e) {
+      if (!barDragState) return;
+      e.preventDefault();
+      const x = barDragState.isTouch ? e.touches[0].clientX : e.clientX;
+      barDragState.deltaPx = x - barDragState.startX;
+      if (Math.abs(barDragState.deltaPx) >= 8) barDragState.moved = true;
+      if (!barDragState.moved) return;
+      barDragState.el.style.transform = `translateX(${barDragState.deltaPx}px)`;
+      barDragState.el.style.opacity = '0.82';
+      barDragState.el.style.zIndex = '20';
+    }
+
+    function handleBarDragEnd(e) {
+      if (!barDragState) return;
+      document.removeEventListener(barDragState.isTouch ? 'touchmove' : 'mousemove', handleBarDragMove);
+
+      if (barDragState.moved) {
+        barDragJustEnded = true;
+        setTimeout(() => { barDragJustEnded = false; }, 150);
+
+        const MINS_PER_PX = 60 / HOUR_W;
+        const rawDeltaMins = barDragState.deltaPx * MINS_PER_PX;
+        const snapDeltaMins = Math.round(rawDeltaMins / 15) * 15;
+        let newStart = Math.max(0, Math.min(23 * 60, barDragState.startMins + snapDeltaMins));
+        newStart = Math.round(newStart / 15) * 15;
+        const newEnd = Math.min(24 * 60 - 1, newStart + barDragState.durationMins);
+
+        const idx = allEvents.findIndex(ev => ev.id === barDragState.eventId);
+        if (idx >= 0 && minsToTimeStr(newStart) !== allEvents[idx].time) {
+          allEvents[idx].time = minsToTimeStr(newStart);
+          allEvents[idx].endTime = minsToTimeStr(newEnd);
+          saveEvents();
+          showStatus(`✓ ${allEvents[idx].title} → ${formatTimeEastern(allEvents[idx].time)}`, 'success');
+          showSyncIndicator();
+          triggerHaptic([40]);
+        } else {
+          barDragState.el.style.transform = '';
+          barDragState.el.style.opacity = '';
+        }
+        renderWeekView();
+      }
+      barDragState = null;
     }
 
     // Group timed events that overlap into arrays (for side-by-side rendering)
