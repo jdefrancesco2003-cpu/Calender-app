@@ -1040,8 +1040,8 @@
         }
         hideAuthModal();
         updateUserChip();
-        // Claim any legacy (pre-auth) events that have no userId
-        fetch('/api/migrate/claim-legacy-events', { method: 'POST', headers: getAuthHeaders() }).catch(() => {});
+        // Claim any legacy (pre-auth) events — await so loadEvents sees them
+        await fetch('/api/migrate/claim-legacy-events', { method: 'POST', headers: getAuthHeaders() }).catch(() => {});
         await loadEvents();
         renderCalendar();
         renderUpcomingEvents();
