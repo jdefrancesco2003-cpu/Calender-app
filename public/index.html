@@ -9,6 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="CalPal">
   <title>CalPal</title>
+  <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tweetnacl-util@0.15.1/nacl-util.min.js"></script>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -131,6 +133,24 @@
     .day-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
     .day-cell.selected .day-dot { background: rgba(255,255,255,0.85); }
     .day-dot.more { background: var(--text-secondary); }
+    /* ── AUTH MODAL ── */
+    #auth-overlay { position: fixed; inset: 0; background: var(--bg-dark); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+    #auth-overlay.hidden { display: none; }
+    .auth-box { width: 100%; max-width: 360px; background: var(--bg-card); border-radius: 20px; padding: 32px 24px; border: 1px solid var(--border-color); }
+    .auth-logo { text-align: center; margin-bottom: 28px; font-size: 28px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; }
+    .auth-logo span { color: var(--primary); }
+    .auth-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; text-align: center; }
+    .auth-field { margin-bottom: 14px; }
+    .auth-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .auth-field input { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; font-size: 15px; color: var(--text-primary); outline: none; -webkit-user-select: text; user-select: text; }
+    .auth-field input:focus { border-color: var(--primary); }
+    .auth-submit { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 6px; transition: background 0.2s; }
+    .auth-submit:active { background: var(--primary-dark); }
+    .auth-toggle { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-secondary); }
+    .auth-toggle span { color: var(--primary); cursor: pointer; font-weight: 600; }
+    .auth-error { background: rgba(255,69,58,0.15); color: #ff6b6b; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
+    .auth-error.visible { display: block; }
+    .user-chip { font-size: 11px; color: var(--text-secondary); background: var(--bg-light); border-radius: 20px; padding: 3px 10px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .day-dot.holiday { background: var(--warning); }
     .week-holiday-pill {
       font-size: 8px; font-weight: 700; color: white;
@@ -252,10 +272,12 @@
         <button class="menu-btn" onclick="toggleMenu(); triggerHaptic(20)">☰</button>
       </div>
       <div class="dropdown-menu" id="dropdown-menu">
+        <div id="user-chip-wrap" style="padding:10px 14px 6px;display:none;"><div class="user-chip" id="user-chip"></div></div>
         <button class="dropdown-item" onclick="exportEvents(); triggerHaptic(20)">📥 Export Events</button>
         <button class="dropdown-item" onclick="openArchiveModal(); triggerHaptic(20)">📦 Archive Past Events</button>
         <button class="dropdown-item" onclick="viewArchived(); triggerHaptic(20)">📂 View Archive</button>
         <button class="dropdown-item" onclick="openSettings(); triggerHaptic(20)">⚙️ Settings</button>
+        <button class="dropdown-item" id="logout-btn" onclick="logout(); triggerHaptic(20)" style="display:none;color:#ff6b6b;">↩ Sign Out</button>
       </div>
     </header>
 
@@ -438,6 +460,27 @@
     </div>
   </div>
 
+  <!-- ── AUTH MODAL ── -->
+  <div id="auth-overlay" class="hidden">
+    <div class="auth-box">
+      <div class="auth-logo">Cal<span>Pal</span></div>
+      <div class="auth-title" id="auth-modal-title">Sign In</div>
+      <div class="auth-error" id="auth-error"></div>
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="auth-submit" id="auth-submit-btn" onclick="submitAuth()">Sign In</button>
+      <div class="auth-toggle" id="auth-toggle-text">
+        No account? <span onclick="toggleAuthMode()">Create one</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ── SETTINGS MODAL ── -->
   <div class="modal-overlay" id="settings-overlay">
     <div class="modal">
@@ -488,6 +531,11 @@
     let pendingDeleteTimeout = null;
     let notificationTimeouts = [];
     let filterDebounceTimer = null;
+    let authToken = localStorage.getItem('calpal_token') || null;
+    let currentUserEmail = localStorage.getItem('calpal_email') || null;
+    let encryptionKey = null; // 32-byte Uint8Array — never persisted
+    let authMode = 'login'; // 'login' | 'register'
+    let authEnabled = false; // set from /api/health on init
     const HOUR_W = 64; // mirrors --hour-w CSS var
     let barDragState = null;
     let barDragJustEnded = false;
@@ -758,19 +806,197 @@
       setTimeout(() => document.getElementById('event-input').focus(), 100);
     }
 
+    // ── Auth + Encryption helpers ──
+    function getAuthHeaders() {
+      const h = { 'Content-Type': 'application/json' };
+      if (authToken) h['Authorization'] = `Bearer ${authToken}`;
+      return h;
+    }
+
+    async function deriveEncryptionKey(password, salt) {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+      const cryptoKey = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt: enc.encode(salt), iterations: 200000, hash: 'SHA-256' },
+        keyMaterial, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
+      );
+      const raw = await crypto.subtle.exportKey('raw', cryptoKey);
+      return new Uint8Array(raw);
+    }
+
+    function encryptEvent(eventObj) {
+      if (!encryptionKey) return null;
+      const nonce = nacl.randomBytes(nacl.secretbox.nonceLength);
+      const message = nacl.util.decodeUTF8(JSON.stringify(eventObj));
+      const box = nacl.secretbox(message, nonce, encryptionKey);
+      return {
+        encryptedData: nacl.util.encodeBase64(box),
+        nonce: nacl.util.encodeBase64(nonce)
+      };
+    }
+
+    function decryptEvent(encryptedData, nonce) {
+      if (!encryptionKey) return null;
+      try {
+        const box = nacl.util.decodeBase64(encryptedData);
+        const nonceBytes = nacl.util.decodeBase64(nonce);
+        const decrypted = nacl.secretbox.open(box, nonceBytes, encryptionKey);
+        if (!decrypted) return null;
+        return JSON.parse(nacl.util.encodeUTF8(decrypted));
+      } catch { return null; }
+    }
+
+    async function apiSaveEvent(eventObj) {
+      if (!authEnabled && !authToken) return; // dev mode, no server sync
+      const encrypted = encryptEvent(eventObj);
+      const body = encrypted
+        ? { id: eventObj.id, encryptedData: encrypted.encryptedData, nonce: encrypted.nonce }
+        : { ...eventObj };
+      try {
+        await fetch('/api/events', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(body)
+        });
+      } catch { /* best-effort */ }
+    }
+
+    async function apiUpdateEvent(eventId, eventObj) {
+      if (!authEnabled && !authToken) return;
+      const encrypted = encryptEvent(eventObj);
+      const body = encrypted
+        ? { encryptedData: encrypted.encryptedData, nonce: encrypted.nonce }
+        : { ...eventObj };
+      try {
+        await fetch(`/api/events/${eventId}`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(body)
+        });
+      } catch { /* best-effort */ }
+    }
+
+    // ── Auth UI ──
+    function showAuthModal(mode = 'login') {
+      authMode = mode;
+      document.getElementById('auth-overlay').classList.remove('hidden');
+      document.getElementById('auth-modal-title').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+      document.getElementById('auth-submit-btn').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+      document.getElementById('auth-toggle-text').innerHTML = mode === 'login'
+        ? 'No account? <span onclick="toggleAuthMode()">Create one</span>'
+        : 'Have an account? <span onclick="toggleAuthMode()">Sign in</span>';
+      document.getElementById('auth-error').classList.remove('visible');
+      document.getElementById('auth-email').value = '';
+      document.getElementById('auth-password').value = '';
+      setTimeout(() => document.getElementById('auth-email').focus(), 100);
+    }
+
+    function hideAuthModal() {
+      document.getElementById('auth-overlay').classList.add('hidden');
+    }
+
+    function toggleAuthMode() {
+      showAuthModal(authMode === 'login' ? 'register' : 'login');
+    }
+
+    function showAuthError(msg) {
+      const el = document.getElementById('auth-error');
+      el.textContent = msg;
+      el.classList.add('visible');
+    }
+
+    async function submitAuth() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const btn = document.getElementById('auth-submit-btn');
+      if (!email || !password) { showAuthError('Email and password required'); return; }
+      btn.disabled = true;
+      btn.textContent = '...';
+      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) { showAuthError(data.error || 'Authentication failed'); return; }
+        authToken = data.token;
+        currentUserEmail = email;
+        localStorage.setItem('calpal_token', authToken);
+        localStorage.setItem('calpal_email', currentUserEmail);
+        if (data.encryptionSalt && data.encryptionSalt !== 'dev-salt') {
+          encryptionKey = await deriveEncryptionKey(password, data.encryptionSalt);
+        }
+        hideAuthModal();
+        updateUserChip();
+        await loadEvents();
+        renderCalendar();
+        renderUpcomingEvents();
+        archivePastEventsSilent();
+      } catch (err) {
+        showAuthError('Connection error. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+      }
+    }
+
+    function logout() {
+      authToken = null;
+      currentUserEmail = null;
+      encryptionKey = null;
+      localStorage.removeItem('calpal_token');
+      localStorage.removeItem('calpal_email');
+      allEvents = [];
+      saveEvents();
+      updateUserChip();
+      toggleMenu();
+      showAuthModal('login');
+    }
+
+    function updateUserChip() {
+      const chip = document.getElementById('user-chip');
+      if (chip) chip.textContent = currentUserEmail || '';
+      const chipWrap = document.getElementById('user-chip-wrap');
+      if (chipWrap) chipWrap.style.display = currentUserEmail ? '' : 'none';
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) logoutBtn.style.display = currentUserEmail ? '' : 'none';
+    }
+
     // ── Local storage ──
     function saveEvents() {
       localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
     }
 
-    // ── Load events (with fetch timeout) ──
+    // ── Load events (with fetch timeout + auth + decryption) ──
     async function loadEvents() {
       const controller = new AbortController();
       const tid = setTimeout(() => controller.abort(), 10000);
       try {
-        const response = await fetch('/api/events', { signal: controller.signal });
+        const response = await fetch('/api/events', {
+          headers: getAuthHeaders(),
+          signal: controller.signal
+        });
         clearTimeout(tid);
+        if (response.status === 401) {
+          // Token expired or invalid — show login
+          authToken = null;
+          localStorage.removeItem('calpal_token');
+          if (authEnabled) showAuthModal('login');
+          return;
+        }
         let loaded = await response.json();
+        // Decrypt events if encryption key is available
+        if (encryptionKey) {
+          loaded = loaded.map(e => {
+            if (e.encryptedData && e.nonce) {
+              const decrypted = decryptEvent(e.encryptedData, e.nonce);
+              return decrypted ? { ...decrypted, id: e.id } : null;
+            }
+            return e;
+          }).filter(Boolean);
+        }
         loadArchive();
         loaded = loaded.filter(e => !archivedIds.has(e.id));
         allEvents = loaded;
@@ -827,8 +1053,19 @@
 
     // ── Init ──
     async function init() {
+      // Check if server requires auth
+      try {
+        const health = await fetch('/api/health').then(r => r.json()).catch(() => ({}));
+        authEnabled = !!health.auth;
+      } catch { authEnabled = false; }
+
+      if (authEnabled && !authToken) {
+        showAuthModal('login');
+        return; // don't load events until logged in
+      }
+
       await loadEvents();
-      archivePastEventsSilent();   // auto-archive on load
+      archivePastEventsSilent();
       scheduleArchiveAtMidnight();
       loadNotificationSettings();
       renderCalendar();
@@ -837,6 +1074,7 @@
       checkNotificationPermission();
       scheduleNotifications();
       fetchWeather();
+      updateUserChip();
       setInterval(fetchWeather, 600000);
       setInterval(() => { if (isWeekView) updateCurrentTimeLine(); }, 60000);
     }
@@ -1000,6 +1238,7 @@
       const newEvent = { id: generateId(), ...pendingParsedEvent };
       allEvents.push(newEvent);
       saveEvents();
+      apiSaveEvent(newEvent);
       showStatus(`✓ ${pendingParsedEvent.title} added`, 'success');
       showSyncIndicator();
       document.getElementById('event-input').value = '';
@@ -1045,7 +1284,7 @@
       if (checkDuplicateEvent(newEvent)) { showDuplicateModal(title); return; }
       if (checkEventOverlap(newEvent)) {
         showOverlapConfirmation(title, () => {
-          allEvents.push(newEvent); saveEvents();
+          allEvents.push(newEvent); saveEvents(); apiSaveEvent(newEvent);
           showStatus(`✓ ${title} saved`, 'success'); showSyncIndicator();
           clearAddForm(); renderCalendar(); renderUpcomingEvents();
           if (isWeekView) renderWeekView(); scheduleNotifications();
@@ -1054,6 +1293,7 @@
       }
       allEvents.push(newEvent);
       saveEvents();
+      apiSaveEvent(newEvent);
       showStatus(`✓ ${title} saved`, 'success');
       showSyncIndicator();
       clearAddForm();
@@ -1094,7 +1334,7 @@
       if (pendingDeleteTimeout) clearTimeout(pendingDeleteTimeout);
       pendingDeleteId = id;
       pendingDeleteTimeout = setTimeout(async () => {
-        try { await fetch(`/api/events/${pendingDeleteId}`, { method: 'DELETE' }); }
+        try { await fetch(`/api/events/${pendingDeleteId}`, { method: 'DELETE', headers: getAuthHeaders() }); }
         catch (err) { /* server delete best-effort */ }
         pendingDeleteId = null;
         pendingDeleteTimeout = null;
@@ -1175,7 +1415,7 @@
         showOverlapConfirmation(title, () => {
           const idx = allEvents.findIndex(e => e.id === editingEventId);
           if (idx >= 0) allEvents[idx] = { ...allEvents[idx], ...updatedEvent };
-          saveEvents(); showStatus(`✓ ${title} updated`, 'success'); showSyncIndicator();
+          saveEvents(); apiUpdateEvent(editingEventId, allEvents.find(e=>e.id===editingEventId)||updatedEvent); showStatus(`✓ ${title} updated`, 'success'); showSyncIndicator();
           closeModal(); renderCalendar(); renderUpcomingEvents(); renderEventsPage();
           if (isWeekView) renderWeekView(); scheduleNotifications();
         });
@@ -1184,6 +1424,7 @@
       const idx = allEvents.findIndex(e => e.id === editingEventId);
       if (idx >= 0) allEvents[idx] = { ...allEvents[idx], ...updatedEvent };
       saveEvents();
+      apiUpdateEvent(editingEventId, allEvents.find(e=>e.id===editingEventId)||updatedEvent);
       showStatus(`✓ ${title} updated`, 'success');
       showSyncIndicator();
       closeModal();
