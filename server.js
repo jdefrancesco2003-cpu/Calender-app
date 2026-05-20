@@ -2,6 +2,9 @@ const express = require('express');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { randomBytes } = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,35 +38,61 @@ function getCurrentESTInfo() {
   return { date: getESTDateString(), time: getESTTimeString(), timezone: EST_TIMEZONE };
 }
 
+// ── Auth config ──
+const JWT_SECRET = process.env.JWT_SECRET || null; // null = dev mode (no auth required)
+const BCRYPT_ROUNDS = 12;
+function generateSalt() { return randomBytes(16).toString('hex'); }
+
 const client = new Anthropic();
 const mongoUri = process.env.MONGODB_URI;
 let eventsCollection;
+let usersCollection;
 let mongoClient;
 
-// Simple in-process rate limiter for the parse endpoint
-const parseRateLimit = new Map();
-function checkParseRateLimit(ip) {
-  const now = Date.now();
-  const entry = parseRateLimit.get(ip);
-  if (!entry || now > entry.expiresAt) {
-    parseRateLimit.set(ip, { count: 1, expiresAt: now + 60000 });
+// ── Rate limiters ──
+function makeRateLimiter(max, windowMs) {
+  const store = new Map();
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of store) if (now > v.expiresAt) store.delete(k);
+  }, 300000);
+  return function check(key) {
+    const now = Date.now();
+    const entry = store.get(key);
+    if (!entry || now > entry.expiresAt) { store.set(key, { count: 1, expiresAt: now + windowMs }); return true; }
+    if (entry.count >= max) return false;
+    entry.count++;
     return true;
-  }
-  if (entry.count >= 20) return false;
-  entry.count++;
-  return true;
+  };
 }
-// Clean up stale entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of parseRateLimit) {
-    if (now > entry.expiresAt) parseRateLimit.delete(ip);
-  }
-}, 300000);
+const checkParseRateLimit = makeRateLimiter(20, 60000);   // 20/min for parse
+const checkAuthRateLimit  = makeRateLimiter(5,  900000);  // 5 attempts/15 min for auth
 
-// Date/time format validation
+// ── Auth middleware ──
+function requireAuth(req, res, next) {
+  if (!JWT_SECRET) {
+    // Dev mode: bypass auth, single shared user
+    req.user = { userId: 'dev-user', email: 'dev@local' };
+    return next();
+  }
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  try {
+    const payload = jwt.verify(header.slice(7), JWT_SECRET);
+    req.user = { userId: payload.sub, email: payload.email };
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+// ── Validation ──
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function validateEventFields({ date, endDate, time, endTime }) {
   if (!date || !DATE_RE.test(date)) return 'Invalid date format (expected YYYY-MM-DD)';
   if (endDate && !DATE_RE.test(endDate)) return 'Invalid end date format';
@@ -73,6 +102,7 @@ function validateEventFields({ date, endDate, time, endTime }) {
   return null;
 }
 
+// ── MongoDB ──
 async function connectMongoDB() {
   if (!mongoUri) {
     console.log('⚠ No MONGODB_URI set — running without persistence');
@@ -83,18 +113,23 @@ async function connectMongoDB() {
     await mongoClient.connect();
     const db = mongoClient.db('calendar');
     eventsCollection = db.collection('events');
+    usersCollection = db.collection('users');
+    await usersCollection.createIndex({ email: 1 }, { unique: true });
+    await eventsCollection.createIndex({ userId: 1 });
     console.log('✓ Connected to MongoDB');
   } catch (err) {
     console.error('✗ MongoDB connection failed:', err.message);
     console.log('⚠ Continuing without MongoDB persistence');
     eventsCollection = null;
+    usersCollection = null;
   }
 }
 
-async function loadEvents() {
+async function loadEvents(userId) {
   if (!eventsCollection) return [];
   try {
-    return await eventsCollection.find({}).toArray();
+    const query = userId ? { userId } : {};
+    return await eventsCollection.find(query).toArray();
   } catch (err) {
     console.error('Error loading events:', err.message);
     return [];
@@ -112,10 +147,11 @@ async function saveEvent(event) {
   }
 }
 
-async function updateEvent(id, updates) {
+async function updateEvent(id, userId, updates) {
   if (!eventsCollection) return updates;
   try {
-    await eventsCollection.updateOne({ id }, { $set: updates });
+    const query = userId ? { id, userId } : { id };
+    await eventsCollection.updateOne(query, { $set: updates });
     return updates;
   } catch (err) {
     console.error('Error updating event:', err.message);
@@ -123,10 +159,11 @@ async function updateEvent(id, updates) {
   }
 }
 
-async function deleteEvent(id) {
+async function deleteEvent(id, userId) {
   if (!eventsCollection) return true;
   try {
-    const result = await eventsCollection.deleteOne({ id });
+    const query = userId ? { id, userId } : { id };
+    const result = await eventsCollection.deleteOne(query);
     return result.deletedCount > 0;
   } catch (err) {
     console.error('Error deleting event:', err.message);
@@ -134,10 +171,7 @@ async function deleteEvent(id) {
   }
 }
 
-function getFormattedDate() {
-  return new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
-
+// ── Natural-language parser (parse only — does NOT save) ──
 async function parseEvent(text, currentESTDate, currentESTTime) {
   if (!text || text.trim().length === 0) throw new Error('Event text cannot be empty');
 
@@ -214,7 +248,6 @@ Return ONLY this JSON:
   if (parsed.time && !TIME_RE.test(parsed.time)) parsed.time = null;
   if (parsed.endTime && !TIME_RE.test(parsed.endTime)) parsed.endTime = null;
 
-  // Add 30-minute default duration when only start time given
   if (parsed.time && !parsed.endTime) {
     const [h, m] = parsed.time.split(':').map(Number);
     let endM = m + 30, endH = h;
@@ -227,7 +260,78 @@ Return ONLY this JSON:
   return parsed;
 }
 
-// Diagnostic endpoint
+// ── Auth routes ──
+app.post('/api/auth/register', async (req, res) => {
+  const ip = req.ip || 'unknown';
+  if (!checkAuthRateLimit(ip)) return res.status(429).json({ error: 'Too many attempts. Try again later.' });
+
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  // Dev mode: no real DB, return token immediately
+  if (!usersCollection || !JWT_SECRET) {
+    const salt = generateSalt();
+    const token = JWT_SECRET ? jwt.sign({ sub: 'dev-user', email }, JWT_SECRET, { expiresIn: '30d' }) : 'dev-token';
+    return res.json({ token, encryptionSalt: salt });
+  }
+
+  try {
+    const existing = await usersCollection.findOne({ email: email.toLowerCase() });
+    if (existing) return res.status(409).json({ error: 'An account with that email already exists' });
+
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const userId = randomBytes(16).toString('hex');
+    const encryptionSalt = generateSalt();
+
+    await usersCollection.insertOne({
+      userId,
+      email: email.toLowerCase(),
+      passwordHash,
+      encryptionSalt,
+      createdAt: new Date()
+    });
+
+    const token = jwt.sign({ sub: userId, email: email.toLowerCase() }, JWT_SECRET, { expiresIn: '30d' });
+    console.log('✓ New user registered:', email.toLowerCase());
+    res.json({ token, encryptionSalt, userId });
+  } catch (err) {
+    console.error('Register error:', err.message);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const ip = req.ip || 'unknown';
+  if (!checkAuthRateLimit(ip)) return res.status(429).json({ error: 'Too many attempts. Try again later.' });
+
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+  // Dev mode
+  if (!usersCollection || !JWT_SECRET) {
+    const token = JWT_SECRET ? jwt.sign({ sub: 'dev-user', email }, JWT_SECRET, { expiresIn: '30d' }) : 'dev-token';
+    return res.json({ token, encryptionSalt: 'dev-salt' });
+  }
+
+  try {
+    const user = await usersCollection.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(401).json({ error: 'Invalid email or password' });
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) return res.status(401).json({ error: 'Invalid email or password' });
+
+    const token = jwt.sign({ sub: user.userId, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+    console.log('✓ User logged in:', user.email);
+    res.json({ token, encryptionSalt: user.encryptionSalt, userId: user.userId });
+  } catch (err) {
+    console.error('Login error:', err.message);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// ── Diagnostic ──
 app.post('/api/test-parse', async (req, res) => {
   try {
     const response = await client.messages.create({
@@ -241,7 +345,8 @@ app.post('/api/test-parse', async (req, res) => {
   }
 });
 
-app.post('/api/events/parse', async (req, res) => {
+// ── Parse endpoint (parse only — client saves after confirmation) ──
+app.post('/api/events/parse', requireAuth, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
   if (!checkParseRateLimit(ip)) {
     return res.status(429).json({ error: 'Too many parse requests. Please wait a minute.' });
@@ -252,30 +357,18 @@ app.post('/api/events/parse', async (req, res) => {
 
   try {
     const parsed = await parseEvent(text, currentESTDate, currentESTTime);
-    const newEvent = {
-      id: Date.now().toString(),
-      title: parsed.title,
-      date: parsed.date,
-      endDate: parsed.endDate || null,
-      time: parsed.time || null,
-      endTime: parsed.endTime || null,
-      isAllDay: parsed.isAllDay || (parsed.time === null && parsed.endTime === null),
-      description: '',
-      isMultiDay: !!parsed.endDate,
-      createdAt: new Date()
-    };
-    await saveEvent(newEvent);
-    console.log('✓ Event saved:', newEvent);
-    res.json(newEvent);
+    // Return parsed data only — client is responsible for encrypting and saving
+    res.json(parsed);
   } catch (err) {
     console.error('✗ Parse error:', err.message);
     res.status(400).json({ error: err.message || 'Failed to parse event' });
   }
 });
 
-app.get('/api/events', async (req, res) => {
+// ── Event CRUD (all require auth, scoped by userId) ──
+app.get('/api/events', requireAuth, async (req, res) => {
   try {
-    const events = await loadEvents();
+    const events = await loadEvents(req.user.userId);
     res.json(events);
   } catch (err) {
     console.error('✗ Error loading events:', err.message);
@@ -283,69 +376,94 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
-app.post('/api/events', async (req, res) => {
-  const { title, date, endDate, time, endTime, description, isAllDay } = req.body;
-  if (!title || !date) return res.status(400).json({ error: 'Title and date are required' });
+app.post('/api/events', requireAuth, async (req, res) => {
+  const body = req.body;
+  if (!body || !body.id) return res.status(400).json({ error: 'Event id is required' });
 
-  const validationError = validateEventFields({ date, endDate, time, endTime });
-  if (validationError) return res.status(400).json({ error: validationError });
-
-  const newEvent = {
-    id: Date.now().toString(),
-    title: title.trim().slice(0, 200),
-    date,
-    endDate: endDate || null,
-    time: time || null,
-    endTime: endTime || null,
-    isAllDay: isAllDay || (!time && !endTime),
-    description: (description || '').slice(0, 500),
-    isMultiDay: !!endDate,
-    createdAt: new Date()
-  };
+  // Accept encrypted events { id, encryptedData, nonce } or legacy plaintext
+  let newEvent;
+  if (body.encryptedData) {
+    if (!body.nonce) return res.status(400).json({ error: 'nonce required with encryptedData' });
+    newEvent = {
+      id: body.id,
+      userId: req.user.userId,
+      encryptedData: body.encryptedData,
+      nonce: body.nonce,
+      createdAt: new Date()
+    };
+  } else {
+    // Legacy plaintext (dev mode / no encryption)
+    const { title, date, endDate, time, endTime, description, isAllDay } = body;
+    if (!title || !date) return res.status(400).json({ error: 'Title and date are required' });
+    const validationError = validateEventFields({ date, endDate, time, endTime });
+    if (validationError) return res.status(400).json({ error: validationError });
+    newEvent = {
+      id: body.id,
+      userId: req.user.userId,
+      title: title.trim().slice(0, 200),
+      date,
+      endDate: endDate || null,
+      time: time || null,
+      endTime: endTime || null,
+      isAllDay: isAllDay || (!time && !endTime),
+      description: (description || '').slice(0, 500),
+      isMultiDay: !!endDate,
+      createdAt: new Date()
+    };
+  }
 
   const result = await saveEvent(newEvent);
   if (result) {
-    console.log('✓ Event created:', newEvent.title);
+    console.log('✓ Event saved:', newEvent.id);
     res.json(result);
   } else {
     res.status(500).json({ error: 'Failed to save event' });
   }
 });
 
-app.put('/api/events/:id', async (req, res) => {
-  const { title, date, endDate, time, endTime, description, isAllDay } = req.body;
+app.put('/api/events/:id', requireAuth, async (req, res) => {
   const eventId = req.params.id;
+  const body = req.body;
 
-  if (!title || !date) return res.status(400).json({ error: 'Title and date are required' });
+  let updates;
+  if (body.encryptedData) {
+    if (!body.nonce) return res.status(400).json({ error: 'nonce required with encryptedData' });
+    updates = {
+      encryptedData: body.encryptedData,
+      nonce: body.nonce,
+      updatedAt: new Date()
+    };
+  } else {
+    const { title, date, endDate, time, endTime, description, isAllDay } = body;
+    if (!title || !date) return res.status(400).json({ error: 'Title and date are required' });
+    const validationError = validateEventFields({ date, endDate, time, endTime });
+    if (validationError) return res.status(400).json({ error: validationError });
+    updates = {
+      title: title.trim().slice(0, 200),
+      date,
+      endDate: endDate || null,
+      time: time || null,
+      endTime: endTime || null,
+      isAllDay: isAllDay || (!time && !endTime),
+      description: (description || '').slice(0, 500),
+      isMultiDay: !!endDate,
+      updatedAt: new Date()
+    };
+  }
 
-  const validationError = validateEventFields({ date, endDate, time, endTime });
-  if (validationError) return res.status(400).json({ error: validationError });
-
-  const updates = {
-    title: title.trim().slice(0, 200),
-    date,
-    endDate: endDate || null,
-    time: time || null,
-    endTime: endTime || null,
-    isAllDay: isAllDay || (!time && !endTime),
-    description: (description || '').slice(0, 500),
-    isMultiDay: !!endDate,
-    updatedAt: new Date()
-  };
-
-  const result = await updateEvent(eventId, updates);
+  const result = await updateEvent(eventId, req.user.userId, updates);
   if (result) {
-    const events = await loadEvents();
+    const events = await loadEvents(req.user.userId);
     const updated = events.find(e => e.id === eventId) || { id: eventId, ...updates };
-    console.log('✓ Event updated:', updated.title);
+    console.log('✓ Event updated:', eventId);
     res.json(updated);
   } else {
     res.status(404).json({ error: 'Event not found' });
   }
 });
 
-app.delete('/api/events/:id', async (req, res) => {
-  const success = await deleteEvent(req.params.id);
+app.delete('/api/events/:id', requireAuth, async (req, res) => {
+  const success = await deleteEvent(req.params.id, req.user.userId);
   if (success) {
     console.log('✓ Event deleted:', req.params.id);
     res.json({ success: true });
@@ -354,14 +472,49 @@ app.delete('/api/events/:id', async (req, res) => {
   }
 });
 
+// ── Sync endpoints ──
+app.get('/api/sync/download', requireAuth, async (req, res) => {
+  try {
+    const events = await loadEvents(req.user.userId);
+    res.json(events);
+  } catch (err) {
+    res.status(500).json({ error: 'Sync download failed' });
+  }
+});
+
+app.post('/api/sync/upload', requireAuth, async (req, res) => {
+  const { id, encryptedData, nonce } = req.body;
+  if (!encryptedData || !nonce) return res.status(400).json({ error: 'encryptedData and nonce required' });
+
+  const event = {
+    id: id || randomBytes(8).toString('hex'),
+    userId: req.user.userId,
+    encryptedData,
+    nonce,
+    updatedAt: new Date()
+  };
+
+  if (eventsCollection) {
+    await eventsCollection.updateOne(
+      { id: event.id, userId: req.user.userId },
+      { $set: event, $setOnInsert: { createdAt: new Date() } },
+      { upsert: true }
+    );
+  }
+
+  res.json(event);
+});
+
+// ── Health ──
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date(),
-    version: '2.1.0',
+    version: '3.0.0',
     model: 'claude-haiku-4-5-20251001',
     timezone: EST_TIMEZONE,
-    mongodb: !!eventsCollection
+    mongodb: !!eventsCollection,
+    auth: !!JWT_SECRET
   });
 });
 
@@ -371,6 +524,7 @@ async function startServer() {
     console.log(`✓ Calendar API running on port ${PORT}`);
     console.log(`✓ Model: claude-haiku-4-5-20251001`);
     console.log(`✓ Timezone: EST (${EST_TIMEZONE})`);
+    console.log(`✓ Auth: ${JWT_SECRET ? 'enabled (JWT)' : 'dev mode (no auth)'}`);
     console.log(`✓ MongoDB: ${eventsCollection ? 'connected' : 'not connected (local storage fallback)'}`);
   });
 }
