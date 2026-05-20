@@ -331,6 +331,53 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// ── Account management ──
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ userId: req.user.userId, email: req.user.email });
+});
+
+app.patch('/api/auth/password', requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'currentPassword and newPassword required' });
+  if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
+  try {
+    const user = await usersCollection.findOne({ userId: req.user.userId });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    // Generate new encryption salt so old derived keys are invalidated
+    const encryptionSalt = generateSalt();
+    await usersCollection.updateOne({ userId: req.user.userId }, { $set: { passwordHash, encryptionSalt, updatedAt: new Date() } });
+    const token = jwt.sign({ sub: req.user.userId, email: req.user.email }, JWT_SECRET, { expiresIn: '30d' });
+    console.log('✓ Password changed:', req.user.email);
+    res.json({ token, encryptionSalt, message: 'Password updated — please re-encrypt your events with the new key' });
+  } catch (err) {
+    console.error('Password change error:', err.message);
+    res.status(500).json({ error: 'Failed to update password' });
+  }
+});
+
+app.delete('/api/auth/account', requireAuth, async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'Password required to delete account' });
+  if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
+  try {
+    const user = await usersCollection.findOne({ userId: req.user.userId });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+    if (eventsCollection) await eventsCollection.deleteMany({ userId: req.user.userId });
+    await usersCollection.deleteOne({ userId: req.user.userId });
+    console.log('✓ Account deleted:', req.user.email);
+    res.json({ success: true, message: 'Account and all events permanently deleted' });
+  } catch (err) {
+    console.error('Account delete error:', err.message);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
 // ── Diagnostic ──
 app.post('/api/test-parse', async (req, res) => {
   try {
