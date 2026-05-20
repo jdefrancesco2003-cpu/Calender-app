@@ -510,6 +510,9 @@
       <div class="auth-toggle" id="auth-toggle-text">
         No account? <span onclick="toggleAuthMode()">Create one</span>
       </div>
+      <div style="margin-top:16px;text-align:center;">
+        <span onclick="continueAsGuest()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;text-decoration:underline;opacity:0.7;">Continue as Guest</span>
+      </div>
     </div>
   </div>
 
@@ -568,6 +571,7 @@
     let encryptionKey = null; // 32-byte Uint8Array — never persisted
     let authMode = 'login'; // 'login' | 'register'
     let authEnabled = false; // set from /api/health on init
+    let guestMode = false; // true when user skips login
     const HOUR_W = 64; // mirrors --hour-w CSS var
     let barDragState = null;
     let barDragJustEnded = false;
@@ -958,7 +962,7 @@
     }
 
     async function apiSaveEvent(eventObj) {
-      if (!authEnabled && !authToken) return; // dev mode, no server sync
+      if (guestMode) return; // guest mode — local only
       const encrypted = encryptEvent(eventObj);
       const body = encrypted
         ? { id: eventObj.id, encryptedData: encrypted.encryptedData, nonce: encrypted.nonce }
@@ -973,7 +977,7 @@
     }
 
     async function apiUpdateEvent(eventId, eventObj) {
-      if (!authEnabled && !authToken) return;
+      if (guestMode) return; // guest mode — local only
       const encrypted = encryptEvent(eventObj);
       const body = encrypted
         ? { encryptedData: encrypted.encryptedData, nonce: encrypted.nonce }
@@ -1004,6 +1008,24 @@
 
     function hideAuthModal() {
       document.getElementById('auth-overlay').classList.add('hidden');
+    }
+
+    async function continueAsGuest() {
+      guestMode = true;
+      hideAuthModal();
+      await loadEvents();
+      archivePastEventsSilent();
+      scheduleArchiveAtMidnight();
+      loadNotificationSettings();
+      renderCalendar();
+      renderUpcomingEvents();
+      setTodayDate();
+      checkNotificationPermission();
+      scheduleNotifications();
+      fetchWeather();
+      updateUserChip();
+      setInterval(fetchWeather, 600000);
+      setInterval(() => { if (isWeekView) updateCurrentTimeLine(); }, 60000);
     }
 
     function toggleAuthMode() {
