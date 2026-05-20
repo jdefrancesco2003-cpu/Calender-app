@@ -151,6 +151,9 @@
     .auth-error { background: rgba(255,69,58,0.15); color: #ff6b6b; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
     .auth-error.visible { display: block; }
     .user-chip { font-size: 11px; color: var(--text-secondary); background: var(--bg-light); border-radius: 20px; padding: 3px 10px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .recurrence-badge { font-size: 9px; color: var(--primary); font-weight: 700; margin-left: 4px; opacity: 0.8; }
+    select.form-select { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--text-primary); width: 100%; appearance: none; -webkit-appearance: none; outline: none; }
+    select.form-select:focus { border-color: var(--primary); }
     .day-dot.holiday { background: var(--warning); }
     .week-holiday-pill {
       font-size: 8px; font-weight: 700; color: white;
@@ -358,6 +361,20 @@
             <label for="all-day-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">All-Day Event</label>
             <label class="switch"><input type="checkbox" id="all-day-toggle" onchange="toggleAllDayManual()"><span class="slider"></span></label>
           </div>
+              <div style="margin-top:10px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Repeat</label>
+                <select class="form-select" id="recurrence-select" onchange="toggleRecurrenceEnd('recurrence-end-row')">
+                  <option value="none">Never</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div id="recurrence-end-row" style="display:none;margin-top:10px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ends On (optional)</label>
+                <input type="date" id="recurrence-end-input" class="form-select" style="padding:10px 12px;">
+              </div>
           <button class="btn-secondary" onclick="addEventManually(); triggerHaptic([60,20,60])">Save Event</button>
         </div>
       </div>
@@ -441,6 +458,20 @@
         <label for="modal-all-day-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">All-Day Event</label>
         <label class="switch"><input type="checkbox" id="modal-all-day-toggle" onchange="toggleAllDayModal()"><span class="slider"></span></label>
       </div>
+              <div style="margin-top:10px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Repeat</label>
+                <select class="form-select" id="modal-recurrence-select" onchange="toggleRecurrenceEnd('modal-recurrence-end-row')">
+                  <option value="none">Never</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div id="modal-recurrence-end-row" style="display:none;margin-top:10px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ends On (optional)</label>
+                <input type="date" id="modal-recurrence-end-input" class="form-select" style="padding:10px 12px;">
+              </div>
       <div style="display:flex;gap:8px;">
         <button class="btn-secondary" style="flex:1;" onclick="saveEditedEvent(); triggerHaptic([60,20,60])">Save</button>
         <button class="btn-secondary" style="flex:1;border-color:var(--warning);color:var(--warning);" onclick="undoEditedEvent(); triggerHaptic([50,30,50])">↶ Undo</button>
@@ -774,6 +805,85 @@
     function minsToTimeStr(m) {
       return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
     }
+
+    // ── Recurring events ──
+    function toggleRecurrenceEnd(rowId) {
+      const selectId = rowId === 'recurrence-end-row' ? 'recurrence-select' : 'modal-recurrence-select';
+      const val = document.getElementById(selectId)?.value;
+      const row = document.getElementById(rowId);
+      if (row) row.style.display = (val && val !== 'none') ? '' : 'none';
+    }
+
+    function isRecurringOnDate(event, dateStr) {
+      if (!event.recurrence || event.recurrence === 'none') return false;
+      if (dateStr < event.date) return false;
+      if (event.recurrenceEnd && dateStr > event.recurrenceEnd) return false;
+      const exceptions = new Set(event.recurrenceExceptions || []);
+      if (exceptions.has(dateStr)) return false;
+      if (dateStr === event.date) return false; // master date shown as original event
+      const start = new Date(event.date + 'T00:00:00');
+      const target = new Date(dateStr + 'T00:00:00');
+      const diffDays = Math.round((target - start) / 86400000);
+      switch (event.recurrence) {
+        case 'daily':   return diffDays > 0;
+        case 'weekly':  return diffDays > 0 && diffDays % 7 === 0;
+        case 'monthly': return diffDays > 0 && start.getDate() === target.getDate();
+        case 'yearly':  return diffDays > 0 && start.getMonth() === target.getMonth() && start.getDate() === target.getDate();
+      }
+      return false;
+    }
+
+    function makeVirtualInstance(masterEvent, dateStr) {
+      return {
+        ...masterEvent,
+        id: `${masterEvent.id}_${dateStr}`,
+        date: dateStr,
+        endDate: null,
+        isVirtual: true,
+        masterId: masterEvent.id,
+      };
+    }
+
+    function getEventsForDate(dateStr) {
+      const result = [];
+      for (const event of allEvents) {
+        if (archivedIds.has(event.id)) continue;
+        if (event.date === dateStr || (event.endDate && dateStr >= event.date && dateStr <= event.endDate)) {
+          const exceptions = new Set(event.recurrenceExceptions || []);
+          if (!exceptions.has(dateStr)) result.push(event);
+        } else if (isRecurringOnDate(event, dateStr)) {
+          result.push(makeVirtualInstance(event, dateStr));
+        }
+      }
+      return result;
+    }
+
+    // Generate recurring instances for a date range (for upcoming events list)
+    function getRecurringInstancesInRange(fromStr, toStr) {
+      const instances = [];
+      for (const event of allEvents) {
+        if (archivedIds.has(event.id) || !event.recurrence || event.recurrence === 'none') continue;
+        // Walk from max(event.date+1, fromStr) to toStr
+        const start = new Date(Math.max(new Date(event.date + 'T00:00:00').getTime() + 86400000, new Date(fromStr + 'T00:00:00').getTime()));
+        const end = new Date(toStr + 'T00:00:00');
+        let d = new Date(start);
+        let safety = 0;
+        while (d <= end && safety++ < 366) {
+          const ds = getLocalDateString(d);
+          if (isRecurringOnDate(event, ds)) instances.push(makeVirtualInstance(event, ds));
+          d.setDate(d.getDate() + 1);
+        }
+      }
+      return instances;
+    }
+
+    function getMasterEvent(virtualOrRegularId) {
+      // If it's a virtual id like "abc123_2026-05-27", extract masterId
+      const m = virtualOrRegularId.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
+      if (m) return allEvents.find(e => e.id === m[1]) || null;
+      return allEvents.find(e => e.id === virtualOrRegularId) || null;
+    }
+
     function showStatus(message, type) {
       const el = document.getElementById('status-message');
       el.innerHTML = `<div class="status-message ${type}">${escHtml(message)}</div>`;
@@ -1370,9 +1480,14 @@
 
     // ── Edit modal ──
     function openEditModal(eventId) {
-      const event = allEvents.find(e => e.id === eventId);
+      // Handle virtual recurring event ids (masterId_YYYY-MM-DD)
+      const virtualMatch = eventId.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
+      let event = allEvents.find(e => e.id === eventId);
+      if (!event && virtualMatch) {
+        event = allEvents.find(e => e.id === virtualMatch[1]);
+      }
       if (!event) return;
-      editingEventId = eventId;
+      editingEventId = event.id; // always edit the master
       lastEditedEvent = JSON.parse(JSON.stringify(event));
       document.getElementById('modal-title-input').value = event.title;
       document.getElementById('modal-date-input').value = event.date;
@@ -1381,6 +1496,11 @@
       document.getElementById('modal-end-time-input').value = event.endTime || '';
       document.getElementById('modal-desc-input').value = event.description || '';
       document.getElementById('modal-all-day-toggle').checked = event.isAllDay || false;
+      // Set recurrence controls
+      const recSel = document.getElementById('modal-recurrence-select');
+      const recEnd = document.getElementById('modal-recurrence-end-input');
+      if (recSel) { recSel.value = event.recurrence || 'none'; toggleRecurrenceEnd('modal-recurrence-end-row'); }
+      if (recEnd) recEnd.value = event.recurrenceEnd || '';
       toggleAllDayModal();
       document.getElementById('modal-overlay').classList.add('active');
     }
@@ -1410,7 +1530,9 @@
       const description = document.getElementById('modal-desc-input').value.trim();
       const isAllDay = document.getElementById('modal-all-day-toggle').checked;
       if (!title || !date) { showStatus('Title and date required', 'error'); return; }
-      const updatedEvent = { title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay };
+      const recurrence = document.getElementById('modal-recurrence-select')?.value || 'none';
+      const recurrenceEnd = document.getElementById('modal-recurrence-end-input')?.value || null;
+      const updatedEvent = { title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay, recurrence, recurrenceEnd: recurrenceEnd || null, isRecurring: recurrence !== 'none', recurrenceExceptions: lastEditedEvent?.recurrenceExceptions || [] };
       if (checkEventOverlap(updatedEvent, editingEventId)) {
         showOverlapConfirmation(title, () => {
           const idx = allEvents.findIndex(e => e.id === editingEventId);
@@ -1524,7 +1646,7 @@
         const dateStr = date.toISOString().split('T')[0];
         const isToday = dateStr === todayStr;
         const isSelected = dateStr === selectedDate;
-        const dayEvents = allEvents.filter(e => !archivedIds.has(e.id) && (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)));
+        const dayEvents = getEventsForDate(dateStr);
         const count = dayEvents.length;
         const dayHolidays = holidays.filter(h => h.date === dateStr);
         let dotsHtml = '';
@@ -1601,6 +1723,12 @@
     function renderUpcomingEvents() {
       const today = new Date(); today.setHours(0,0,0,0);
       const activeEvents = allEvents.filter(e => !archivedIds.has(e.id) && new Date(e.date + 'T00:00:00') >= today);
+      // Include recurring instances for the next 60 days
+      const todayForUpcoming = getESTDateString();
+      const sixtyDaysOut = (() => { const d = new Date(todayForUpcoming + 'T00:00:00'); d.setDate(d.getDate() + 60); return getLocalDateString(d); })();
+      const recurringInstances = getRecurringInstancesInRange(todayForUpcoming, sixtyDaysOut);
+      // Merge into the events array before bucketing (avoid duplicates)
+      recurringInstances.forEach(ri => { if (!activeEvents.find(e => e.id === ri.id)) activeEvents.push(ri); });
       const groups = { today: [], tomorrow: [], week: [], month: [], later: [] };
       activeEvents.forEach(event => {
         const g = getDateGroup(event.date);
@@ -1629,7 +1757,7 @@
             : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
           html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
-              <div class="event-title">${escHtml(event.title)}</div>
+              <div class="event-title">${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
               ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
               ${event.endDate && !event.isAllDay ? '<div class="all-day-badge" style="background:rgba(10,132,255,0.15);color:var(--primary);">Multi-Day</div>' : ''}
               <div class="event-day-label">${dateLabel}${timeStr ? ` · ${timeStr}${dur}` : ''}</div>
