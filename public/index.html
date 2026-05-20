@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a1a2e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="CalPal">
@@ -590,22 +592,22 @@
     }
     function archivePastEventsSilent() {
       const todayStr = new Date().toISOString().split('T')[0];
-      const past = allEvents.filter(e => e.date < todayStr && !archivedIds.has(e.id));
+      const past = allEvents.filter(e => (e.endDate || e.date) < todayStr && !archivedIds.has(e.id));
       if (past.length === 0) return;
       archivedEvents.push(...past);
-      allEvents = allEvents.filter(e => e.date >= todayStr);
+      allEvents = allEvents.filter(e => (e.endDate || e.date) >= todayStr);
       saveArchive();
       saveEvents();
     }
     function archivePastEvents() {
       const todayStr = new Date().toISOString().split('T')[0];
-      const past = allEvents.filter(e => e.date < todayStr && !archivedIds.has(e.id));
+      const past = allEvents.filter(e => (e.endDate || e.date) < todayStr && !archivedIds.has(e.id));
       if (past.length === 0) {
         showStatus('No past events to archive', 'error');
         return false;
       }
       archivedEvents.push(...past);
-      allEvents = allEvents.filter(e => e.date >= todayStr);
+      allEvents = allEvents.filter(e => (e.endDate || e.date) >= todayStr);
       saveArchive();
       saveEvents();
       showStatus(`✓ ${past.length} event(s) archived`, 'success');
@@ -810,10 +812,24 @@
       else showStatus('Notifications disabled', 'success');
     }
 
+    function scheduleArchiveAtMidnight() {
+      const now = new Date();
+      const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+      const msUntilMidnight = midnight - now;
+      setTimeout(() => {
+        archivePastEventsSilent();
+        renderCalendar();
+        renderUpcomingEvents();
+        renderEventsPage();
+        scheduleArchiveAtMidnight(); // reschedule for next midnight
+      }, msUntilMidnight);
+    }
+
     // ── Init ──
     async function init() {
       await loadEvents();
       archivePastEventsSilent();   // auto-archive on load
+      scheduleArchiveAtMidnight();
       loadNotificationSettings();
       renderCalendar();
       renderUpcomingEvents();
@@ -1367,11 +1383,14 @@
           const timeStr = formatEventTime(event.time, event.endTime);
           const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
           const dateObj = new Date(event.date + 'T00:00:00');
-          const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const dateLabel = event.endDate
+            ? `${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+            : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
           html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
               <div class="event-title">${escHtml(event.title)}</div>
               ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
+              ${event.endDate && !event.isAllDay ? '<div class="all-day-badge" style="background:rgba(10,132,255,0.15);color:var(--primary);">Multi-Day</div>' : ''}
               <div class="event-day-label">${dateLabel}${timeStr ? ` · ${timeStr}${dur}` : ''}</div>
               ${event.description ? `<div class="event-meta">${escHtml(event.description)}</div>` : ''}
             </div>
@@ -1655,6 +1674,7 @@
             <div class="event-details">
               <div class="event-title">${escHtml(event.title)}</div>
               ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
+              ${event.endDate ? `<div class="event-meta" style="color:var(--primary);font-weight:600;">${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>` : ''}
               ${timeStr ? `<div class="event-meta">${timeStr}${dur}</div>` : ''}
               ${event.description ? `<div class="event-meta">${escHtml(event.description)}</div>` : ''}
             </div>
@@ -1708,6 +1728,13 @@
         menu.classList.remove('active');
       }
     });
+
+    // ── PWA Service Worker ──
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>
