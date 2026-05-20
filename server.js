@@ -2,7 +2,7 @@ const express = require('express');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { randomBytes } = require('crypto');
 
