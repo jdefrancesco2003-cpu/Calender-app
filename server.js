@@ -10,16 +10,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// ===== PHASE 6: EST TIMEZONE HELPERS =====
 const EST_TIMEZONE = 'America/New_York';
 
 function getESTDateString() {
   const now = new Date();
   const estFormatter = new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    timeZone: EST_TIMEZONE
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: EST_TIMEZONE
   });
   const parts = estFormatter.formatToParts(now);
   const year = parts.find(p => p.type === 'year').value;
@@ -30,48 +26,74 @@ function getESTDateString() {
 
 function getESTTimeString() {
   const now = new Date();
-  const estFormatter = new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: EST_TIMEZONE
-  });
-  return estFormatter.format(now);
+  return new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: EST_TIMEZONE
+  }).format(now);
 }
 
 function getCurrentESTInfo() {
-  return {
-    date: getESTDateString(),
-    time: getESTTimeString(),
-    timezone: EST_TIMEZONE
-  };
+  return { date: getESTDateString(), time: getESTTimeString(), timezone: EST_TIMEZONE };
 }
-// ===== END PHASE 6 TIMEZONE HELPERS =====
 
 const client = new Anthropic();
 const mongoUri = process.env.MONGODB_URI;
 let eventsCollection;
 let mongoClient;
 
+// Simple in-process rate limiter for the parse endpoint
+const parseRateLimit = new Map();
+function checkParseRateLimit(ip) {
+  const now = Date.now();
+  const entry = parseRateLimit.get(ip);
+  if (!entry || now > entry.expiresAt) {
+    parseRateLimit.set(ip, { count: 1, expiresAt: now + 60000 });
+    return true;
+  }
+  if (entry.count >= 20) return false;
+  entry.count++;
+  return true;
+}
+// Clean up stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of parseRateLimit) {
+    if (now > entry.expiresAt) parseRateLimit.delete(ip);
+  }
+}, 300000);
+
+// Date/time format validation
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^\d{2}:\d{2}$/;
+function validateEventFields({ date, endDate, time, endTime }) {
+  if (!date || !DATE_RE.test(date)) return 'Invalid date format (expected YYYY-MM-DD)';
+  if (endDate && !DATE_RE.test(endDate)) return 'Invalid end date format';
+  if (time && !TIME_RE.test(time)) return 'Invalid time format (expected HH:mm)';
+  if (endTime && !TIME_RE.test(endTime)) return 'Invalid end time format';
+  return null;
+}
+
 async function connectMongoDB() {
+  if (!mongoUri) {
+    console.log('⚠ No MONGODB_URI set — running without persistence');
+    return;
+  }
   try {
-    mongoClient = new MongoClient(mongoUri, { useUnifiedTopology: true });
+    mongoClient = new MongoClient(mongoUri);
     await mongoClient.connect();
     const db = mongoClient.db('calendar');
     eventsCollection = db.collection('events');
     console.log('✓ Connected to MongoDB');
-    return mongoClient;
   } catch (err) {
     console.error('✗ MongoDB connection failed:', err.message);
-    process.exit(1);
+    console.log('⚠ Continuing without MongoDB persistence');
+    eventsCollection = null;
   }
 }
 
 async function loadEvents() {
   if (!eventsCollection) return [];
   try {
-    const events = await eventsCollection.find({}).toArray();
-    return events;
+    return await eventsCollection.find({}).toArray();
   } catch (err) {
     console.error('Error loading events:', err.message);
     return [];
@@ -79,7 +101,7 @@ async function loadEvents() {
 }
 
 async function saveEvent(event) {
-  if (!eventsCollection) return null;
+  if (!eventsCollection) return event;
   try {
     const result = await eventsCollection.insertOne(event);
     return { ...event, _id: result.insertedId };
@@ -90,7 +112,7 @@ async function saveEvent(event) {
 }
 
 async function updateEvent(id, updates) {
-  if (!eventsCollection) return null;
+  if (!eventsCollection) return updates;
   try {
     await eventsCollection.updateOne({ id }, { $set: updates });
     return updates;
@@ -101,7 +123,7 @@ async function updateEvent(id, updates) {
 }
 
 async function deleteEvent(id) {
-  if (!eventsCollection) return false;
+  if (!eventsCollection) return true;
   try {
     const result = await eventsCollection.deleteOne({ id });
     return result.deletedCount > 0;
@@ -111,44 +133,24 @@ async function deleteEvent(id) {
   }
 }
 
-function getTodayString() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today.toISOString().split('T')[0];
-}
-
-function getTomorrowString() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0);
-  return tomorrow.toISOString().split('T')[0];
-}
-
 function getFormattedDate() {
-  const today = new Date();
-  return today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// PHASE 6: Updated parseEvent to accept EST context
 async function parseEvent(text, currentESTDate, currentESTTime) {
-  if (!text || text.trim().length === 0) {
-    throw new Error('Event text cannot be empty');
-  }
+  if (!text || text.trim().length === 0) throw new Error('Event text cannot be empty');
 
-  const today = currentESTDate || getTodayString();
-  const formattedToday = getFormattedDate();
-  const modelName = 'claude-haiku-4-5-20251001'; // PHASE 6: Switched from claude-opus-4-1-20250805 for 90% cost savings
+  const today = currentESTDate || getESTDateString();
+  const modelName = 'claude-haiku-4-5-20251001';
 
-  try {
-    console.log(`📝 Parsing event: "${text}" (EST Date: ${today}, EST Time: ${currentESTTime || 'N/A'})`);
-    
-    // PHASE 6: Updated system prompt with EST context
-    const response = await client.messages.create({
-      model: modelName,
-      max_tokens: 500,
-      messages: [{
-        role: 'user',
-        content: `You are a calendar event parser. The user is in EST (Eastern Standard Time).
+  console.log(`📝 Parsing: "${text}" (EST: ${today} ${currentESTTime || ''})`);
+
+  const response = await client.messages.create({
+    model: modelName,
+    max_tokens: 500,
+    messages: [{
+      role: 'user',
+      content: `You are a calendar event parser. The user is in EST (Eastern Standard Time).
 
 Current EST date: ${today}
 Current EST time: ${currentESTTime || 'unknown'}
@@ -172,14 +174,12 @@ Date rules (TODAY = ${today}):
 - Specific dates like "June 5" → 2026-06-05
 - Ranges like "June 5-7" → date = 2026-06-05, endDate = 2026-06-07
 - Day names → next occurring day from ${today}
-- For ranges → date = start, endDate = end
 
 Time rules:
 - "noon" or "12pm" → 12:00
 - "morning" → 09:00
 - "afternoon" → 14:00
 - "evening" → 18:00
-- Specific times → exact (6pm = 18:00)
 - "6pm to 10pm" → time = 18:00, endTime = 22:00
 - No time = null (all-day event)
 
@@ -192,123 +192,64 @@ Return ONLY this JSON:
   "endTime": "HH:mm" or null,
   "isAllDay": true/false
 }`
-      }]
-    });
+    }]
+  });
 
-    const content = response.content[0].text.trim();
-    console.log('✓ Claude response:', content);
+  const content = response.content[0].text.trim();
+  console.log('✓ Claude response:', content);
 
-    let parsed;
-    try {
-      parsed = JSON.parse(content);
-    } catch (e) {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('Could not extract JSON');
-      }
-    }
-
-    if (!parsed.title || !parsed.date) {
-      throw new Error('Missing title or date');
-    }
-
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(parsed.date)) {
-      throw new Error(`Invalid date format: ${parsed.date}`);
-    }
-
-    if (parsed.endDate && !dateRegex.test(parsed.endDate)) {
-      parsed.endDate = null;
-    }
-
-    if (parsed.time) {
-      const timeRegex = /^\d{2}:\d{2}$/;
-      if (!timeRegex.test(parsed.time)) {
-        parsed.time = null;
-      }
-    }
-
-    if (parsed.endTime) {
-      const timeRegex = /^\d{2}:\d{2}$/;
-      if (!timeRegex.test(parsed.endTime)) {
-        parsed.endTime = null;
-      }
-    }
-
-    console.log('✓ Event parsed successfully:', parsed);
-    
-    // PHASE 7: If time exists but no endTime, add 30-minute default duration
-    if (parsed.time && !parsed.endTime) {
-      const [hours, minutes] = parsed.time.split(':').map(Number);
-      let endMinutes = minutes + 30;
-      let endHours = hours;
-      
-      if (endMinutes >= 60) {
-        endHours += 1;
-        endMinutes -= 60;
-      }
-      
-      if (endHours >= 24) {
-        endHours = 23;
-        endMinutes = 59;
-      }
-      
-      parsed.endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
-      console.log(`✓ Added 30-min default: ${parsed.time} → ${parsed.endTime}`);
-    }
-    
-    return parsed;
-  } catch (err) {
-    console.error('✗ Parse error:', err.message);
-    console.error('Full error:', err);
-    throw err;
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (e) {
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+    else throw new Error('Could not extract JSON from response');
   }
+
+  if (!parsed.title || !parsed.date) throw new Error('Missing title or date');
+  if (!DATE_RE.test(parsed.date)) throw new Error(`Invalid date format: ${parsed.date}`);
+  if (parsed.endDate && !DATE_RE.test(parsed.endDate)) parsed.endDate = null;
+  if (parsed.time && !TIME_RE.test(parsed.time)) parsed.time = null;
+  if (parsed.endTime && !TIME_RE.test(parsed.endTime)) parsed.endTime = null;
+
+  // Add 30-minute default duration when only start time given
+  if (parsed.time && !parsed.endTime) {
+    const [h, m] = parsed.time.split(':').map(Number);
+    let endM = m + 30, endH = h;
+    if (endM >= 60) { endH++; endM -= 60; }
+    if (endH >= 24) { endH = 23; endM = 59; }
+    parsed.endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+  }
+
+  console.log('✓ Parsed:', parsed);
+  return parsed;
 }
 
-// PHASE 6: Updated /api/events/parse endpoint to receive EST context
-// PHASE 7: Diagnostic endpoint for debugging
+// Diagnostic endpoint
 app.post('/api/test-parse', async (req, res) => {
-  console.log('🔍 TEST PARSE - Checking API connectivity...');
-  console.log('API Key exists:', !!process.env.ANTHROPIC_API_KEY);
-  console.log('API Key length:', process.env.ANTHROPIC_API_KEY?.length || 0);
-  
   try {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 100,
-      messages: [{
-        role: 'user',
-        content: 'Say "API works" in one word'
-      }]
+      messages: [{ role: 'user', content: 'Say "API works" in one word' }]
     });
-    
-    console.log('✓ API connection successful');
-    res.json({ 
-      status: 'ok',
-      message: response.content[0].text,
-      apiKeyExists: !!process.env.ANTHROPIC_API_KEY
-    });
+    res.json({ status: 'ok', message: response.content[0].text, apiKeyExists: !!process.env.ANTHROPIC_API_KEY });
   } catch (err) {
-    console.error('✗ API Error:', err.message);
-    res.status(400).json({ 
-      status: 'error',
-      error: err.message,
-      apiKeyExists: !!process.env.ANTHROPIC_API_KEY,
-      hint: 'Check ANTHROPIC_API_KEY in Railway env variables'
-    });
+    res.status(400).json({ status: 'error', error: err.message, apiKeyExists: !!process.env.ANTHROPIC_API_KEY });
   }
 });
 
 app.post('/api/events/parse', async (req, res) => {
-  const { text, currentESTDate, currentESTTime, timezone } = req.body;
-  if (!text) {
-    return res.status(400).json({ error: 'Event text is required' });
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  if (!checkParseRateLimit(ip)) {
+    return res.status(429).json({ error: 'Too many parse requests. Please wait a minute.' });
   }
 
+  const { text, currentESTDate, currentESTTime } = req.body;
+  if (!text) return res.status(400).json({ error: 'Event text is required' });
+
   try {
-    // PHASE 6: Pass EST context to parseEvent
     const parsed = await parseEvent(text, currentESTDate, currentESTTime);
     const newEvent = {
       id: Date.now().toString(),
@@ -322,7 +263,6 @@ app.post('/api/events/parse', async (req, res) => {
       isMultiDay: !!parsed.endDate,
       createdAt: new Date()
     };
-    
     await saveEvent(newEvent);
     console.log('✓ Event saved:', newEvent);
     res.json(newEvent);
@@ -335,7 +275,6 @@ app.post('/api/events/parse', async (req, res) => {
 app.get('/api/events', async (req, res) => {
   try {
     const events = await loadEvents();
-    console.log('✓ Loaded', events.length, 'events');
     res.json(events);
   } catch (err) {
     console.error('✗ Error loading events:', err.message);
@@ -345,27 +284,27 @@ app.get('/api/events', async (req, res) => {
 
 app.post('/api/events', async (req, res) => {
   const { title, date, endDate, time, endTime, description, isAllDay } = req.body;
-  
-  if (!title || !date) {
-    return res.status(400).json({ error: 'Title and date are required' });
-  }
+  if (!title || !date) return res.status(400).json({ error: 'Title and date are required' });
+
+  const validationError = validateEventFields({ date, endDate, time, endTime });
+  if (validationError) return res.status(400).json({ error: validationError });
 
   const newEvent = {
     id: Date.now().toString(),
-    title: title.trim(),
+    title: title.trim().slice(0, 200),
     date,
     endDate: endDate || null,
     time: time || null,
     endTime: endTime || null,
-    isAllDay: isAllDay || (time === null && endTime === null),
-    description: description || '',
+    isAllDay: isAllDay || (!time && !endTime),
+    description: (description || '').slice(0, 500),
     isMultiDay: !!endDate,
     createdAt: new Date()
   };
-  
+
   const result = await saveEvent(newEvent);
   if (result) {
-    console.log('✓ Event created:', newEvent);
+    console.log('✓ Event created:', newEvent.title);
     res.json(result);
   } else {
     res.status(500).json({ error: 'Failed to save event' });
@@ -376,28 +315,28 @@ app.put('/api/events/:id', async (req, res) => {
   const { title, date, endDate, time, endTime, description, isAllDay } = req.body;
   const eventId = req.params.id;
 
-  if (!title || !date) {
-    return res.status(400).json({ error: 'Title and date are required' });
-  }
+  if (!title || !date) return res.status(400).json({ error: 'Title and date are required' });
+
+  const validationError = validateEventFields({ date, endDate, time, endTime });
+  if (validationError) return res.status(400).json({ error: validationError });
 
   const updates = {
-    title: title.trim(),
+    title: title.trim().slice(0, 200),
     date,
     endDate: endDate || null,
     time: time || null,
     endTime: endTime || null,
-    isAllDay: isAllDay || (time === null && endTime === null),
-    description: description || '',
+    isAllDay: isAllDay || (!time && !endTime),
+    description: (description || '').slice(0, 500),
     isMultiDay: !!endDate,
     updatedAt: new Date()
   };
 
-  await updateEvent(eventId, updates);
-  const events = await loadEvents();
-  const updated = events.find(e => e.id === eventId);
-  
-  if (updated) {
-    console.log('✓ Event updated:', updated);
+  const result = await updateEvent(eventId, updates);
+  if (result) {
+    const events = await loadEvents();
+    const updated = events.find(e => e.id === eventId) || { id: eventId, ...updates };
+    console.log('✓ Event updated:', updated.title);
     res.json(updated);
   } else {
     res.status(404).json({ error: 'Event not found' });
@@ -415,28 +354,29 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date(), version: '0.6', model: 'claude-haiku-4-5-20251001', timezone: EST_TIMEZONE });
+  res.json({
+    status: 'ok',
+    timestamp: new Date(),
+    version: '2.1.0',
+    model: 'claude-haiku-4-5-20251001',
+    timezone: EST_TIMEZONE,
+    mongodb: !!eventsCollection
+  });
 });
 
 async function startServer() {
-  try {
-    await connectMongoDB();
-    app.listen(PORT, () => {
-      console.log(`✓ Calendar API running on port ${PORT}`);
-      console.log(`✓ Model: claude-haiku-4-5-20251001 (PHASE 6)`);
-      console.log(`✓ Timezone: EST (America/New_York)`);
-    });
-  } catch (err) {
-    console.error('✗ Failed to start server:', err.message);
-    process.exit(1);
-  }
+  await connectMongoDB();
+  app.listen(PORT, () => {
+    console.log(`✓ Calendar API running on port ${PORT}`);
+    console.log(`✓ Model: claude-haiku-4-5-20251001`);
+    console.log(`✓ Timezone: EST (${EST_TIMEZONE})`);
+    console.log(`✓ MongoDB: ${eventsCollection ? 'connected' : 'not connected (local storage fallback)'}`);
+  });
 }
 
 process.on('SIGINT', async () => {
-  console.log('\n✓ Shutting down gracefully...');
-  if (mongoClient) {
-    await mongoClient.close();
-  }
+  console.log('\n✓ Shutting down...');
+  if (mongoClient) await mongoClient.close();
   process.exit(0);
 });
 
