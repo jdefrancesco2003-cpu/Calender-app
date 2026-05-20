@@ -470,7 +470,6 @@
     let editingEventId = null;
     let pendingParsedEvent = null;
     let notificationsEnabled = false;
-    let pendingEditMode = false;
     let lastDeletedEvent = null;
     let lastDeletedEventIndex = -1;
     let lastEditedEvent = null;
@@ -479,12 +478,6 @@
     let pendingDeleteTimeout = null;
     let notificationTimeouts = [];
     let filterDebounceTimer = null;
-    let draggingEvent = null;
-    let dragStartY = 0;
-    let dragStartTime = null;
-    let dragHoldTimer = null;
-    let dragDateStr = null;
-    let dragCancelled = false;
 
     const WEATHER_API_KEY = '46a759eb926bfad1530ec2671deb009c';
     const EST_TIMEZONE = 'America/New_York';
@@ -862,7 +855,6 @@
           data.title = capitalizeTitle(data.title);
           if (checkDuplicateEvent(data)) { showDuplicateModal(data.title); return; }
           pendingParsedEvent = data;
-          pendingEditMode = false;
           showConfirmationModal(data);
         }
       } catch (err) {
@@ -893,7 +885,6 @@
 
     function enterEditMode() {
       if (!pendingParsedEvent) return;
-      pendingEditMode = true;
       document.getElementById('modal-title-input').value = pendingParsedEvent.title;
       document.getElementById('modal-date-input').value = pendingParsedEvent.date;
       document.getElementById('modal-end-date-input').value = pendingParsedEvent.endDate || '';
@@ -927,7 +918,6 @@
     function closeConfirmation() {
       document.getElementById('confirmation-overlay').classList.remove('active');
       pendingParsedEvent = null;
-      pendingEditMode = false;
     }
 
     // ── Manual add ──
@@ -1349,7 +1339,7 @@
         const allDayEvs = allEvents.filter(e =>
           !archivedIds.has(e.id) &&
           (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) &&
-          (e.isAllDay || !e.time)
+          (e.isAllDay || (e.endDate && !e.time))
         );
         const pillsHtml = allDayEvs.map(e =>
           `<div class="week-allday-pill" onclick="openEditModal('${e.id}');triggerHaptic([40])" title="${escHtml(e.title)}">${escHtml(e.title)}</div>`
@@ -1478,7 +1468,7 @@
       const filtered = allEvents.filter(e => {
         if (archivedIds.has(e.id)) return false;
         const textMatch = e.title.toLowerCase().includes(query) || (e.description || '').toLowerCase().includes(query);
-        const fromMatch = !fromDate || e.date >= fromDate;
+        const fromMatch = !fromDate || e.date >= fromDate || (e.endDate && e.endDate >= fromDate);
         const toMatch = !toDate || e.date <= toDate;
         return textMatch && fromMatch && toMatch;
       }).sort((a, b) => {
@@ -1512,7 +1502,7 @@
         const eventsHtml = grouped[dateKey].map(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          return `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
+          return `<div class="event-item" data-event-id="${event.id}" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
               <div class="event-title">${escHtml(event.title)}</div>
               ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
@@ -1527,6 +1517,12 @@
         }).join('');
         return `<div class="event-day-group"><div class="event-day-label-group">${dateLabel}</div>${eventsHtml}</div>`;
       }).join('');
+      // Attach swipe-to-reveal handlers after DOM is built
+      container.querySelectorAll('.event-item').forEach(item => {
+        item.addEventListener('touchstart', _swipeTouchStart, { passive: true });
+        item.addEventListener('touchmove', _swipeTouchMove, { passive: false });
+        item.addEventListener('touchend', _swipeTouchEnd, false);
+      });
     }
 
     // ── Export ──
@@ -1544,19 +1540,6 @@
 
     // ── Swipe to reveal actions ──
     let swipeStartX = 0, swipeCurrX = 0;
-    function setupSwipe(e) {
-      e.currentTarget.addEventListener('touchstart', _swipeTouchStart, { passive: true });
-      e.currentTarget.addEventListener('touchmove', _swipeTouchMove, { passive: false });
-      e.currentTarget.addEventListener('touchend', _swipeTouchEnd, false);
-    }
-    function resetSwipe(e) {
-      const el = e.currentTarget;
-      el.removeEventListener('touchstart', _swipeTouchStart);
-      el.removeEventListener('touchmove', _swipeTouchMove);
-      el.removeEventListener('touchend', _swipeTouchEnd);
-      el.style.transform = '';
-      el.classList.remove('swipe-left');
-    }
     function _swipeTouchStart(e) { swipeStartX = e.touches[0].clientX; swipeCurrX = swipeStartX; }
     function _swipeTouchMove(e) {
       swipeCurrX = e.touches[0].clientX;

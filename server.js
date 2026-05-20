@@ -67,6 +67,7 @@ const TIME_RE = /^\d{2}:\d{2}$/;
 function validateEventFields({ date, endDate, time, endTime }) {
   if (!date || !DATE_RE.test(date)) return 'Invalid date format (expected YYYY-MM-DD)';
   if (endDate && !DATE_RE.test(endDate)) return 'Invalid end date format';
+  if (endDate && endDate < date) return 'End date must be on or after start date';
   if (time && !TIME_RE.test(time)) return 'Invalid time format (expected HH:mm)';
   if (endTime && !TIME_RE.test(endTime)) return 'Invalid end time format';
   return null;
