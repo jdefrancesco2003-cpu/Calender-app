@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="CalPal">
   <title>CalPal</title>
-  <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tweetnacl-util@0.15.1/nacl-util.min.js"></script>
+  <script src="/nacl.min.js"></script>
+  <script src="/nacl-util.min.js"></script>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -340,7 +340,7 @@
           <div class="input-group">
             <textarea id="event-input" placeholder='e.g., "dentist Friday 2pm" or "team meeting next Monday 9-10am"' maxlength="200"></textarea>
           </div>
-          <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50,30,50])">✦ Add with AI</button>
+          <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50,30,50])">Add Event</button>
           <div class="divider"></div>
           <div class="section-title">Manual Entry</div>
           <div class="input-group"><label>Title</label><input type="text" id="title-input" placeholder="Event name" maxlength="100"></div>
@@ -1040,6 +1040,8 @@
         }
         hideAuthModal();
         updateUserChip();
+        // Claim any legacy (pre-auth) events that have no userId
+        fetch('/api/migrate/claim-legacy-events', { method: 'POST', headers: getAuthHeaders() }).catch(() => {});
         await loadEvents();
         renderCalendar();
         renderUpcomingEvents();
@@ -1286,7 +1288,7 @@
         const estInfo = getCurrentESTInfo();
         const response = await fetch('/api/events/parse', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ text: input, currentESTDate: estInfo.date, currentESTTime: estInfo.time, timezone: estInfo.timezone }),
           signal: controller.signal
         });

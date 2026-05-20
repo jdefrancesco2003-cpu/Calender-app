@@ -378,6 +378,22 @@ app.delete('/api/auth/account', requireAuth, async (req, res) => {
   }
 });
 
+// ── Legacy migration: claim events with no userId ──
+app.post('/api/migrate/claim-legacy-events', requireAuth, async (req, res) => {
+  if (!eventsCollection) return res.json({ claimed: 0 });
+  try {
+    const result = await eventsCollection.updateMany(
+      { userId: { $exists: false } },
+      { $set: { userId: req.user.userId } }
+    );
+    console.log(`✓ Claimed ${result.modifiedCount} legacy events for ${req.user.email}`);
+    res.json({ claimed: result.modifiedCount });
+  } catch (err) {
+    console.error('Migration error:', err.message);
+    res.status(500).json({ error: 'Migration failed' });
+  }
+});
+
 // ── Diagnostic ──
 app.post('/api/test-parse', async (req, res) => {
   try {
