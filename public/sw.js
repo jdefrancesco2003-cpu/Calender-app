@@ -1,5 +1,14 @@
-const CACHE_NAME = 'calpal-v1';
-const STATIC_ASSETS = ['/', '/index.html', '/manifest.json'];
+const CACHE_NAME = 'calpal-v2';
+const STATIC_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/nacl.min.js',
+  '/nacl-util.min.js',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-touch-icon.png',
+];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -20,7 +29,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // API calls: network-first, fall back to a simple offline response
+  // API calls: network-first, fall back to offline response
   if (url.pathname.startsWith('/api/')) {
     e.respondWith(
       fetch(e.request).catch(() =>
@@ -41,11 +50,10 @@ self.addEventListener('fetch', (e) => {
         caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
       }
       return res;
-    }))
+    }).catch(() => caches.match('/index.html')))
   );
 });
 
-// Listen for skip-waiting message from app update flow
 self.addEventListener('message', (e) => {
   if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });

@@ -2,7 +2,7 @@ const express = require('express');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { randomBytes } = require('crypto');
 
@@ -375,6 +375,22 @@ app.delete('/api/auth/account', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Account delete error:', err.message);
     res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// ── Legacy migration: claim events with no userId ──
+app.post('/api/migrate/claim-legacy-events', requireAuth, async (req, res) => {
+  if (!eventsCollection) return res.json({ claimed: 0 });
+  try {
+    const result = await eventsCollection.updateMany(
+      { userId: { $exists: false } },
+      { $set: { userId: req.user.userId } }
+    );
+    console.log(`✓ Claimed ${result.modifiedCount} legacy events for ${req.user.email}`);
+    res.json({ claimed: result.modifiedCount });
+  } catch (err) {
+    console.error('Migration error:', err.message);
+    res.status(500).json({ error: 'Migration failed' });
   }
 });
 

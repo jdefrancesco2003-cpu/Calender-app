@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="CalPal">
   <title>CalPal</title>
-  <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tweetnacl-util@0.15.1/nacl-util.min.js"></script>
+  <script src="/nacl.min.js"></script>
+  <script src="/nacl-util.min.js"></script>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -276,6 +276,7 @@
       </div>
       <div class="dropdown-menu" id="dropdown-menu">
         <div id="user-chip-wrap" style="padding:10px 14px 6px;display:none;"><div class="user-chip" id="user-chip"></div></div>
+        <button class="dropdown-item" id="restore-btn" onclick="restoreLegacyEvents(); triggerHaptic(20)" style="color:var(--primary);">♻️ Restore My Events</button>
         <button class="dropdown-item" onclick="exportEvents(); triggerHaptic(20)">📥 Export Events</button>
         <button class="dropdown-item" onclick="openArchiveModal(); triggerHaptic(20)">📦 Archive Past Events</button>
         <button class="dropdown-item" onclick="viewArchived(); triggerHaptic(20)">📂 View Archive</button>
@@ -340,7 +341,7 @@
           <div class="input-group">
             <textarea id="event-input" placeholder='e.g., "dentist Friday 2pm" or "team meeting next Monday 9-10am"' maxlength="200"></textarea>
           </div>
-          <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50,30,50])">✦ Add with AI</button>
+          <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50,30,50])">Add Event</button>
           <div class="divider"></div>
           <div class="section-title">Manual Entry</div>
           <div class="input-group"><label>Title</label><input type="text" id="title-input" placeholder="Event name" maxlength="100"></div>
@@ -1040,6 +1041,8 @@
         }
         hideAuthModal();
         updateUserChip();
+        // Claim any legacy (pre-auth) events — await so loadEvents sees them
+        await fetch('/api/migrate/claim-legacy-events', { method: 'POST', headers: getAuthHeaders() }).catch(() => {});
         await loadEvents();
         renderCalendar();
         renderUpcomingEvents();
@@ -1286,7 +1289,7 @@
         const estInfo = getCurrentESTInfo();
         const response = await fetch('/api/events/parse', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ text: input, currentESTDate: estInfo.date, currentESTTime: estInfo.time, timezone: estInfo.timezone }),
           signal: controller.signal
         });
@@ -2080,6 +2083,29 @@
     }
 
     // ── Export ──
+    async function restoreLegacyEvents() {
+      closeMenuOnTab();
+      showStatus('Restoring events...', 'success');
+      try {
+        const res = await fetch('/api/migrate/claim-legacy-events', { method: 'POST', headers: getAuthHeaders() });
+        const data = await res.json();
+        if (data.claimed > 0) {
+          await loadEvents();
+          renderCalendar();
+          renderUpcomingEvents();
+          renderEventsPage();
+          showStatus(`✓ ${data.claimed} event${data.claimed === 1 ? '' : 's'} restored`, 'success');
+          // Hide the button after successful restore
+          const btn = document.getElementById('restore-btn');
+          if (btn) btn.style.display = 'none';
+        } else {
+          showStatus('No legacy events found', 'error');
+        }
+      } catch (err) {
+        showStatus('Restore failed — try again', 'error');
+      }
+    }
+
     function exportEvents() {
       const dataStr = JSON.stringify(allEvents, null, 2);
       const url = URL.createObjectURL(new Blob([dataStr], { type: 'application/json' }));
