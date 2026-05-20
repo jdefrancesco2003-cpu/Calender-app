@@ -1390,7 +1390,9 @@
       const description = document.getElementById('desc-input').value.trim();
       const isAllDay = document.getElementById('all-day-toggle').checked;
       if (!title || !date) { showStatus('Title and date required', 'error'); return; }
-      const newEvent = { id: generateId(), title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay };
+      const recurrence = document.getElementById('recurrence-select')?.value || 'none';
+      const recurrenceEnd = document.getElementById('recurrence-end-input')?.value || null;
+      const newEvent = { id: generateId(), title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay, recurrence, recurrenceEnd: recurrenceEnd || null, isRecurring: recurrence !== 'none', recurrenceExceptions: [] };
       if (checkDuplicateEvent(newEvent)) { showDuplicateModal(title); return; }
       if (checkEventOverlap(newEvent)) {
         showOverlapConfirmation(title, () => {
@@ -1421,11 +1423,32 @@
       document.getElementById('end-time-input').value = '';
       document.getElementById('desc-input').value = '';
       document.getElementById('all-day-toggle').checked = false;
+      const recSel = document.getElementById('recurrence-select');
+      if (recSel) { recSel.value = 'none'; toggleRecurrenceEnd('recurrence-end-row'); }
+      const recEnd = document.getElementById('recurrence-end-input');
+      if (recEnd) recEnd.value = '';
       setTodayDate();
     }
 
     // ── Delete with server sync after undo window ──
     async function deleteEvent(id) {
+      // Handle virtual recurring instance — add exception to master instead of deleting
+      const virtualMatch = id.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
+      if (virtualMatch) {
+        const masterId = virtualMatch[1];
+        const exceptionDate = virtualMatch[2];
+        const masterIdx = allEvents.findIndex(e => e.id === masterId);
+        if (masterIdx >= 0) {
+          if (!allEvents[masterIdx].recurrenceExceptions) allEvents[masterIdx].recurrenceExceptions = [];
+          allEvents[masterIdx].recurrenceExceptions.push(exceptionDate);
+          saveEvents();
+          apiUpdateEvent(masterId, allEvents[masterIdx]);
+          showStatus(`✓ Occurrence removed`, 'success');
+          renderCalendar(); renderUpcomingEvents(); renderEventsPage();
+          if (isWeekView) renderWeekView();
+        }
+        return;
+      }
       const eventToDelete = allEvents.find(e => e.id === id);
       if (!eventToDelete) return;
       lastDeletedEvent = JSON.parse(JSON.stringify(eventToDelete));
@@ -1669,8 +1692,7 @@
     function openDayModal(dateStr) {
       selectedDate = dateStr;
       renderCalendar();
-      const dayEvents = allEvents
-        .filter(e => !archivedIds.has(e.id) && (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)))
+      const dayEvents = getEventsForDate(dateStr)
         .sort((a, b) => {
           if (a.isAllDay && !b.isAllDay) return -1;
           if (!a.isAllDay && b.isAllDay) return 1;
@@ -1686,7 +1708,7 @@
           const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
           return `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
-              <div class="event-title">${escHtml(event.title)}</div>
+              <div class="event-title">${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
               ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
               ${timeStr ? `<div class="event-meta">${timeStr}${dur}</div>` : ''}
               ${event.description ? `<div class="event-meta">${escHtml(event.description)}</div>` : ''}
@@ -1806,11 +1828,8 @@
         const isToday = dateStr === todayStr;
 
         // All-day / multi-day events → label column pills
-        const allDayEvs = allEvents.filter(e =>
-          !archivedIds.has(e.id) &&
-          (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) &&
-          (e.isAllDay || (e.endDate && !e.time))
-        );
+        const dayEvs = getEventsForDate(dateStr);
+        const allDayEvs = dayEvs.filter(e => e.isAllDay || (e.endDate && !e.time));
         const pillsHtml = allDayEvs.map(e =>
           `<div class="week-allday-pill" onclick="openEditModal('${e.id}');triggerHaptic([40])" title="${escHtml(e.title)}">${escHtml(e.title)}</div>`
         ).join('');
@@ -1828,11 +1847,8 @@
         </div>`;
 
         // Timed events
-        const timedEvs = allEvents.filter(e =>
-          !archivedIds.has(e.id) &&
-          (e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate)) &&
-          !e.isAllDay && e.time
-        ).sort((a, b) => timeToMins(a.time) - timeToMins(b.time));
+        const timedEvs = dayEvs.filter(e => !e.isAllDay && e.time)
+          .sort((a, b) => timeToMins(a.time) - timeToMins(b.time));
 
         // Group overlapping events for side-by-side rendering
         const overlapGroups = groupOverlapping(timedEvs);
@@ -2041,7 +2057,7 @@
           const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
           return `<div class="event-item" data-event-id="${event.id}" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
-              <div class="event-title">${escHtml(event.title)}</div>
+              <div class="event-title">${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
               ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
               ${event.endDate ? `<div class="event-meta" style="color:var(--primary);font-weight:600;">${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>` : ''}
               ${timeStr ? `<div class="event-meta">${timeStr}${dur}</div>` : ''}
