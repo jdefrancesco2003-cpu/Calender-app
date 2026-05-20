@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#1a1a2e"/>
+  <!-- Calendar body -->
+  <rect x="96" y="140" width="320" height="276" rx="24" fill="#2a2a3e" stroke="#4a9d6f" stroke-width="6"/>
+  <!-- Calendar header bar -->
+  <rect x="96" y="140" width="320" height="80" rx="24" fill="#4a9d6f"/>
+  <rect x="96" y="188" width="320" height="32" fill="#4a9d6f"/>
+  <!-- Binding rings -->
+  <rect x="176" y="100" width="20" height="72" rx="10" fill="#30d158"/>
+  <rect x="316" y="100" width="20" height="72" rx="10" fill="#30d158"/>
+  <!-- Grid dots / day cells -->
+  <rect x="128" y="252" width="36" height="28" rx="6" fill="#3a3a5e"/>
+  <rect x="178" y="252" width="36" height="28" rx="6" fill="#3a3a5e"/>
+  <rect x="228" y="252" width="36" height="28" rx="6" fill="#3a3a5e"/>
+  <rect x="278" y="252" width="36" height="28" rx="6" fill="#4a9d6f"/>
+  <rect x="328" y="252" width="36" height="28" rx="6" fill="#3a3a5e"/>
+  <rect x="128" y="296" width="36" height="28" rx="6" fill="#3a3a5e"/>
+  <rect x="178" y="296" width="36" height="28" rx="6" fill="#4a9d6f"/>
+  <rect x="228" y="296" width="36" height="28" rx="6" fill="#3a3a5e"/>
+  <rect x="278" y="296" width="36" height="28" rx="6" fill="#3a3a5e"/>
+  <rect x="328" y="296" width="36" height="28" rx="6" fill="#3a3a5e"/>
+  <rect x="128" y="340" width="36" height="28" rx="6" fill="#3a3a5e"/>
+  <rect x="178" y="340" width="36" height="28" rx="6" fill="#3a3a5e"/>
+  <rect x="228" y="340" width="86" height="28" rx="6" fill="#30d158"/>
+  <!-- AI sparkle -->
+  <circle cx="370" cy="168" r="14" fill="white" opacity="0.9"/>
+  <text x="370" y="174" text-anchor="middle" font-size="16" font-weight="900" fill="#4a9d6f">✦</text>
+</svg>
