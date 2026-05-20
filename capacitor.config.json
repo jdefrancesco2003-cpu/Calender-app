@@ -1,0 +1,29 @@
+{
+  "appId": "com.calpal.app",
+  "appName": "CalPal",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#30d158",
+      "sound": "beep.wav"
+    },
+    "StatusBar": {
+      "style": "dark",
+      "backgroundColor": "#1a1a2e"
+    },
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#1a1a2e",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    }
+  }
+}
