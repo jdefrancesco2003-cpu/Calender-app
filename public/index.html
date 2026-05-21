@@ -69,6 +69,7 @@
     /* ── FAB ── */
     .fab { position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 56px; height: 56px; background: var(--primary); color: white; border: none; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(74,157,111,0.45), 0 1px 6px rgba(74,157,111,0.2); z-index: 100; transition: transform 0.12s, box-shadow 0.12s; }
     .fab:active { transform: scale(0.89); box-shadow: 0 2px 8px rgba(74,157,111,0.3); }
+    body.week-mode .fab { bottom: max(96px, calc(env(safe-area-inset-bottom) + 92px)); }
 
     /* ── STATUS ── */
     #status-message { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 3000; pointer-events: none; }
@@ -333,7 +334,7 @@
     #onboarding-overlay.hidden { display:none; }
     .ob-slide { display:none;flex-direction:column;align-items:center;text-align:center;max-width:320px; }
     .ob-slide.active { display:flex; }
-    .ob-icon { font-size:72px;margin-bottom:24px; }
+    .ob-icon { width:72px;height:72px;border-radius:20px;background:rgba(74,157,111,0.15);border:2px solid rgba(74,157,111,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:28px;font-weight:800;color:var(--primary);letter-spacing:-1px; }
     .ob-title { font-size:26px;font-weight:700;color:var(--text-primary);margin-bottom:12px; }
     .ob-desc { font-size:16px;color:var(--text-secondary);line-height:1.6;margin-bottom:32px; }
     .ob-dots { display:flex;gap:8px;margin-bottom:32px; }
@@ -347,7 +348,7 @@
       <h1>Mark<span>ed</span></h1>
       <div class="header-right">
         <div class="weather-widget" id="weather-widget" style="display:none;">
-          <span class="weather-icon" id="weather-icon">☀️</span>
+          <span class="weather-icon" id="weather-icon"></span>
           <span class="weather-temp" id="weather-temp">--°</span>
         </div>
         <div class="sync-indicator" id="sync-indicator"></div>
@@ -355,10 +356,10 @@
       </div>
       <div class="dropdown-menu" id="dropdown-menu">
         <div id="user-chip-wrap" style="padding:10px 14px 6px;display:none;"><div class="user-chip" id="user-chip"></div></div>
-        <button class="dropdown-item" id="restore-btn" onclick="restoreLegacyEvents(); triggerHaptic(20)" style="color:var(--primary);">♻️ Restore My Events</button>
-        <button class="dropdown-item" onclick="openArchiveModal(); triggerHaptic(20)">📦 Archive Past Events</button>
-        <button class="dropdown-item" onclick="viewArchived(); triggerHaptic(20)">📂 View Archive</button>
-        <button class="dropdown-item" onclick="openSettings(); triggerHaptic(20)">⚙️ Settings</button>
+        <button class="dropdown-item" id="restore-btn" onclick="restoreLegacyEvents(); triggerHaptic(20)" style="color:var(--primary);">Restore My Events</button>
+        <button class="dropdown-item" onclick="openArchiveModal(); triggerHaptic(20)">Archive Past Events</button>
+        <button class="dropdown-item" onclick="viewArchived(); triggerHaptic(20)">View Archive</button>
+        <button class="dropdown-item" onclick="openSettings(); triggerHaptic(20)">Settings</button>
         <button class="dropdown-item" id="logout-btn" onclick="logout(); triggerHaptic(20)" style="display:none;color:#ff6b6b;">↩ Sign Out</button>
       </div>
     </header>
@@ -418,7 +419,7 @@
         <div style="padding:10px 14px 6px;background:var(--bg-dark);position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border-color);flex-shrink:0;">
           <div style="display:flex;gap:8px;align-items:center;">
             <div style="flex:1;position:relative;">
-              <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;opacity:0.5;">🔍</span>
+              <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;pointer-events:none;opacity:0.4;color:var(--text-secondary);">Search</span>
               <input type="search" id="search-input" placeholder="Search events…" oninput="filterEvents()"
                 style="width:100%;box-sizing:border-box;padding:9px 12px 9px 34px;border-radius:10px;border:1.5px solid var(--border-color);background:var(--bg-light);color:var(--text-primary);font-size:15px;">
             </div>
@@ -446,7 +447,7 @@
       <div class="modal-handle"></div>
       <h3>Confirm Event</h3>
       <div id="confirmation-content"></div>
-      <button class="edit-button-modal" onclick="enterEditMode(); triggerHaptic(20)">✏️ Edit Before Saving</button>
+      <button class="edit-button-modal" onclick="enterEditMode(); triggerHaptic(20)">Edit Before Saving</button>
       <div class="confirmation-buttons">
         <button class="btn-secondary" style="flex:1;" onclick="confirmParsedEvent(); triggerHaptic([60,20,60])">Confirm</button>
         <button class="btn-danger" style="flex:1;" onclick="closeConfirmation(); triggerHaptic([100,50,100])">Cancel</button>
@@ -459,7 +460,6 @@
     <div class="modal" style="max-width:360px;">
       <div class="modal-handle"></div>
       <div style="text-align:center;padding:16px 0;">
-        <div style="font-size:44px;margin-bottom:12px;">🔁</div>
         <div style="font-size:16px;font-weight:700;margin-bottom:8px;color:var(--text-primary);">Duplicate Event</div>
         <div id="duplicate-message" style="font-size:14px;color:var(--text-secondary);line-height:1.5;"></div>
       </div>
@@ -521,7 +521,7 @@
         <button class="btn-danger" style="flex:1;" onclick="deleteEditingEvent(); triggerHaptic([100,50,100])">Delete</button>
         <button class="btn-secondary" style="flex:1;" onclick="closeModal(); triggerHaptic(20)">Cancel</button>
       </div>
-      <button class="btn-secondary" style="width:100%;margin-top:8px;" onclick="shareEvent(allEvents.find(e=>e.id===editingEventId)); triggerHaptic(20)">📤 Share</button>
+      <button class="btn-secondary" style="width:100%;margin-top:8px;" onclick="shareEvent(allEvents.find(e=>e.id===editingEventId)); triggerHaptic(20)">Share Event</button>
     </div>
   </div>
 
@@ -529,7 +529,7 @@
   <div class="modal-overlay" id="archive-modal-overlay">
     <div class="modal archive-modal">
       <div class="modal-handle"></div>
-      <h3>📂 Archive</h3>
+      <h3>Archive</h3>
       <div id="archived-events-list"></div>
       <button class="btn-secondary" style="width:100%;margin-top:4px;" onclick="closeArchiveModal(); triggerHaptic(20)">Close</button>
     </div>
@@ -582,7 +582,7 @@
           <input type="text" id="reset-code" placeholder="123456" autocomplete="one-time-code" maxlength="6" inputmode="numeric" style="font-family:monospace;letter-spacing:6px;font-size:22px;text-align:center;">
         </div>
         <div class="auth-field"><label>New Password</label><input type="password" id="reset-new-password" placeholder="Min 8 characters" autocomplete="new-password"></div>
-        <p style="font-size:12px;color:var(--warning);margin:4px 0 12px;text-align:center;">⚠️ Events encrypted with your old password will be lost</p>
+        <p style="font-size:12px;color:var(--warning);margin:4px 0 12px;text-align:center;">Events encrypted with your old password will be lost</p>
         <button class="auth-submit" id="reset-submit-btn" onclick="submitResetPassword()">Reset Password</button>
         <div style="margin-top:10px;text-align:center;"><span onclick="showResetStep1()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.8;">← Use a different email</span></div>
       </div>
@@ -618,16 +618,16 @@
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
       <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">Calendar Data</p>
-      <button class="btn-secondary" style="width:100%;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">📤 Export .ics</button>
+      <button class="btn-secondary" style="width:100%;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">Export .ics</button>
       <label style="width:100%;margin-top:8px;display:block;">
         <input type="file" id="ical-import-input" accept=".ics" style="display:none;" onchange="importIcalFile(event); closeSettings()">
-        <span class="btn-secondary" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box;" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">📥 Import .ics</span>
+        <span class="btn-secondary" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box;" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">Import .ics</span>
       </label>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;" id="account-settings-divider"></div>
       <p class="settings-section-label" id="account-settings-label" style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">Account</p>
-      <button class="btn-secondary" id="change-pw-btn" style="width:100%;display:none;" onclick="openChangePassword(); triggerHaptic(20)">🔒 Change Password</button>
-      <button class="btn-danger" id="delete-acct-btn" style="width:100%;margin-top:8px;display:none;" onclick="openDeleteAccount(); triggerHaptic(20)">🗑 Delete Account</button>
+      <button class="btn-secondary" id="change-pw-btn" style="width:100%;display:none;" onclick="openChangePassword(); triggerHaptic(20)">Change Password</button>
+      <button class="btn-danger" id="delete-acct-btn" style="width:100%;margin-top:8px;display:none;" onclick="openDeleteAccount(); triggerHaptic(20)">Delete Account</button>
       <p id="account-settings-guest-msg" style="font-size:13px;color:var(--text-secondary);text-align:center;margin:0;display:none;">Sign in to manage your account.</p>
 
       <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--text-secondary);opacity:0.6;">
@@ -728,10 +728,10 @@
   <div class="modal-overlay" id="recovery-overlay">
     <div class="modal" style="max-width:380px;">
       <div class="modal-handle"></div>
-      <h3 style="color:var(--warning);">⚠️ Save Your Recovery Codes</h3>
+      <h3 style="color:var(--warning);">Save Your Recovery Codes</h3>
       <p style="font-size:13px;color:var(--text-secondary);margin:8px 0 12px;">These 16 one-time codes reset your password if you forget it. They <strong>won't be shown again</strong> — save them somewhere safe.</p>
       <div id="recovery-codes-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;"></div>
-      <button class="btn-primary" style="width:100%;margin-bottom:12px;" onclick="copyRecoveryCodes()">📋 Copy All Codes</button>
+      <button class="btn-primary" style="width:100%;margin-bottom:12px;" onclick="copyRecoveryCodes()">Copy All Codes</button>
       <p style="font-size:12px;color:var(--text-secondary);margin:0 0 6px;">Type any one code to confirm you've saved them:</p>
       <input type="text" id="recovery-confirm-input" placeholder="e.g. a1b2c3d4" autocomplete="off"
         style="font-family:monospace;letter-spacing:1px;margin-bottom:8px;"
@@ -745,7 +745,6 @@
   <div class="modal-overlay" id="verify-email-overlay">
     <div class="modal" style="max-width:340px;">
       <div class="modal-handle"></div>
-      <div style="text-align:center;font-size:48px;margin-bottom:4px;">✉️</div>
       <h3 style="text-align:center;margin-bottom:6px;">Verify Your Email</h3>
       <p style="font-size:14px;color:var(--text-secondary);text-align:center;margin:0 0 16px;line-height:1.5;">We sent a 6-digit code to<br><strong id="verify-email-display" style="color:var(--text-primary);"></strong></p>
       <div id="verify-error" style="font-size:13px;color:#ff6b6b;text-align:center;min-height:18px;margin-bottom:8px;"></div>
@@ -764,7 +763,7 @@
     <div class="modal" style="max-width:340px;">
       <div class="modal-handle"></div>
       <h3>Change Password</h3>
-      <p style="font-size:13px;color:var(--warning);margin:4px 0 12px;">⚠️ Changing your password will re-derive your encryption key. Events encrypted with the old password will be inaccessible.</p>
+      <p style="font-size:13px;color:var(--warning);margin:4px 0 12px;">Changing your password will re-derive your encryption key. Events encrypted with the old password will be inaccessible.</p>
       <div class="auth-field"><label>Current Password</label><input type="password" id="cp-current" placeholder="••••••••"></div>
       <div class="auth-field"><label>New Password</label><input type="password" id="cp-new" placeholder="Min 8 characters"></div>
       <div id="cp-error" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:8px;"></div>
@@ -793,22 +792,22 @@
   <!-- ── ONBOARDING OVERLAY ── -->
   <div id="onboarding-overlay" class="hidden">
     <div class="ob-slide active" id="ob-0">
-      <div class="ob-icon">📅</div>
+      <div class="ob-icon">M</div>
       <div class="ob-title">Welcome to Marked</div>
       <div class="ob-desc">Your AI-powered personal calendar. Add events in plain English and let Marked figure out the rest.</div>
     </div>
     <div class="ob-slide" id="ob-1">
-      <div class="ob-icon">✨</div>
+      <div class="ob-icon">AI</div>
       <div class="ob-title">Smart Event Parsing</div>
       <div class="ob-desc">Just type "dentist next Tuesday at 2pm" or "team meeting every Monday 9-10am" and Marked handles scheduling.</div>
     </div>
     <div class="ob-slide" id="ob-2">
-      <div class="ob-icon">🔒</div>
+      <div class="ob-icon">E2E</div>
       <div class="ob-title">Private &amp; Encrypted</div>
       <div class="ob-desc">All your events are end-to-end encrypted. Only you can read them — not even we can.</div>
     </div>
     <div class="ob-slide" id="ob-3">
-      <div class="ob-icon">🌐</div>
+      <div class="ob-icon">↑↓</div>
       <div class="ob-title">Syncs Everywhere</div>
       <div class="ob-desc">Your calendar stays in sync across all your devices. Sign in anywhere to access your schedule.</div>
     </div>
@@ -1113,7 +1112,7 @@
       const modal = document.getElementById('archive-modal-overlay');
       const list = document.getElementById('archived-events-list');
       if (archivedEvents.length === 0) {
-        list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div>No archived events</div>';
+        list.innerHTML = '<div class="empty-state">No archived events</div>';
       } else {
         const sorted = [...archivedEvents].sort((a, b) => new Date(b.date) - new Date(a.date));
         list.innerHTML = sorted.map(event => {
@@ -1717,12 +1716,12 @@
     }
     function getWeatherIcon(condition) {
       const c = condition.toLowerCase();
-      if (c.includes('cloud')) return '☁️';
-      if (c.includes('rain')) return '🌧️';
-      if (c.includes('snow')) return '❄️';
-      if (c.includes('clear') || c.includes('sunny')) return '☀️';
-      if (c.includes('wind')) return '💨';
-      return '🌤️';
+      if (c.includes('cloud')) return 'Cloudy';
+      if (c.includes('rain')) return 'Rain';
+      if (c.includes('snow')) return 'Snow';
+      if (c.includes('clear') || c.includes('sunny')) return 'Clear';
+      if (c.includes('wind')) return 'Windy';
+      return 'Clear';
     }
 
     // ── Duplicate / overlap checks ──
@@ -1761,8 +1760,8 @@
       const wrap = document.createElement('div');
       wrap.style.cssText = 'text-align:center;padding:16px 0;';
       const icon = document.createElement('div');
-      icon.style.cssText = 'font-size:44px;margin-bottom:12px;';
-      icon.textContent = '⚠️';
+      icon.style.cssText = 'font-size:13px;font-weight:700;color:var(--warning);margin-bottom:8px;';
+      icon.textContent = 'Note';
       const title = document.createElement('div');
       title.style.cssText = 'font-size:16px;font-weight:700;margin-bottom:8px;color:var(--text-primary);';
       title.textContent = `"${eventTitle}" overlaps another event`;
@@ -2217,6 +2216,7 @@
         monthView.style.animation = `slideOutToLeft ${ANIM}ms ease forwards`;
         setTimeout(() => {
           isWeekView = true;
+          document.body.classList.add('week-mode');
           monthView.style.display = 'none'; monthView.style.animation = '';
           if (bottom) bottom.style.display = 'none';
           if (spacer) spacer.style.display = 'block';
@@ -2231,6 +2231,7 @@
         weekView.style.animation = `slideOutToRight ${ANIM}ms ease forwards`;
         setTimeout(() => {
           isWeekView = false;
+          document.body.classList.remove('week-mode');
           weekView.style.display = 'none'; weekView.style.animation = '';
           if (spacer) spacer.style.display = 'none';
           monthView.style.display = '';
@@ -2314,7 +2315,7 @@
       const eventsHtml = items.length === 0
         ? `<div style="text-align:center;color:var(--text-secondary);font-size:14px;padding:32px 0;opacity:0.7;">No events</div>`
         : items.map(ev => {
-            if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.1);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;border-left:3px solid var(--warning);">🎉 ${escHtml(ev.title)}</div>`;
+            if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.1);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;border-left:3px solid var(--warning);">${escHtml(ev.title)}</div>`;
             const color = getCategoryColor(ev.category || 'work');
             const timeStr = ev.isAllDay ? 'All day' : (ev.time ? formatTimeEastern(ev.time) : '');
             return `<div onclick="openEditModal('${ev.id}');triggerHaptic([40])" style="padding:10px 12px;background:var(--bg-dark);border-radius:10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;border-left:3px solid ${color};">
@@ -2404,7 +2405,7 @@
         sHtml += '</div>';
         html += sHtml;
       });
-      _setBottomPanel(html || '<div class="empty-state"><div class="empty-state-icon">📅</div>Nothing coming up</div>');
+      _setBottomPanel(html || '<div class="empty-state">Nothing coming up</div>');
     }
 
     // ── HORIZONTAL WEEK VIEW ──
@@ -2700,7 +2701,7 @@
     function _renderEventsList(events) {
       const container = document.getElementById('events-list');
       if (events.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div>No events found</div>';
+        container.innerHTML = '<div class="empty-state">No events found</div>';
         return;
       }
       const today = new Date().toISOString().split('T')[0];
@@ -2993,7 +2994,7 @@
         if (data.encryptionSalt) encryptionKey=await deriveEncryptionKey(nw,data.encryptionSalt);
         closeChangePw();
         showStatus('✓ Password updated','success');
-        showStatus('⚠️ Old encrypted events cleared','error');
+        showStatus('Old encrypted events cleared','error');
       } catch {errEl.textContent='Connection error';}
       finally{btn.disabled=false;btn.textContent='Update';}
     }
