@@ -221,7 +221,7 @@
     .week-current-time::before { content: ''; position: absolute; top: -4px; left: -4px; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; box-shadow: 0 0 6px rgba(255,69,58,0.6); }
 
     /* ── EVENT CARDS ── */
-    .event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58,58,60,0.85) 100%); padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: transform 0.1s, background 0.1s, box-shadow 0.15s ease; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    .event-item { background: var(--bg-light); padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: transform 0.1s, background 0.1s, box-shadow 0.15s ease; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     .event-item:active { transform: scale(0.98); background: var(--bg-light) !important; box-shadow: 0 4px 16px rgba(74,157,111,0.18); }
     .event-item.swipe-left { transform: translateX(-100px); }
     .event-swipe-actions { position: absolute; right: 0; top: 0; height: 100%; display: flex; }
@@ -405,17 +405,8 @@
           </div>
         </div>
 
-        <!-- Upcoming events (calendar tab) -->
-        <div class="events-container" id="upcoming-container">
-          <div class="upcoming-day-group" id="today-section"></div>
-          <div class="upcoming-day-group" id="tomorrow-section"></div>
-          <div class="upcoming-day-group" id="week-section"></div>
-          <div class="upcoming-day-group" id="month-section"></div>
-          <div class="upcoming-day-group" id="later-section"></div>
-        </div>
-
-        <!-- Selected-day events (shown inline replacing upcoming when a day is tapped) -->
-        <div id="calendar-day-events" style="display:none;flex:1;overflow-y:auto;padding:0 14px 80px;background:var(--bg-card);border-top:1px solid var(--border-color);"></div>
+        <!-- Calendar bottom: upcoming events OR selected-day schedule -->
+        <div id="calendar-bottom" class="events-container"></div>
       </div>
 
       <!-- ── EVENTS TAB ── -->
@@ -886,6 +877,7 @@
     const HOUR_W = 64; // mirrors --hour-w CSS var
     let barDragState = null;
     let barDragJustEnded = false;
+    let barLongPressTimer = null;
 
     // ── Task 2: Category state ──
     let addEventCategory = 'work';
@@ -1325,7 +1317,7 @@
       if (btn) btn.classList.add('active');
       closeMenuOnTab();
       if (tab === 'events') renderEventsPage();
-      if (tab === 'calendar') { renderCalendar(); renderUpcomingEvents(); renderCalendarDayEvents(); }
+      if (tab === 'calendar') { renderCalendar(); renderUpcomingEvents(); }
     }
     function toggleMenu() {
       document.getElementById('dropdown-menu').classList.toggle('active');
@@ -2215,16 +2207,11 @@
     function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
 
     function toggleView() {
-      const dayEvPanel = document.getElementById('calendar-day-events');
-      if (dayEvPanel && dayEvPanel.style.display !== 'none') {
-        dayEvPanel.style.display = 'none';
-        dayEvPanel.innerHTML = '';
-        selectedDate = null;
-      }
+      if (selectedDate) { selectedDate = null; }
       const btn = document.getElementById('view-toggle-btn');
       const monthView = document.getElementById('month-view');
       const weekView = document.getElementById('week-view');
-      const upcoming = document.getElementById('upcoming-container');
+      const bottom = document.getElementById('calendar-bottom');
       const ANIM = 180;
 
       if (!isWeekView) {
@@ -2234,7 +2221,7 @@
         setTimeout(() => {
           isWeekView = true;
           monthView.style.display = 'none'; monthView.style.animation = '';
-          upcoming.style.display = 'none';
+          if (bottom) bottom.style.display = 'none';
           weekView.style.display = 'flex';
           weekView.style.animation = `slideInFromRight ${ANIM}ms ease forwards`;
           document.getElementById('month-year').textContent = '';
@@ -2249,7 +2236,7 @@
           weekView.style.display = 'none'; weekView.style.animation = '';
           monthView.style.display = '';
           monthView.style.animation = `slideInFromLeft ${ANIM}ms ease forwards`;
-          upcoming.style.display = '';
+          if (bottom) bottom.style.display = '';
           renderCalendar();
           renderUpcomingEvents();
         }, ANIM);
@@ -2296,7 +2283,6 @@
       const remaining = 42 - (startDow + daysInMonth);
       for (let i = 1; i <= remaining; i++) html += `<div class="day-cell other-month"><div class="day-number">${i}</div></div>`;
       document.getElementById('calendar-grid').innerHTML = html;
-      renderCalendarDayEvents();
     }
 
     // ── Calendar day events (shown inline replacing upcoming section) ──
@@ -2345,17 +2331,44 @@
     function openDayModal(dateStr) {
       selectedDate = dateStr;
       renderCalendar();
-      renderCalendarDayEvents();
-      document.getElementById('upcoming-container').style.display = 'none';
-      document.getElementById('calendar-day-events').style.display = 'flex';
-      document.getElementById('calendar-day-events').style.flexDirection = 'column';
+      const container = document.getElementById('calendar-bottom');
+      if (!container) return;
+      const dateObj = new Date(dateStr + 'T00:00:00');
+      const label = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      const dayEvs = getEventsForDate(dateStr).filter(e => !e.isHoliday);
+      const dayHolidays = holidays.filter(h => h.date === dateStr);
+      const items = [...dayHolidays, ...dayEvs].sort((a, b) => {
+        if (a.isHoliday && !b.isHoliday) return -1;
+        if (!a.isHoliday && b.isHoliday) return 1;
+        if (!a.time && !b.time) return 0;
+        if (!a.time) return 1; if (!b.time) return -1;
+        return a.time.localeCompare(b.time);
+      });
+      const eventsHtml = items.length === 0
+        ? `<div style="text-align:center;color:var(--text-secondary);font-size:14px;padding:32px 0;opacity:0.7;">No events</div>`
+        : items.map(ev => {
+            if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.1);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;border-left:3px solid var(--warning);">🎉 ${escHtml(ev.title)}</div>`;
+            const color = getCategoryColor(ev.category || 'work');
+            const timeStr = ev.isAllDay ? 'All day' : (ev.time ? formatTimeEastern(ev.time) : '');
+            return `<div onclick="openEditModal('${ev.id}');triggerHaptic([40])" style="padding:10px 12px;background:var(--bg-dark);border-radius:10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;border-left:3px solid ${color};">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(ev.title)}</div>
+                ${timeStr ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${timeStr}</div>` : ''}
+              </div>
+            </div>`;
+          }).join('');
+      container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;border-bottom:1px solid var(--border-color);margin-bottom:8px;">
+          <span style="font-size:16px;font-weight:700;color:var(--text-primary);">${label}</span>
+          <button onclick="closeDayModal();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:20px;padding:4px 8px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
+        </div>
+        ${eventsHtml}
+      `;
     }
     function closeDayModal() {
       selectedDate = null;
       renderCalendar();
-      document.getElementById('calendar-day-events').style.display = 'none';
-      document.getElementById('calendar-day-events').innerHTML = '';
-      document.getElementById('upcoming-container').style.display = '';
+      renderUpcomingEvents();
     }
 
     // ── Upcoming events (calendar tab) ──
@@ -2375,13 +2388,14 @@
     }
 
     function renderUpcomingEvents() {
+      const container = document.getElementById('calendar-bottom');
+      if (!container || selectedDate || isWeekView) return;
       const today = new Date(); today.setHours(0,0,0,0);
       const activeEvents = allEvents.filter(e => !archivedIds.has(e.id) && new Date(e.date + 'T00:00:00') >= today);
       // Include recurring instances for the next 60 days
       const todayForUpcoming = getESTDateString();
       const sixtyDaysOut = (() => { const d = new Date(todayForUpcoming + 'T00:00:00'); d.setDate(d.getDate() + 60); return getLocalDateString(d); })();
       const recurringInstances = getRecurringInstancesInRange(todayForUpcoming, sixtyDaysOut);
-      // Merge into the events array before bucketing (avoid duplicates)
       recurringInstances.forEach(ri => { if (!activeEvents.find(e => e.id === ri.id)) activeEvents.push(ri); });
       const groups = { today: [], tomorrow: [], week: [], month: [], later: [] };
       activeEvents.forEach(event => {
@@ -2397,11 +2411,11 @@
           return (a.time || '').localeCompare(b.time || '');
         });
       });
+      let html = '';
       ['today','tomorrow','week','month','later'].forEach(section => {
-        const container = document.getElementById(`${section}-section`);
         const events = groups[section];
-        if (events.length === 0) { container.innerHTML = ''; return; }
-        let html = `<div class="upcoming-day-header">${events[0].groupLabel}</div>`;
+        if (events.length === 0) return;
+        let sHtml = `<div class="upcoming-day-group"><div class="upcoming-day-header">${events[0].groupLabel}</div>`;
         events.forEach(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
@@ -2410,7 +2424,7 @@
             ? `${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
             : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
           const upcomingCatColor = getCategoryColor(event.category || 'work');
-          html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
+          sHtml += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
               <div class="event-title" style="display:flex;align-items:center;gap:6px;"><span class="cat-dot" style="background:${upcomingCatColor};flex-shrink:0;"></span>${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
               ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
@@ -2420,8 +2434,10 @@
             </div>
           </div>`;
         });
-        container.innerHTML = html;
+        sHtml += '</div>';
+        html += sHtml;
       });
+      container.innerHTML = html || '<div class="empty-state"><div class="empty-state-icon">📅</div>Nothing coming up</div>';
     }
 
     // ── HORIZONTAL WEEK VIEW ──
@@ -2531,7 +2547,6 @@
 
       updateCurrentTimeLine();
       scrollToCurrentTime();
-      renderCalendarDayEvents();
     }
 
     // ── Horizontal drag-to-reschedule for week event bars ──
@@ -2539,14 +2554,35 @@
       e.stopPropagation();
       const isTouch = !!e.touches;
       const startX = isTouch ? e.touches[0].clientX : e.clientX;
-      barDragState = {
-        eventId, startMins, durationMins, startX,
-        deltaPx: 0, moved: false,
-        el: e.currentTarget,
-        isTouch
+      const startY = isTouch ? e.touches[0].clientY : e.clientY;
+      const el = e.currentTarget;
+
+      const cancel = () => {
+        if (barLongPressTimer) { clearTimeout(barLongPressTimer); barLongPressTimer = null; }
+        document.removeEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove);
+        document.removeEventListener(isTouch ? 'touchend' : 'mouseup', cancel);
       };
-      document.addEventListener(isTouch ? 'touchmove' : 'mousemove', handleBarDragMove, { passive: false });
-      document.addEventListener(isTouch ? 'touchend' : 'mouseup', handleBarDragEnd, { once: true });
+      const checkMove = (mv) => {
+        const cx = isTouch ? mv.touches[0].clientX : mv.clientX;
+        const cy = isTouch ? mv.touches[0].clientY : mv.clientY;
+        if (Math.abs(cx - startX) > 6 || Math.abs(cy - startY) > 6) cancel();
+      };
+
+      barLongPressTimer = setTimeout(() => {
+        barLongPressTimer = null;
+        document.removeEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove);
+        document.removeEventListener(isTouch ? 'touchend' : 'mouseup', cancel);
+        barDragState = { eventId, startMins, durationMins, startX, deltaPx: 0, moved: false, el, isTouch };
+        el.style.transform = 'scale(1.05)';
+        el.style.opacity = '0.8';
+        el.style.zIndex = '20';
+        triggerHaptic([40, 20, 40]);
+        document.addEventListener(isTouch ? 'touchmove' : 'mousemove', handleBarDragMove, { passive: false });
+        document.addEventListener(isTouch ? 'touchend' : 'mouseup', handleBarDragEnd, { once: true });
+      }, 600);
+
+      document.addEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove, { passive: true });
+      document.addEventListener(isTouch ? 'touchend' : 'mouseup', cancel, { once: true });
     }
 
     function handleBarDragMove(e) {
@@ -2565,10 +2601,15 @@
       if (!barDragState) return;
       document.removeEventListener(barDragState.isTouch ? 'touchmove' : 'mousemove', handleBarDragMove);
 
-      if (barDragState.moved) {
-        barDragJustEnded = true;
-        setTimeout(() => { barDragJustEnded = false; }, 150);
+      const el = barDragState.el;
+      el.style.transform = '';
+      el.style.opacity = '';
+      el.style.zIndex = '';
 
+      barDragJustEnded = true;
+      setTimeout(() => { barDragJustEnded = false; }, 200);
+
+      if (barDragState.moved) {
         const MINS_PER_PX = 60 / HOUR_W;
         const rawDeltaMins = barDragState.deltaPx * MINS_PER_PX;
         const snapDeltaMins = Math.round(rawDeltaMins / 15) * 15;
@@ -2584,9 +2625,6 @@
           showStatus(`✓ ${allEvents[idx].title} → ${formatTimeEastern(allEvents[idx].time)}`, 'success');
           showSyncIndicator();
           triggerHaptic([40]);
-        } else {
-          barDragState.el.style.transform = '';
-          barDragState.el.style.opacity = '';
         }
         renderWeekView();
       }
