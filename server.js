@@ -284,18 +284,21 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const userId = randomBytes(16).toString('hex');
     const encryptionSalt = generateSalt();
+    const codes = Array.from({length:16}, () => randomBytes(4).toString('hex'));
+    const hashedCodes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
 
     await usersCollection.insertOne({
       userId,
       email: email.toLowerCase(),
       passwordHash,
       encryptionSalt,
+      recoveryCodes: hashedCodes,
       createdAt: new Date()
     });
 
     const token = jwt.sign({ sub: userId, email: email.toLowerCase() }, JWT_SECRET, { expiresIn: '30d' });
     console.log('✓ New user registered:', email.toLowerCase());
-    res.json({ token, encryptionSalt, userId });
+    res.json({ token, encryptionSalt, userId, recoveryCodes: codes });
   } catch (err) {
     console.error('Register error:', err.message);
     res.status(500).json({ error: 'Registration failed' });
@@ -375,6 +378,54 @@ app.delete('/api/auth/account', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Account delete error:', err.message);
     res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// POST /api/auth/forgot-password
+// Generates 16 one-time recovery codes, stores hashed, returns plaintext once
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
+  try {
+    const user = await usersCollection.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ error: 'No account found with that email' });
+    const codes = Array.from({length:16}, () => randomBytes(4).toString('hex'));
+    const hashedCodes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
+    await usersCollection.updateOne({ userId: user.userId }, { $set: { recoveryCodes: hashedCodes, recoveryGeneratedAt: new Date() } });
+    console.log('✓ Recovery codes generated:', user.email);
+    res.json({ codes });
+  } catch (err) {
+    console.error('Forgot password error:', err.message);
+    res.status(500).json({ error: 'Failed to generate recovery codes' });
+  }
+});
+
+// POST /api/auth/reset-password
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { email, code, newPassword } = req.body;
+  if (!email || !code || !newPassword) return res.status(400).json({ error: 'Email, code, and new password required' });
+  if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
+  try {
+    const user = await usersCollection.findOne({ email: email.toLowerCase() });
+    if (!user || !user.recoveryCodes?.length) return res.status(400).json({ error: 'Invalid or expired recovery code' });
+    let matchIndex = -1;
+    for (let i = 0; i < user.recoveryCodes.length; i++) {
+      if (user.recoveryCodes[i] && await bcrypt.compare(code.trim().toLowerCase(), user.recoveryCodes[i])) { matchIndex = i; break; }
+    }
+    if (matchIndex === -1) return res.status(400).json({ error: 'Invalid or expired recovery code' });
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    const encryptionSalt = generateSalt();
+    const updatedCodes = [...user.recoveryCodes];
+    updatedCodes[matchIndex] = null;
+    await usersCollection.updateOne({ userId: user.userId }, { $set: { passwordHash, encryptionSalt, recoveryCodes: updatedCodes, updatedAt: new Date() } });
+    const token = jwt.sign({ sub: user.userId, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+    console.log('✓ Password reset via recovery code:', user.email);
+    res.json({ token, encryptionSalt, userId: user.userId, warning: 'Events encrypted with your old password are no longer accessible' });
+  } catch (err) {
+    console.error('Reset password error:', err.message);
+    res.status(500).json({ error: 'Password reset failed' });
   }
 });
 
@@ -566,6 +617,31 @@ app.post('/api/sync/upload', requireAuth, async (req, res) => {
   }
 
   res.json(event);
+});
+
+// ── Static legal pages ──
+app.get('/privacy', (req, res) => {
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy — CalPal</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
+<h1>CalPal Privacy Policy</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
+<h2>What We Collect</h2><p>CalPal collects your email address and calendar event data (titles, dates, times). All event data is end-to-end encrypted before leaving your device — we cannot read your events.</p>
+<h2>How We Use It</h2><p>Your email is used solely for account authentication. Your encrypted event data is stored on our servers to enable sync across devices.</p>
+<h2>Data Storage</h2><p>Data is stored in MongoDB Atlas (cloud). Encryption keys are derived from your password on-device using PBKDF2 and are never transmitted to our servers.</p>
+<h2>Third Parties</h2><p>We use the Anthropic Claude API to parse natural-language event descriptions. Text you type in the event input is sent to Anthropic for parsing. No personal identifying information is included.</p>
+<h2>Data Deletion</h2><p>You can permanently delete your account and all associated data at any time from Settings → Delete Account.</p>
+<h2>Contact</h2><p>Questions? Email us at <a href="mailto:jdefrancesco2003@gmail.com">jdefrancesco2003@gmail.com</a></p>
+</body></html>`);
+});
+
+app.get('/terms', (req, res) => {
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Service — CalPal</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
+<h1>CalPal Terms of Service</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
+<h2>Acceptance</h2><p>By using CalPal you agree to these terms. CalPal is provided as-is for personal productivity use.</p>
+<h2>Account Responsibility</h2><p>You are responsible for keeping your password and recovery codes safe. We cannot recover encrypted data if you lose your password and recovery codes.</p>
+<h2>Prohibited Use</h2><p>Do not use CalPal to store illegal content or to abuse the AI parsing service.</p>
+<h2>Service Availability</h2><p>We aim for high availability but do not guarantee 100% uptime. Always export your calendar (.ics) as a backup.</p>
+<h2>Termination</h2><p>You may delete your account at any time. We may suspend accounts that violate these terms.</p>
+<h2>Contact</h2><p>Questions? Email <a href="mailto:jdefrancesco2003@gmail.com">jdefrancesco2003@gmail.com</a></p>
+</body></html>`);
 });
 
 // ── Health ──

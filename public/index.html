@@ -64,7 +64,7 @@
     .dropdown-item:active { background: rgba(74,157,111,0.18); }
 
     /* ── FAB ── */
-    .fab { position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 54px; height: 54px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(74,157,111,0.4); z-index: 100; transition: transform 0.2s, box-shadow 0.2s; }
+    .fab { position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 54px; height: 54px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(74,157,111,0.4); z-index: 100; transition: transform 0.15s, box-shadow 0.15s; }
     .fab:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(74,157,111,0.4); }
 
     /* ── STATUS ── */
@@ -75,13 +75,24 @@
 
     /* ── TABS ── */
     .section-tabs { display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-dark); flex-shrink: 0; }
-    .tab-button { flex: 1; padding: 12px 0; background: none; border: none; border-bottom: 3px solid transparent; font-size: 14px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: color 0.2s, border-color 0.2s; letter-spacing: 0.2px; }
+    .tab-button { flex: 1; padding: 12px 0; background: none; border: none; border-bottom: 3px solid transparent; font-size: 14px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: color 0.2s, border-color 0.2s; letter-spacing: 0.2px; position: relative; }
     .tab-button.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 20%; right: 20%;
+      height: 2px; border-radius: 1px;
+      background: var(--primary);
+    }
 
     /* ── MAIN CONTENT ── */
     .main-content { display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
     .tab-content { display: none; flex-direction: column; flex: 1; }
-    .tab-content.active { display: flex; }
+    .tab-content.active { display: flex; animation: tabFadeIn 0.22s ease both; }
+    @keyframes tabFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
     /* ── SECTION / FORM ── */
     .section { background: var(--bg-card); padding: 16px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--border-color); }
@@ -91,7 +102,7 @@
     .input-group label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.6px; }
     input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--bg-light); color: var(--text-primary); appearance: none; min-height: 44px; transition: border-color 0.2s, box-shadow 0.2s; }
     input::placeholder, textarea::placeholder { color: var(--text-secondary); }
-    input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,157,111,0.12); }
+    input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,157,111,0.12); transition: border-color 0.15s, box-shadow 0.15s; }
     textarea { resize: none; min-height: 90px; font-size: 15px; }
     button { padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px; appearance: none; }
     .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 12px rgba(74,157,111,0.25); }
@@ -112,7 +123,7 @@
     input:checked + .slider:before { transform: translateX(20px); }
 
     /* ── CALENDAR (MONTH VIEW) ── */
-    #calendar-tab { overflow: hidden; display: flex; flex-direction: column; }
+    #calendar-tab { overflow-y: auto !important; flex-direction: column !important; padding-bottom: 80px; }
     .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); flex-shrink: 0; }
     .month-year { font-size: 17px; font-weight: 700; color: var(--text-primary); }
     .month-nav { display: flex; gap: 8px; align-items: center; }
@@ -122,8 +133,8 @@
     .view-toggle-btn:active, .view-toggle-btn.active { background: var(--primary); color: white; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 10px 12px; background: var(--bg-card); flex-shrink: 0; }
     .day-header { text-align: center; font-weight: 700; color: var(--text-secondary); padding: 6px 0; font-size: 11px; letter-spacing: 0.5px; }
-    .day-cell { aspect-ratio: 1; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 40px; position: relative; transition: all 0.15s ease; }
-    .day-cell:active { transform: scale(0.93); border-color: var(--primary); }
+    .day-cell { aspect-ratio: 1; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 40px; position: relative; transition: background 0.15s, transform 0.1s, border-color 0.15s; }
+    .day-cell:active { transform: scale(0.94); border-color: var(--primary); }
     .day-cell.other-month { background: transparent; border-color: transparent; opacity: 0.25; }
     .day-cell.today { border: 2px solid var(--primary); box-shadow: 0 0 0 1px var(--primary), inset 0 0 10px rgba(74,157,111,0.08); }
     .day-cell.selected { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-color: var(--primary); }
@@ -136,7 +147,11 @@
     /* ── AUTH MODAL ── */
     #auth-overlay { position: fixed; inset: 0; background: var(--bg-dark); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
     #auth-overlay.hidden { display: none; }
-    .auth-box { width: 100%; max-width: 360px; background: var(--bg-card); border-radius: 20px; padding: 32px 24px; border: 1px solid var(--border-color); }
+    .auth-box { width: 100%; max-width: 360px; background: var(--bg-card); border-radius: 20px; padding: 32px 24px; border: 1px solid var(--border-color); animation: authBoxIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) both; }
+    @keyframes authBoxIn {
+      from { transform: translateY(32px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
     .auth-logo { text-align: center; margin-bottom: 28px; font-size: 28px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; }
     .auth-logo span { color: var(--primary); }
     .auth-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; text-align: center; }
@@ -203,8 +218,8 @@
     .week-current-time::before { content: ''; position: absolute; top: -4px; left: -4px; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; box-shadow: 0 0 6px rgba(255,69,58,0.6); }
 
     /* ── EVENT CARDS ── */
-    .event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58,58,60,0.85) 100%); padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-    .event-item:active { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(74,157,111,0.18); }
+    .event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58,58,60,0.85) 100%); padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: transform 0.1s, background 0.1s, box-shadow 0.15s ease; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    .event-item:active { transform: scale(0.98); background: var(--bg-light) !important; box-shadow: 0 4px 16px rgba(74,157,111,0.18); }
     .event-item.swipe-left { transform: translateX(-100px); }
     .event-swipe-actions { position: absolute; right: 0; top: 0; height: 100%; display: flex; }
     .swipe-action { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; border: none; min-width: 52px; min-height: auto; transition: opacity 0.15s; }
@@ -224,9 +239,14 @@
     .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
 
     /* ── MODALS ── */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 2000; padding: max(12px, env(safe-area-inset-top)) 12px 0 12px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 2000; padding: max(12px, env(safe-area-inset-top)) 12px 0 12px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: background-color 0.2s; }
     .modal-overlay.active { display: flex; align-items: flex-end; animation: fadeIn 0.2s ease; }
-    .modal { background: var(--bg-card); border-radius: 20px 20px 0 0; width: 100%; max-height: 84vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: slideUpModal 0.3s cubic-bezier(0.34,1.3,0.64,1); }
+    .modal-overlay.active .modal { animation: slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1) both; }
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .modal { background: var(--bg-card); border-radius: 20px 20px 0 0; width: 100%; max-height: 84vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
     .modal h3 { font-size: 17px; font-weight: 700; color: var(--text-primary); }
     .modal-handle { width: 36px; height: 4px; background: var(--border-color); border-radius: 2px; margin: 0 auto 8px; }
     .confirmation-modal { padding: 24px 20px; }
@@ -260,6 +280,47 @@
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+    /* ── CATEGORY COLORS (Task 2) ── */
+    .cat-dot { width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0; }
+    .cat-work    { background:#4a9d6f; }
+    .cat-personal{ background:#5b8dee; }
+    .cat-health  { background:#ff6b6b; }
+    .cat-social  { background:#ffb347; }
+    .cat-other   { background:#b39ddb; }
+    .cat-select { display:flex;gap:10px;align-items:center;margin:8px 0; }
+    .cat-btn { width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:border 0.15s; }
+    .cat-btn.selected { border-color:white; }
+
+    /* ── PULL-TO-REFRESH ── */
+    .ptr-spinner {
+      text-align:center; padding:12px; color:var(--text-secondary); font-size:13px;
+      display:none; transition: opacity 0.2s;
+      position: sticky; top: 0; z-index: 10; background: var(--bg-dark);
+    }
+    .ptr-spinner.visible { display:block; }
+
+    /* ── LIGHT MODE (Task 6) ── */
+    body.light-mode {
+      --bg-dark: #f5f5f7;
+      --bg-card: #ffffff;
+      --bg-light: #e8e8ed;
+      --text-primary: #1a1a2e;
+      --text-secondary: #6e6e73;
+      --border-color: rgba(0,0,0,0.12);
+    }
+
+    /* ── ONBOARDING (Task 7) ── */
+    #onboarding-overlay { position:fixed;inset:0;background:var(--bg-dark);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px; }
+    #onboarding-overlay.hidden { display:none; }
+    .ob-slide { display:none;flex-direction:column;align-items:center;text-align:center;max-width:320px; }
+    .ob-slide.active { display:flex; }
+    .ob-icon { font-size:72px;margin-bottom:24px; }
+    .ob-title { font-size:26px;font-weight:700;color:var(--text-primary);margin-bottom:12px; }
+    .ob-desc { font-size:16px;color:var(--text-secondary);line-height:1.6;margin-bottom:32px; }
+    .ob-dots { display:flex;gap:8px;margin-bottom:32px; }
+    .ob-dot { width:8px;height:8px;border-radius:50%;background:var(--border-color);transition:background 0.2s; }
+    .ob-dot.active { background:var(--primary); }
   </style>
 </head>
 <body>
@@ -289,14 +350,14 @@
 
     <div class="section-tabs">
       <button class="tab-button active" id="tab-btn-calendar" onclick="showTab('calendar', this); triggerHaptic(20)">Calendar</button>
-      <button class="tab-button" id="tab-btn-add" onclick="showTab('add', this); triggerHaptic(20)">Add Event</button>
       <button class="tab-button" id="tab-btn-events" onclick="showTab('events', this); triggerHaptic(20)">Events</button>
     </div>
 
     <div class="main-content">
+      <div class="ptr-spinner" id="ptr-spinner">↻ Refreshing...</div>
 
       <!-- ── CALENDAR TAB ── -->
-      <div id="calendar-tab" class="tab-content active" style="overflow:hidden; flex-direction:column;">
+      <div id="calendar-tab" class="tab-content active">
         <div class="calendar-header">
           <div class="month-year" id="month-year"></div>
           <div class="month-nav">
@@ -331,53 +392,9 @@
           <div class="upcoming-day-group" id="month-section"></div>
           <div class="upcoming-day-group" id="later-section"></div>
         </div>
-      </div>
 
-      <!-- ── ADD EVENT TAB ── -->
-      <div id="add-tab" class="tab-content">
-        <div class="section">
-          <div class="section-title">Quick Add</div>
-          <div class="section-subtitle">Describe your event naturally</div>
-          <div class="input-group">
-            <textarea id="event-input" placeholder='e.g., "dentist Friday 2pm" or "team meeting next Monday 9-10am"' maxlength="200"></textarea>
-          </div>
-          <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50,30,50])">Add Event</button>
-          <div class="divider"></div>
-          <div class="section-title">Manual Entry</div>
-          <div class="input-group"><label>Title</label><input type="text" id="title-input" placeholder="Event name" maxlength="100"></div>
-          <div class="input-group"><label>Date Range</label>
-            <div class="time-inputs">
-              <div><label style="font-size:10px;color:var(--text-secondary);">Start</label><input type="date" id="date-input"></div>
-              <div><label style="font-size:10px;color:var(--text-secondary);">End</label><input type="date" id="end-date-input"></div>
-            </div>
-          </div>
-          <div class="input-group"><label>Time</label>
-            <div class="time-inputs">
-              <div><label style="font-size:10px;color:var(--text-secondary);">Start</label><input type="time" id="time-input"></div>
-              <div><label style="font-size:10px;color:var(--text-secondary);">End</label><input type="time" id="end-time-input"></div>
-            </div>
-          </div>
-          <div class="input-group"><label>Notes</label><textarea id="desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
-          <div class="toggle-switch">
-            <label for="all-day-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">All-Day Event</label>
-            <label class="switch"><input type="checkbox" id="all-day-toggle" onchange="toggleAllDayManual()"><span class="slider"></span></label>
-          </div>
-              <div style="margin-top:10px;">
-                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Repeat</label>
-                <select class="form-select" id="recurrence-select" onchange="toggleRecurrenceEnd('recurrence-end-row')">
-                  <option value="none">Never</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
-              </div>
-              <div id="recurrence-end-row" style="display:none;margin-top:10px;">
-                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ends On (optional)</label>
-                <input type="date" id="recurrence-end-input" class="form-select" style="padding:10px 12px;">
-              </div>
-          <button class="btn-secondary" onclick="addEventManually(); triggerHaptic([60,20,60])">Save Event</button>
-        </div>
+        <!-- Selected-day events below calendar -->
+        <div id="calendar-day-events" style="padding:0 16px 16px;"></div>
       </div>
 
       <!-- ── EVENTS TAB ── -->
@@ -396,7 +413,7 @@
 
     </div><!-- .main-content -->
 
-    <button class="fab" onclick="openAddEventTab(); triggerHaptic([50,30,50])">+</button>
+    <button class="fab" onclick="openAddModal(); triggerHaptic([50,30,50])">+</button>
   </div>
 
   <!-- ── CONFIRMATION MODAL ── -->
@@ -455,6 +472,16 @@
         </div>
       </div>
       <div class="input-group"><label>Notes</label><textarea id="modal-desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
+      <div style="margin-top:8px;">
+        <label style="font-size:13px;color:var(--text-secondary);">Category</label>
+        <div class="cat-select" id="edit-cat-select">
+          <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('edit','work')" title="Work"></button>
+          <button type="button" class="cat-btn cat-personal" data-cat="personal" onclick="selectCategory('edit','personal')" title="Personal"></button>
+          <button type="button" class="cat-btn cat-health" data-cat="health" onclick="selectCategory('edit','health')" title="Health"></button>
+          <button type="button" class="cat-btn cat-social" data-cat="social" onclick="selectCategory('edit','social')" title="Social"></button>
+          <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('edit','other')" title="Other"></button>
+        </div>
+      </div>
       <div class="toggle-switch">
         <label for="modal-all-day-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">All-Day Event</label>
         <label class="switch"><input type="checkbox" id="modal-all-day-toggle" onchange="toggleAllDayModal()"><span class="slider"></span></label>
@@ -479,6 +506,7 @@
         <button class="btn-danger" style="flex:1;" onclick="deleteEditingEvent(); triggerHaptic([100,50,100])">Delete</button>
         <button class="btn-secondary" style="flex:1;" onclick="closeModal(); triggerHaptic(20)">Cancel</button>
       </div>
+      <button class="btn-secondary" style="width:100%;margin-top:8px;" onclick="shareEvent(allEvents.find(e=>e.id===editingEventId)); triggerHaptic(20)">📤 Share</button>
     </div>
   </div>
 
@@ -510,9 +538,26 @@
       <div class="auth-toggle" id="auth-toggle-text">
         No account? <span onclick="toggleAuthMode()">Create one</span>
       </div>
+      <div style="margin-top:8px;text-align:center;">
+        <span id="forgot-link" onclick="showForgotPassword()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.8;">Forgot password?</span>
+      </div>
       <div style="margin-top:16px;text-align:center;">
         <span onclick="continueAsGuest()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;text-decoration:underline;opacity:0.7;">Continue as Guest</span>
       </div>
+      <div style="margin-top:20px;text-align:center;font-size:11px;color:var(--text-secondary);opacity:0.6;">
+        <a href="/privacy" target="_blank" style="color:inherit;">Privacy Policy</a> · <a href="/terms" target="_blank" style="color:inherit;">Terms of Service</a>
+      </div>
+    </div>
+    <div id="reset-panel" class="auth-box" style="display:none;">
+      <div class="auth-logo">Cal<span>Pal</span></div>
+      <div class="auth-title">Reset Password</div>
+      <div class="auth-error" id="reset-error"></div>
+      <div class="auth-field"><label>Email</label><input type="email" id="reset-email" placeholder="you@example.com"></div>
+      <div class="auth-field"><label>Recovery Code</label><input type="text" id="reset-code" placeholder="e.g. a1b2c3d4" autocomplete="off" style="font-family:monospace;letter-spacing:1px;"></div>
+      <div class="auth-field"><label>New Password</label><input type="password" id="reset-new-password" placeholder="Min 8 characters"></div>
+      <p style="font-size:12px;color:var(--warning);margin:4px 0 12px;text-align:center;">⚠️ Events encrypted with your old password will be lost</p>
+      <button class="auth-submit" id="reset-submit-btn" onclick="submitResetPassword()">Reset Password</button>
+      <div style="margin-top:12px;text-align:center;"><span onclick="hideForgotPassword()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.8;">← Back to Sign In</span></div>
     </div>
   </div>
 
@@ -525,7 +570,82 @@
         <label for="notif-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">Enable Notifications</label>
         <label class="switch"><input type="checkbox" id="notif-toggle" onchange="toggleNotifications()"><span class="slider"></span></label>
       </div>
-      <button class="btn-secondary" style="width:100%;margin-top:4px;" onclick="closeSettings(); triggerHaptic(20)">Done</button>
+      <div class="toggle-switch" style="margin-top:12px;">
+        <label style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">Light Mode</label>
+        <label class="switch"><input type="checkbox" id="theme-toggle" onchange="toggleTheme()"><span class="slider"></span></label>
+      </div>
+      <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">📤 Export .ics</button>
+      <label style="width:100%;margin-top:8px;display:block;">
+        <input type="file" id="ical-import-input" accept=".ics" style="display:none;" onchange="importIcalFile(event); closeSettings()">
+        <span class="btn-secondary" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box;" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">📥 Import .ics</span>
+      </label>
+      <button class="btn-secondary" id="change-pw-btn" style="width:100%;margin-top:8px;display:none;" onclick="openChangePassword(); triggerHaptic(20)">🔒 Change Password</button>
+      <button class="btn-danger" id="delete-acct-btn" style="width:100%;margin-top:8px;display:none;" onclick="openDeleteAccount(); triggerHaptic(20)">🗑 Delete Account</button>
+      <div style="margin-top:8px;text-align:center;font-size:11px;color:var(--text-secondary);opacity:0.6;">
+        <a href="/privacy" target="_blank" style="color:inherit;text-decoration:none;">Privacy Policy</a> · <a href="/terms" target="_blank" style="color:inherit;text-decoration:none;">Terms of Service</a>
+      </div>
+      <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="closeSettings(); triggerHaptic(20)">Done</button>
+    </div>
+  </div>
+
+  <!-- ── ADD EVENT MODAL ── -->
+  <div class="modal-overlay" id="add-event-overlay">
+    <div class="modal" style="max-height:90vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,16px);">
+      <div class="modal-handle"></div>
+      <h3 style="margin-bottom:16px;">New Event</h3>
+      <div class="section-title" style="font-size:13px;margin-bottom:4px;">Describe it naturally</div>
+      <div class="input-group">
+        <textarea id="event-input" placeholder='e.g. "dentist Friday 2pm" or "team meeting every Monday 9–10am"' maxlength="200" style="min-height:60px;"></textarea>
+      </div>
+      <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50,30,50])" style="width:100%;">✦ Parse with AI</button>
+      <div class="divider" style="margin:16px 0;"></div>
+      <div class="section-title" style="font-size:13px;margin-bottom:8px;">Manual Entry</div>
+      <div class="input-group"><label>Title</label><input type="text" id="title-input" placeholder="Event name" maxlength="100"></div>
+      <div class="input-group"><label>Date Range</label>
+        <div class="time-inputs">
+          <div><label style="font-size:10px;color:var(--text-secondary);">Start</label><input type="date" id="date-input"></div>
+          <div><label style="font-size:10px;color:var(--text-secondary);">End</label><input type="date" id="end-date-input"></div>
+        </div>
+      </div>
+      <div class="input-group"><label>Time</label>
+        <div class="time-inputs">
+          <div><label style="font-size:10px;color:var(--text-secondary);">Start</label><input type="time" id="time-input"></div>
+          <div><label style="font-size:10px;color:var(--text-secondary);">End</label><input type="time" id="end-time-input"></div>
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <label style="font-size:13px;color:var(--text-secondary);">Category</label>
+        <div class="cat-select" id="add-cat-select">
+          <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('add','work')" title="Work"></button>
+          <button type="button" class="cat-btn cat-personal" data-cat="personal" onclick="selectCategory('add','personal')" title="Personal"></button>
+          <button type="button" class="cat-btn cat-health" data-cat="health" onclick="selectCategory('add','health')" title="Health"></button>
+          <button type="button" class="cat-btn cat-social" data-cat="social" onclick="selectCategory('add','social')" title="Social"></button>
+          <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('add','other')" title="Other"></button>
+        </div>
+      </div>
+      <div class="input-group"><label>Notes</label><textarea id="desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
+      <div class="toggle-switch">
+        <label for="all-day-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">All-Day Event</label>
+        <label class="switch"><input type="checkbox" id="all-day-toggle" onchange="toggleAllDayManual()"><span class="slider"></span></label>
+      </div>
+      <div style="margin-top:10px;">
+        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Repeat</label>
+        <select class="form-select" id="recurrence-select" onchange="toggleRecurrenceEnd('recurrence-end-row')">
+          <option value="none">Never</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+      <div id="recurrence-end-row" style="display:none;margin-top:10px;">
+        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ends On (optional)</label>
+        <input type="date" id="recurrence-end-input" class="form-select" style="padding:10px 12px;">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeAddModal(); triggerHaptic(20)">Cancel</button>
+        <button class="btn-primary" style="flex:1;" onclick="addEventManually(); triggerHaptic([60,20,60])">Save Event</button>
+      </div>
     </div>
   </div>
 
@@ -537,6 +657,93 @@
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button class="btn-danger" style="flex:1;" onclick="cancelOverlapSave(); triggerHaptic([100,50,100])">Cancel</button>
         <button class="btn-secondary" style="flex:1;" onclick="confirmOverlapSave(); triggerHaptic([60,20,60])">Save Anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RECOVERY CODES MODAL ── -->
+  <div class="modal-overlay" id="recovery-overlay">
+    <div class="modal" style="max-width:380px;">
+      <div class="modal-handle"></div>
+      <h3 style="color:var(--warning);">⚠️ Save Your Recovery Codes</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin:8px 0 16px;">These 16 codes can reset your password if you forget it. Each code works once. Store them somewhere safe — they won't be shown again.</p>
+      <div id="recovery-codes-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px;"></div>
+      <button class="btn-primary" style="width:100%;margin-bottom:8px;" onclick="copyRecoveryCodes()">📋 Copy All Codes</button>
+      <button class="btn-secondary" style="width:100%;" onclick="closeRecoveryModal()">I've saved them</button>
+    </div>
+  </div>
+
+  <!-- ── CHANGE PASSWORD MODAL ── -->
+  <div class="modal-overlay" id="change-pw-overlay">
+    <div class="modal" style="max-width:340px;">
+      <div class="modal-handle"></div>
+      <h3>Change Password</h3>
+      <p style="font-size:13px;color:var(--warning);margin:4px 0 12px;">⚠️ Changing your password will re-derive your encryption key. Events encrypted with the old password will be inaccessible.</p>
+      <div class="auth-field"><label>Current Password</label><input type="password" id="cp-current" placeholder="••••••••"></div>
+      <div class="auth-field"><label>New Password</label><input type="password" id="cp-new" placeholder="Min 8 characters"></div>
+      <div id="cp-error" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeChangePw()">Cancel</button>
+        <button class="btn-primary" style="flex:1;" id="cp-submit" onclick="submitChangePassword()">Update</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DELETE ACCOUNT MODAL ── -->
+  <div class="modal-overlay" id="delete-account-overlay">
+    <div class="modal" style="max-width:340px;">
+      <div class="modal-handle"></div>
+      <h3 style="color:#ff6b6b;">Delete Account</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin:8px 0 16px;">This is permanent. Your account and ALL events will be deleted. Type your password to confirm.</p>
+      <div class="auth-field"><label>Password</label><input type="password" id="da-password" placeholder="••••••••"></div>
+      <div id="da-error" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeDeleteAccount()">Cancel</button>
+        <button class="btn-danger" style="flex:1;" id="da-submit" onclick="submitDeleteAccount()">Delete Forever</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ONBOARDING OVERLAY ── -->
+  <div id="onboarding-overlay" class="hidden">
+    <div class="ob-slide active" id="ob-0">
+      <div class="ob-icon">📅</div>
+      <div class="ob-title">Welcome to CalPal</div>
+      <div class="ob-desc">Your AI-powered personal calendar. Add events in plain English and let CalPal figure out the rest.</div>
+    </div>
+    <div class="ob-slide" id="ob-1">
+      <div class="ob-icon">✨</div>
+      <div class="ob-title">Smart Event Parsing</div>
+      <div class="ob-desc">Just type "dentist next Tuesday at 2pm" or "team meeting every Monday 9-10am" and CalPal handles scheduling.</div>
+    </div>
+    <div class="ob-slide" id="ob-2">
+      <div class="ob-icon">🔒</div>
+      <div class="ob-title">Private &amp; Encrypted</div>
+      <div class="ob-desc">All your events are end-to-end encrypted. Only you can read them — not even we can.</div>
+    </div>
+    <div class="ob-slide" id="ob-3">
+      <div class="ob-icon">🌐</div>
+      <div class="ob-title">Syncs Everywhere</div>
+      <div class="ob-desc">Your calendar stays in sync across all your devices. Sign in anywhere to access your schedule.</div>
+    </div>
+    <div class="ob-dots">
+      <div class="ob-dot active" id="od-0"></div>
+      <div class="ob-dot" id="od-1"></div>
+      <div class="ob-dot" id="od-2"></div>
+      <div class="ob-dot" id="od-3"></div>
+    </div>
+    <button class="btn-primary" style="width:100%;max-width:280px;" id="ob-next-btn" onclick="obNext()">Next →</button>
+    <button class="btn-secondary" style="width:100%;max-width:280px;margin-top:10px;" onclick="obSkip()">Skip</button>
+  </div>
+
+  <!-- ── DELETE CONFIRM MODAL ── -->
+  <div class="modal-overlay" id="delete-confirm-overlay">
+    <div class="modal" style="max-width:320px;">
+      <div class="modal-handle"></div>
+      <p style="font-size:15px;text-align:center;margin:8px 0 20px;" id="delete-confirm-msg">Delete this event?</p>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" style="flex:1;" onclick="document.getElementById('delete-confirm-overlay').classList.remove('active'); window._deleteConfirmReject&&window._deleteConfirmReject()">Cancel</button>
+        <button class="btn-danger" style="flex:1;" onclick="document.getElementById('delete-confirm-overlay').classList.remove('active'); window._deleteConfirmResolve&&window._deleteConfirmResolve()">Delete</button>
       </div>
     </div>
   </div>
@@ -575,6 +782,111 @@
     const HOUR_W = 64; // mirrors --hour-w CSS var
     let barDragState = null;
     let barDragJustEnded = false;
+
+    // ── Task 2: Category state ──
+    let addEventCategory = 'work';
+    let editEventCategory = 'work';
+
+    function selectCategory(form, cat) {
+      if (form === 'add') addEventCategory = cat;
+      else editEventCategory = cat;
+      const container = document.getElementById(`${form}-cat-select`);
+      container.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.cat === cat);
+      });
+    }
+
+    function getCategoryColor(cat) {
+      return { work:'#4a9d6f', personal:'#5b8dee', health:'#ff6b6b', social:'#ffb347', other:'#b39ddb' }[cat] || '#4a9d6f';
+    }
+
+    // ── Task 4: Share event as .ics ──
+    function shareEvent(ev) {
+      if (!ev) return;
+      const lines = [
+        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CalPal//CalPal Calendar//EN',
+        'CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
+        `UID:${ev.id}@calpal.app`,`SUMMARY:${ev.title}`
+      ];
+      if (ev.isAllDay || !ev.time) {
+        lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`);
+        const d = new Date((ev.endDate||ev.date)+'T00:00:00'); d.setDate(d.getDate()+1);
+        lines.push(`DTEND;VALUE=DATE:${d.toISOString().slice(0,10).replace(/-/g,'')}`);
+      } else {
+        lines.push(`DTSTART;TZID=America/New_York:${ev.date.replace(/-/g,'')}T${ev.time.replace(':','')}00`);
+        const endT=ev.endTime||ev.time,endD=ev.endDate||ev.date;
+        lines.push(`DTEND;TZID=America/New_York:${endD.replace(/-/g,'')}T${endT.replace(':','')}00`);
+      }
+      lines.push('END:VEVENT','END:VCALENDAR');
+      const blob = new Blob([lines.join('\r\n')+'\r\n'],{type:'text/calendar'});
+      if (navigator.share) {
+        const file = new File([blob], `${ev.title.replace(/\s+/g,'-')}.ics`, {type:'text/calendar'});
+        navigator.share({ title: ev.title, files: [file] }).catch(() => {});
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download=`${ev.title.replace(/\s+/g,'-')}.ics`; a.click();
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    // ── Task 5: Pull-to-refresh ──
+    let ptrStartY = 0;
+    let ptrActive = false;
+
+    document.addEventListener('touchstart', e => { ptrStartY = e.touches[0].clientY; }, { passive: true });
+    document.addEventListener('touchend', async e => {
+      const dy = e.changedTouches[0].clientY - ptrStartY;
+      if (dy > 80 && window.scrollY === 0 && !ptrActive) {
+        ptrActive = true;
+        document.getElementById('ptr-spinner').classList.add('visible');
+        await loadEvents();
+        renderCalendar();
+        renderUpcomingEvents();
+        document.getElementById('ptr-spinner').classList.remove('visible');
+        triggerHaptic([30, 20, 30]);
+        ptrActive = false;
+      }
+    }, { passive: true });
+
+    // ── Task 6: Theme ──
+    function toggleTheme() {
+      const light = document.getElementById('theme-toggle').checked;
+      document.body.classList.toggle('light-mode', light);
+      localStorage.setItem('calpal_theme', light ? 'light' : 'dark');
+    }
+
+    function loadTheme() {
+      const saved = localStorage.getItem('calpal_theme');
+      if (saved === 'light') {
+        document.body.classList.add('light-mode');
+        const toggle = document.getElementById('theme-toggle');
+        if (toggle) toggle.checked = true;
+      }
+    }
+
+    // ── Task 7: Onboarding ──
+    let obSlide = 0;
+    const OB_TOTAL = 4;
+
+    function showOnboarding() {
+      if (localStorage.getItem('calpal_onboarded')) return;
+      document.getElementById('onboarding-overlay').classList.remove('hidden');
+    }
+
+    function obNext() {
+      obSlide++;
+      if (obSlide >= OB_TOTAL) { obSkip(); return; }
+      for (let i = 0; i < OB_TOTAL; i++) {
+        document.getElementById(`ob-${i}`).classList.toggle('active', i === obSlide);
+        document.getElementById(`od-${i}`).classList.toggle('active', i === obSlide);
+      }
+      if (obSlide === OB_TOTAL - 1) document.getElementById('ob-next-btn').textContent = 'Get Started';
+    }
+
+    function obSkip() {
+      localStorage.setItem('calpal_onboarded', '1');
+      document.getElementById('onboarding-overlay').classList.add('hidden');
+    }
 
     // ── Holiday helpers ──
     function getNthWeekday(year, month, weekday, nth) {
@@ -745,8 +1057,8 @@
       renderUpcomingEvents();
       renderEventsPage();
     }
-    function deleteFromArchive(eventId) {
-      if (!confirm('Permanently delete this event?')) return;
+    async function deleteFromArchive(eventId) {
+      try { await confirmDelete('Permanently delete this event?'); } catch { return; }
       archivedEvents = archivedEvents.filter(e => e.id !== eventId);
       saveArchive();
       showStatus('Event permanently deleted', 'success');
@@ -904,11 +1216,12 @@
     function showTab(tab, btn) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
-      document.getElementById(tab + '-tab').classList.add('active');
+      const tabEl = document.getElementById(tab + '-tab');
+      if (tabEl) tabEl.classList.add('active');
       if (btn) btn.classList.add('active');
       closeMenuOnTab();
       if (tab === 'events') renderEventsPage();
-      if (tab === 'calendar') { renderCalendar(); renderUpcomingEvents(); }
+      if (tab === 'calendar') { renderCalendar(); renderUpcomingEvents(); renderCalendarDayEvents(); }
     }
     function toggleMenu() {
       document.getElementById('dropdown-menu').classList.toggle('active');
@@ -916,10 +1229,17 @@
     function closeMenuOnTab() {
       document.getElementById('dropdown-menu').classList.remove('active');
     }
-    function openAddEventTab() {
-      showTab('add', document.getElementById('tab-btn-add'));
-      setTimeout(() => document.getElementById('event-input').focus(), 100);
+    function openAddModal() {
+      clearAddForm();
+      const dateEl = document.getElementById('date-input');
+      if (dateEl && !dateEl.value) dateEl.value = selectedDate || getLocalDateString(new Date());
+      document.getElementById('add-event-overlay').classList.add('active');
+      setTimeout(() => document.getElementById('event-input').focus(), 150);
     }
+    function closeAddModal() {
+      document.getElementById('add-event-overlay').classList.remove('active');
+    }
+    function openAddEventTab() { openAddModal(); }
 
     // ── Auth + Encryption helpers ──
     function getAuthHeaders() {
@@ -961,35 +1281,43 @@
       } catch { return null; }
     }
 
+    let offlineQueue = []; // {type:'save'|'update'|'delete', id?, data?}
+
     async function apiSaveEvent(eventObj) {
-      if (guestMode) return; // guest mode — local only
+      if (guestMode) return;
+      if (!navigator.onLine) { offlineQueue.push({type:'save',data:eventObj}); showStatus('Saved locally — will sync when online','success'); return; }
       const encrypted = encryptEvent(eventObj);
-      const body = encrypted
-        ? { id: eventObj.id, encryptedData: encrypted.encryptedData, nonce: encrypted.nonce }
-        : { ...eventObj };
+      const body = encrypted ? {id:eventObj.id,encryptedData:encrypted.encryptedData,nonce:encrypted.nonce} : {...eventObj};
       try {
-        await fetch('/api/events', {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(body)
-        });
-      } catch { /* best-effort */ }
+        const res = await fetch('/api/events', {method:'POST',headers:getAuthHeaders(),body:JSON.stringify(body)});
+        if (res.status === 401) { showStatus('Session expired — please sign in again','error'); return; }
+        if (!res.ok) { offlineQueue.push({type:'save',data:eventObj}); }
+      } catch { offlineQueue.push({type:'save',data:eventObj}); }
     }
 
     async function apiUpdateEvent(eventId, eventObj) {
-      if (guestMode) return; // guest mode — local only
+      if (guestMode) return;
+      if (!navigator.onLine) { offlineQueue.push({type:'update',id:eventId,data:eventObj}); return; }
       const encrypted = encryptEvent(eventObj);
-      const body = encrypted
-        ? { encryptedData: encrypted.encryptedData, nonce: encrypted.nonce }
-        : { ...eventObj };
+      const body = encrypted ? {encryptedData:encrypted.encryptedData,nonce:encrypted.nonce} : {...eventObj};
       try {
-        await fetch(`/api/events/${eventId}`, {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(body)
-        });
-      } catch { /* best-effort */ }
+        const res = await fetch(`/api/events/${eventId}`,{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify(body)});
+        if (res.status === 401) showStatus('Session expired — please sign in again','error');
+        else if (!res.ok) offlineQueue.push({type:'update',id:eventId,data:eventObj});
+      } catch { offlineQueue.push({type:'update',id:eventId,data:eventObj}); }
     }
+
+    async function flushOfflineQueue() {
+      if (!offlineQueue.length) return;
+      const q = [...offlineQueue]; offlineQueue = [];
+      for (const item of q) {
+        if (item.type==='save') await apiSaveEvent(item.data);
+        else if (item.type==='update') await apiUpdateEvent(item.id, item.data);
+        else if (item.type==='delete') { try { await fetch(`/api/events/${item.id}`,{method:'DELETE',headers:getAuthHeaders()}); } catch {} }
+      }
+    }
+    window.addEventListener('online', () => { showStatus('Back online — syncing...','success'); flushOfflineQueue(); });
+    window.addEventListener('offline', () => showStatus('You\'re offline — changes will sync when reconnected','error'));
 
     // ── Auth UI ──
     function showAuthModal(mode = 'login') {
@@ -1003,6 +1331,14 @@
       document.getElementById('auth-error').classList.remove('visible');
       document.getElementById('auth-email').value = '';
       document.getElementById('auth-password').value = '';
+      // Show forgot-link only in login mode
+      const forgotLink = document.getElementById('forgot-link');
+      if (forgotLink) forgotLink.style.display = mode === 'login' ? '' : 'none';
+      // Make sure reset panel is hidden when showing auth box
+      const resetPanel = document.getElementById('reset-panel');
+      if (resetPanel) resetPanel.style.display = 'none';
+      const authBox = document.querySelector('#auth-overlay .auth-box');
+      if (authBox) authBox.style.display = '';
       setTimeout(() => document.getElementById('auth-email').focus(), 100);
     }
 
@@ -1069,6 +1405,11 @@
         renderCalendar();
         renderUpcomingEvents();
         archivePastEventsSilent();
+        // Show recovery codes after registration
+        if (authMode === 'register' && data.recoveryCodes) {
+          showRecoveryCodes(data.recoveryCodes);
+          obSkip(); // dismiss onboarding if showing
+        }
       } catch (err) {
         showAuthError('Connection error. Please try again.');
       } finally {
@@ -1097,6 +1438,10 @@
       if (chipWrap) chipWrap.style.display = currentUserEmail ? '' : 'none';
       const logoutBtn = document.getElementById('logout-btn');
       if (logoutBtn) logoutBtn.style.display = currentUserEmail ? '' : 'none';
+      const changePwBtn = document.getElementById('change-pw-btn');
+      if (changePwBtn) changePwBtn.style.display = currentUserEmail ? '' : 'none';
+      const deleteAcctBtn = document.getElementById('delete-acct-btn');
+      if (deleteAcctBtn) deleteAcctBtn.style.display = currentUserEmail ? '' : 'none';
     }
 
     // ── Local storage ──
@@ -1188,6 +1533,8 @@
 
     // ── Init ──
     async function init() {
+      loadTheme();
+
       // Check if server requires auth
       try {
         const health = await fetch('/api/health').then(r => r.json()).catch(() => ({}));
@@ -1207,6 +1554,7 @@
       renderUpcomingEvents();
       setTodayDate();
       checkNotificationPermission();
+      showOnboarding();
       scheduleNotifications();
       fetchWeather();
       updateUserChip();
@@ -1323,6 +1671,13 @@
           data.title = capitalizeTitle(data.title);
           if (checkDuplicateEvent(data)) { showDuplicateModal(data.title); return; }
           pendingParsedEvent = data;
+          // Pre-fill manual form so user can review/edit before confirming
+          if (data.title) document.getElementById('title-input').value = data.title;
+          if (data.date) document.getElementById('date-input').value = data.date;
+          if (data.endDate) document.getElementById('end-date-input').value = data.endDate;
+          if (data.time) document.getElementById('time-input').value = data.time;
+          if (data.endTime) document.getElementById('end-time-input').value = data.endTime;
+          if (data.isAllDay) { document.getElementById('all-day-toggle').checked = true; toggleAllDayManual(); }
           showConfirmationModal(data);
         }
       } catch (err) {
@@ -1370,7 +1725,7 @@
         showOverlapConfirmation(pendingParsedEvent.title, confirmParsedEvent);
         return;
       }
-      const newEvent = { id: generateId(), ...pendingParsedEvent };
+      const newEvent = { id: generateId(), ...pendingParsedEvent, category: addEventCategory };
       allEvents.push(newEvent);
       saveEvents();
       apiSaveEvent(newEvent);
@@ -1378,6 +1733,7 @@
       showSyncIndicator();
       document.getElementById('event-input').value = '';
       closeConfirmation();
+      closeAddModal();
       renderCalendar();
       renderUpcomingEvents();
       if (isWeekView) renderWeekView();
@@ -1417,13 +1773,13 @@
       if (!title || !date) { showStatus('Title and date required', 'error'); return; }
       const recurrence = document.getElementById('recurrence-select')?.value || 'none';
       const recurrenceEnd = document.getElementById('recurrence-end-input')?.value || null;
-      const newEvent = { id: generateId(), title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay, recurrence, recurrenceEnd: recurrenceEnd || null, isRecurring: recurrence !== 'none', recurrenceExceptions: [] };
+      const newEvent = { id: generateId(), title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay, category: addEventCategory, recurrence, recurrenceEnd: recurrenceEnd || null, isRecurring: recurrence !== 'none', recurrenceExceptions: [] };
       if (checkDuplicateEvent(newEvent)) { showDuplicateModal(title); return; }
       if (checkEventOverlap(newEvent)) {
         showOverlapConfirmation(title, () => {
           allEvents.push(newEvent); saveEvents(); apiSaveEvent(newEvent);
           showStatus(`✓ ${title} saved`, 'success'); showSyncIndicator();
-          clearAddForm(); renderCalendar(); renderUpcomingEvents();
+          clearAddForm(); closeAddModal(); renderCalendar(); renderUpcomingEvents();
           if (isWeekView) renderWeekView(); scheduleNotifications();
         });
         return;
@@ -1434,6 +1790,7 @@
       showStatus(`✓ ${title} saved`, 'success');
       showSyncIndicator();
       clearAddForm();
+      closeAddModal();
       renderCalendar();
       renderUpcomingEvents();
       if (isWeekView) renderWeekView();
@@ -1452,6 +1809,11 @@
       if (recSel) { recSel.value = 'none'; toggleRecurrenceEnd('recurrence-end-row'); }
       const recEnd = document.getElementById('recurrence-end-input');
       if (recEnd) recEnd.value = '';
+      addEventCategory = 'work';
+      const catSel = document.getElementById('add-cat-select');
+      if (catSel) {
+        catSel.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('selected', b.dataset.cat === 'work'));
+      }
       setTodayDate();
     }
 
@@ -1549,6 +1911,9 @@
       const recEnd = document.getElementById('modal-recurrence-end-input');
       if (recSel) { recSel.value = event.recurrence || 'none'; toggleRecurrenceEnd('modal-recurrence-end-row'); }
       if (recEnd) recEnd.value = event.recurrenceEnd || '';
+      // Set category
+      editEventCategory = event.category || 'work';
+      selectCategory('edit', editEventCategory);
       toggleAllDayModal();
       document.getElementById('modal-overlay').classList.add('active');
     }
@@ -1580,7 +1945,7 @@
       if (!title || !date) { showStatus('Title and date required', 'error'); return; }
       const recurrence = document.getElementById('modal-recurrence-select')?.value || 'none';
       const recurrenceEnd = document.getElementById('modal-recurrence-end-input')?.value || null;
-      const updatedEvent = { title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay, recurrence, recurrenceEnd: recurrenceEnd || null, isRecurring: recurrence !== 'none', recurrenceExceptions: lastEditedEvent?.recurrenceExceptions || [] };
+      const updatedEvent = { title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay, category: editEventCategory, recurrence, recurrenceEnd: recurrenceEnd || null, isRecurring: recurrence !== 'none', recurrenceExceptions: lastEditedEvent?.recurrenceExceptions || [] };
       if (checkEventOverlap(updatedEvent, editingEventId)) {
         showOverlapConfirmation(title, () => {
           const idx = allEvents.findIndex(e => e.id === editingEventId);
@@ -1700,7 +2065,11 @@
         let dotsHtml = '';
         if (count > 0 || dayHolidays.length > 0) {
           const dotCount = Math.min(count, 3);
-          for (let i = 0; i < dotCount; i++) dotsHtml += '<div class="day-dot"></div>';
+          for (let i = 0; i < dotCount; i++) {
+            const ev = dayEvents[i];
+            const dotColor = getCategoryColor(ev && ev.category ? ev.category : 'work');
+            dotsHtml += `<div class="day-dot" style="background:${dotColor};"></div>`;
+          }
           if (count > 3) dotsHtml += '<div class="day-dot more"></div>';
           for (let i = 0; i < Math.min(dayHolidays.length, 2); i++)
             dotsHtml += '<div class="day-dot holiday"></div>';
@@ -1711,12 +2080,54 @@
       const remaining = 42 - (startDow + daysInMonth);
       for (let i = 1; i <= remaining; i++) html += `<div class="day-cell other-month"><div class="day-number">${i}</div></div>`;
       document.getElementById('calendar-grid').innerHTML = html;
+      renderCalendarDayEvents();
+    }
+
+    // ── Calendar day events (below calendar grid) ──
+    function renderCalendarDayEvents() {
+      const container = document.getElementById('calendar-day-events');
+      if (!container) return;
+      const target = selectedDate || getLocalDateString(new Date());
+      const dateObj = new Date(target + 'T00:00:00');
+      const label = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      const dayEvs = getEventsForDate(target).filter(e => !e.isHoliday);
+      const dayHolidays = holidays.filter(h => h.date === target);
+
+      if (!dayEvs.length && !dayHolidays.length) {
+        container.innerHTML = `<div style="text-align:center;color:var(--text-secondary);font-size:14px;padding:24px 0;">${label}<br><span style="opacity:0.6;">No events</span></div>`;
+        return;
+      }
+
+      const items = [...dayHolidays, ...dayEvs].sort((a, b) => {
+        if (a.isHoliday && !b.isHoliday) return -1;
+        if (!a.isHoliday && b.isHoliday) return 1;
+        if (!a.time && !b.time) return 0;
+        if (!a.time) return 1;
+        if (!b.time) return -1;
+        return a.time.localeCompare(b.time);
+      });
+
+      container.innerHTML = `
+        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;padding:12px 0 8px;">${label}</div>
+        ${items.map(ev => {
+          if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.12);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;">🎉 ${escHtml(ev.title)}</div>`;
+          const color = getCategoryColor(ev.category || 'work');
+          const timeStr = ev.isAllDay ? 'All day' : (ev.time ? formatTimeEastern(ev.time) : '');
+          return `<div onclick="openEditModal('${ev.id}');triggerHaptic([40])" style="padding:10px 12px;background:var(--bg-card);border-radius:10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;border-left:3px solid ${color};">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(ev.title)}</div>
+              ${timeStr ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${timeStr}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      `;
     }
 
     // ── Day modal ──
     function openDayModal(dateStr) {
       selectedDate = dateStr;
       renderCalendar();
+      renderCalendarDayEvents();
       const dayEvents = getEventsForDate(dateStr)
         .sort((a, b) => {
           if (a.isAllDay && !b.isAllDay) return -1;
@@ -1802,9 +2213,10 @@
           const dateLabel = event.endDate
             ? `${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
             : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const upcomingCatColor = getCategoryColor(event.category || 'work');
           html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
-              <div class="event-title">${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
+              <div class="event-title" style="display:flex;align-items:center;gap:6px;"><span class="cat-dot" style="background:${upcomingCatColor};flex-shrink:0;"></span>${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
               ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
               ${event.endDate && !event.isAllDay ? '<div class="all-day-badge" style="background:rgba(10,132,255,0.15);color:var(--primary);">Multi-Day</div>' : ''}
               <div class="event-day-label">${dateLabel}${timeStr ? ` · ${timeStr}${dur}` : ''}</div>
@@ -1897,8 +2309,9 @@
             const widthPx = Math.max(((endMins - startMins) / 60) * 64, 28);
             const topPx = 4 + idx * (barH + 2);
             const timeLabel = formatEventTime(ev.time, ev.endTime);
+            const barColor = getCategoryColor(ev.category || 'work');
             barsHtml += `<div class="week-event-bar"
-              style="left:${leftPx}px;width:${widthPx}px;top:${topPx}px;height:${barH}px;font-size:${fontSize}px;cursor:grab;"
+              style="left:${leftPx}px;width:${widthPx}px;top:${topPx}px;height:${barH}px;font-size:${fontSize}px;cursor:grab;background:${barColor};"
               data-event-id="${ev.id}"
               onmousedown="startBarDrag(event,'${ev.id}',${startMins},${endMins - startMins})"
               ontouchstart="startBarDrag(event,'${ev.id}',${startMins},${endMins - startMins})"
@@ -1922,6 +2335,7 @@
 
       updateCurrentTimeLine();
       scrollToCurrentTime();
+      renderCalendarDayEvents();
     }
 
     // ── Horizontal drag-to-reschedule for week event bars ──
@@ -2152,6 +2566,168 @@
       const diff = swipeStartX - swipeCurrX;
       if (diff > 40) this.classList.add('swipe-left');
       else { this.style.transform = ''; this.classList.remove('swipe-left'); }
+    }
+
+    // ── iCal Export ──
+    function exportIcal() {
+      const events = allEvents.filter(e => !e.isHoliday);
+      if (!events.length) { showStatus('No events to export', 'error'); return; }
+      const lines = [
+        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CalPal//CalPal Calendar//EN',
+        'X-WR-CALNAME:CalPal','X-WR-TIMEZONE:America/New_York','CALSCALE:GREGORIAN','METHOD:PUBLISH'
+      ];
+      events.forEach(ev => {
+        lines.push('BEGIN:VEVENT');
+        lines.push(`UID:${ev.id}@calpal.app`);
+        lines.push(`SUMMARY:${ev.title}`);
+        if (ev.isAllDay || !ev.time) {
+          lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`);
+          const d = new Date((ev.endDate||ev.date)+'T00:00:00'); d.setDate(d.getDate()+1);
+          lines.push(`DTEND;VALUE=DATE:${d.toISOString().slice(0,10).replace(/-/g,'')}`);
+        } else {
+          lines.push(`DTSTART;TZID=America/New_York:${ev.date.replace(/-/g,'')}T${(ev.time).replace(':','')}00`);
+          const endT=ev.endTime||ev.time, endD=ev.endDate||ev.date;
+          lines.push(`DTEND;TZID=America/New_York:${endD.replace(/-/g,'')}T${endT.replace(':','')}00`);
+        }
+        lines.push('END:VEVENT');
+      });
+      lines.push('END:VCALENDAR');
+      const blob = new Blob([lines.join('\r\n')+'\r\n'],{type:'text/calendar'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='calpal.ics'; a.click();
+      URL.revokeObjectURL(url);
+      showStatus('✓ Calendar exported','success');
+    }
+
+    // ── iCal Import ──
+    async function importIcalFile(e) {
+      const file = e.target.files[0]; if (!file) return;
+      e.target.value = '';
+      const text = await file.text();
+      const vevents = text.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g)||[];
+      if (!vevents.length) { showStatus('No events found in file','error'); return; }
+      let imported = 0;
+      for (const block of vevents) {
+        const get = k => { const m=block.match(new RegExp(`^${k}[;:][^\r\n]+`,'m')); return m?m[0].replace(new RegExp(`^${k}[^:]*:`),'').trim():null; };
+        const dtstart=get('DTSTART'); if (!dtstart) continue;
+        const parseD = s => { const c=s.replace(/TZID=[^:]+:/,'').replace(/VALUE=DATE:/,''); return c.length===8?{date:`${c.slice(0,4)}-${c.slice(4,6)}-${c.slice(6,8)}`,time:null}:{date:`${c.slice(0,4)}-${c.slice(4,6)}-${c.slice(6,8)}`,time:`${c.slice(9,11)}:${c.slice(11,13)}`}; };
+        const start=parseD(dtstart), dtend=get('DTEND'), end=dtend?parseD(dtend):null;
+        const isAllDay=!start.time;
+        let endDate=null;
+        if (end&&end.date!==start.date) { if(isAllDay){const d=new Date(end.date+'T00:00:00');d.setDate(d.getDate()-1);endDate=d.toISOString().slice(0,10);}else{endDate=end.date;} }
+        const uid = get('UID') || null;
+        const newEv = { id: uid ? uid.replace('@calpal.app','') : (crypto.randomUUID?(crypto.randomUUID()):(Date.now().toString(36)+Math.random().toString(36).slice(2))), title:get('SUMMARY')||'Imported Event', date:start.date, endDate:endDate||null, time:start.time, endTime:end?.time||null, isAllDay, isMultiDay:!!endDate, createdAt:new Date().toISOString() };
+        if (allEvents.find(e=>e.id===newEv.id)) continue; // skip duplicates
+        allEvents.push(newEv); saveEvents(); await apiSaveEvent(newEv); imported++;
+      }
+      renderCalendar(); renderUpcomingEvents();
+      showStatus(`✓ Imported ${imported} event${imported!==1?'s':''}`, 'success');
+    }
+
+    // ── Password reset (forgot password flow) ──
+    function showForgotPassword() {
+      document.querySelector('#auth-overlay .auth-box').style.display = 'none';
+      document.getElementById('reset-panel').style.display = '';
+      document.getElementById('reset-email').value = document.getElementById('auth-email').value || '';
+      document.getElementById('reset-error').classList.remove('visible');
+    }
+    function hideForgotPassword() {
+      document.getElementById('reset-panel').style.display = 'none';
+      document.querySelector('#auth-overlay .auth-box').style.display = '';
+    }
+    async function submitResetPassword() {
+      const email = document.getElementById('reset-email').value.trim();
+      const code = document.getElementById('reset-code').value.trim();
+      const newPassword = document.getElementById('reset-new-password').value;
+      const btn = document.getElementById('reset-submit-btn');
+      if (!email || !code || !newPassword) { document.getElementById('reset-error').textContent='All fields required'; document.getElementById('reset-error').classList.add('visible'); return; }
+      btn.disabled=true; btn.textContent='Resetting...';
+      try {
+        const res = await fetch('/api/auth/reset-password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,code,newPassword}) });
+        const data = await res.json();
+        if (!res.ok) { document.getElementById('reset-error').textContent=data.error||'Reset failed'; document.getElementById('reset-error').classList.add('visible'); return; }
+        authToken = data.token; currentUserEmail = email;
+        localStorage.setItem('calpal_token', authToken); localStorage.setItem('calpal_email', email);
+        if (data.encryptionSalt) encryptionKey = await deriveEncryptionKey(newPassword, data.encryptionSalt);
+        hideForgotPassword();
+        document.getElementById('auth-overlay').classList.add('hidden');
+        updateUserChip();
+        await loadEvents(); renderCalendar(); renderUpcomingEvents();
+        showStatus('✓ Password reset — signed in', 'success');
+        if (data.warning) setTimeout(() => showStatus('⚠️ Old encrypted events were cleared', 'error'), 2000);
+      } catch { document.getElementById('reset-error').textContent='Connection error'; document.getElementById('reset-error').classList.add('visible'); }
+      finally { btn.disabled=false; btn.textContent='Reset Password'; }
+    }
+
+    // ── Recovery codes modal ──
+    function showRecoveryCodes(codes) {
+      const grid = document.getElementById('recovery-codes-grid');
+      grid.innerHTML = codes.map(c => `<code style="background:var(--bg-light);border-radius:6px;padding:6px 8px;font-size:12px;font-family:monospace;text-align:center;">${c}</code>`).join('');
+      document.getElementById('recovery-overlay').classList.add('active');
+      window._recoveryCodes = codes;
+    }
+    function closeRecoveryModal() {
+      document.getElementById('recovery-overlay').classList.remove('active');
+      window._recoveryCodes = null;
+    }
+    function copyRecoveryCodes() {
+      const codes = window._recoveryCodes;
+      if (codes) navigator.clipboard.writeText(codes.join('\n')).then(() => showStatus('✓ Codes copied', 'success'));
+    }
+
+    // ── Change password modal ──
+    function openChangePassword() { closeSettings(); document.getElementById('change-pw-overlay').classList.add('active'); document.getElementById('cp-current').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-error').textContent=''; }
+    function closeChangePw() { document.getElementById('change-pw-overlay').classList.remove('active'); }
+    async function submitChangePassword() {
+      const cur=document.getElementById('cp-current').value, nw=document.getElementById('cp-new').value;
+      const errEl=document.getElementById('cp-error'), btn=document.getElementById('cp-submit');
+      if (!cur||!nw){errEl.textContent='Both fields required';return;}
+      if (nw.length<8){errEl.textContent='New password must be at least 8 characters';return;}
+      btn.disabled=true; btn.textContent='Updating...';
+      try {
+        const res=await fetch('/api/auth/password',{method:'PATCH',headers:getAuthHeaders(),body:JSON.stringify({currentPassword:cur,newPassword:nw})});
+        const data=await res.json();
+        if (!res.ok){errEl.textContent=data.error||'Update failed';return;}
+        authToken=data.token; localStorage.setItem('calpal_token',authToken);
+        if (data.encryptionSalt) encryptionKey=await deriveEncryptionKey(nw,data.encryptionSalt);
+        closeChangePw();
+        showStatus('✓ Password updated','success');
+        showStatus('⚠️ Old encrypted events cleared','error');
+      } catch {errEl.textContent='Connection error';}
+      finally{btn.disabled=false;btn.textContent='Update';}
+    }
+
+    // ── Delete account modal ──
+    function openDeleteAccount() { closeSettings(); document.getElementById('delete-account-overlay').classList.add('active'); document.getElementById('da-password').value=''; document.getElementById('da-error').textContent=''; }
+    function closeDeleteAccount() { document.getElementById('delete-account-overlay').classList.remove('active'); }
+    async function submitDeleteAccount() {
+      const pw=document.getElementById('da-password').value;
+      const errEl=document.getElementById('da-error'), btn=document.getElementById('da-submit');
+      if (!pw){errEl.textContent='Password required';return;}
+      btn.disabled=true; btn.textContent='Deleting...';
+      try {
+        const res=await fetch('/api/auth/account',{method:'DELETE',headers:getAuthHeaders(),body:JSON.stringify({password:pw})});
+        const data=await res.json();
+        if (!res.ok){errEl.textContent=data.error||'Deletion failed';return;}
+        authToken=null; currentUserEmail=null; encryptionKey=null;
+        localStorage.removeItem('calpal_token'); localStorage.removeItem('calpal_email');
+        localStorage.removeItem('calendarEvents');
+        allEvents=[]; archivedEvents=[]; archivedIds=new Set();
+        closeDeleteAccount(); updateUserChip(); renderCalendar(); renderUpcomingEvents();
+        if (authEnabled) showAuthModal('register');
+        showStatus('Account deleted','success');
+      } catch {errEl.textContent='Connection error';}
+      finally{btn.disabled=false;btn.textContent='Delete Forever';}
+    }
+
+    // ── Delete confirm modal ──
+    function confirmDelete(msg) {
+      return new Promise((resolve, reject) => {
+        document.getElementById('delete-confirm-msg').textContent = msg || 'Delete this event?';
+        document.getElementById('delete-confirm-overlay').classList.add('active');
+        window._deleteConfirmResolve = resolve;
+        window._deleteConfirmReject = reject;
+      });
     }
 
     window.addEventListener('load', init);

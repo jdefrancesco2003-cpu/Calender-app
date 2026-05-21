@@ -8,6 +8,10 @@
   "theme_color": "#1a1a2e",
   "orientation": "portrait-primary",
   "scope": "/",
+  "id": "com.calpal.app",
+  "handle_links": "preferred",
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "protocol_handlers": [{ "protocol": "web+calpal", "url": "/?action=%s" }],
   "icons": [
     {
       "src": "/icons/icon-32.png",
