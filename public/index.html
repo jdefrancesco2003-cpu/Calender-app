@@ -284,6 +284,8 @@
     @keyframes slideUpModal { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUpToast { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes bottomPanelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .calendar-bottom-enter { animation: bottomPanelIn 0.2s ease both; }
     @keyframes slideOutToLeft { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(-28px); } }
     @keyframes slideInFromRight { from { opacity:0; transform:translateX(28px); } to { opacity:1; transform:translateX(0); } }
     @keyframes slideOutToRight { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(28px); } }
@@ -463,15 +465,6 @@
     </div>
   </div>
 
-  <!-- ── DAY MODAL ── -->
-  <div class="modal-overlay" id="day-modal-overlay">
-    <div class="modal">
-      <div class="modal-handle"></div>
-      <div class="day-events-title" id="day-modal-title"></div>
-      <div id="day-modal-events"></div>
-      <button class="btn-secondary" style="margin-top:4px;" onclick="closeDayModal(); triggerHaptic(20)">Close</button>
-    </div>
-  </div>
 
   <!-- ── EDIT MODAL ── -->
   <div class="modal-overlay" id="modal-overlay">
@@ -554,7 +547,7 @@
         <label>Password</label>
         <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
       </div>
-      <button class="auth-submit" id="auth-submit-btn" onclick="submitAuth()">Sign In</button>
+      <button class="auth-submit" id="auth-submit-btn" onclick="submitAuth();triggerHaptic([30,20,30])">Sign In</button>
       <div class="auth-toggle" id="auth-toggle-text">
         No account? <span onclick="toggleAuthMode()">Create one</span>
       </div>
@@ -890,6 +883,7 @@
       container.querySelectorAll('.cat-btn').forEach(btn => {
         btn.classList.toggle('selected', btn.dataset.cat === cat);
       });
+      triggerHaptic(12);
     }
 
     function getCategoryColor(cat) {
@@ -2285,56 +2279,24 @@
       document.getElementById('calendar-grid').innerHTML = html;
     }
 
-    // ── Calendar day events (shown inline replacing upcoming section) ──
-    function renderCalendarDayEvents() {
-      const container = document.getElementById('calendar-day-events');
+    // ── Day events (inline, replaces upcoming section) ──
+    function _setBottomPanel(html) {
+      const container = document.getElementById('calendar-bottom');
       if (!container) return;
-      const target = selectedDate || getLocalDateString(new Date());
-      const dateObj = new Date(target + 'T00:00:00');
-      const label = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-      const dayEvs = getEventsForDate(target).filter(e => !e.isHoliday);
-      const dayHolidays = holidays.filter(h => h.date === target);
-
-      const items = [...dayHolidays, ...dayEvs].sort((a, b) => {
-        if (a.isHoliday && !b.isHoliday) return -1;
-        if (!a.isHoliday && b.isHoliday) return 1;
-        if (!a.time && !b.time) return 0;
-        if (!a.time) return 1;
-        if (!b.time) return -1;
-        return a.time.localeCompare(b.time);
-      });
-
-      const eventsHtml = items.length === 0
-        ? `<div style="text-align:center;color:var(--text-secondary);font-size:14px;padding:32px 0;opacity:0.7;">No events</div>`
-        : items.map(ev => {
-            if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.1);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;border-left:3px solid var(--warning);">🎉 ${escHtml(ev.title)}</div>`;
-            const color = getCategoryColor(ev.category || 'work');
-            const timeStr = ev.isAllDay ? 'All day' : (ev.time ? formatTimeEastern(ev.time) : '');
-            return `<div onclick="openEditModal('${ev.id}');triggerHaptic([40])" style="padding:10px 12px;background:var(--bg-dark);border-radius:10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;border-left:3px solid ${color};">
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:14px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(ev.title)}</div>
-                ${timeStr ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${timeStr}</div>` : ''}
-              </div>
-            </div>`;
-          }).join('');
-
-      container.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;">
-          <span style="font-size:16px;font-weight:700;color:var(--text-primary);">${label}</span>
-          <button onclick="closeDayModal();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:20px;padding:4px 6px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
-        </div>
-        ${eventsHtml}
-      `;
+      container.classList.remove('calendar-bottom-enter');
+      void container.offsetWidth;
+      container.innerHTML = html;
+      container.classList.add('calendar-bottom-enter');
     }
 
-    // ── Day events (inline, replaces upcoming section) ──
     function openDayModal(dateStr) {
       selectedDate = dateStr;
       renderCalendar();
-      const container = document.getElementById('calendar-bottom');
-      if (!container) return;
+      const todayStr = getLocalDateString(new Date());
       const dateObj = new Date(dateStr + 'T00:00:00');
-      const label = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      const label = dateStr === todayStr
+        ? 'Today'
+        : dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
       const dayEvs = getEventsForDate(dateStr).filter(e => !e.isHoliday);
       const dayHolidays = holidays.filter(h => h.date === dateStr);
       const items = [...dayHolidays, ...dayEvs].sort((a, b) => {
@@ -2357,13 +2319,13 @@
               </div>
             </div>`;
           }).join('');
-      container.innerHTML = `
+      _setBottomPanel(`
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;border-bottom:1px solid var(--border-color);margin-bottom:8px;">
           <span style="font-size:16px;font-weight:700;color:var(--text-primary);">${label}</span>
           <button onclick="closeDayModal();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:20px;padding:4px 8px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
         </div>
         ${eventsHtml}
-      `;
+      `);
     }
     function closeDayModal() {
       selectedDate = null;
@@ -2437,7 +2399,7 @@
         sHtml += '</div>';
         html += sHtml;
       });
-      container.innerHTML = html || '<div class="empty-state"><div class="empty-state-icon">📅</div>Nothing coming up</div>';
+      _setBottomPanel(html || '<div class="empty-state"><div class="empty-state-icon">📅</div>Nothing coming up</div>');
     }
 
     // ── HORIZONTAL WEEK VIEW ──
@@ -2579,7 +2541,7 @@
         triggerHaptic([40, 20, 40]);
         document.addEventListener(isTouch ? 'touchmove' : 'mousemove', handleBarDragMove, { passive: false });
         document.addEventListener(isTouch ? 'touchend' : 'mouseup', handleBarDragEnd, { once: true });
-      }, 600);
+      }, 850);
 
       document.addEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove, { passive: true });
       document.addEventListener(isTouch ? 'touchend' : 'mouseup', cancel, { once: true });
