@@ -357,7 +357,7 @@
       <div class="ptr-spinner" id="ptr-spinner">↻ Refreshing...</div>
 
       <!-- ── CALENDAR TAB ── -->
-      <div id="calendar-tab" class="tab-content active" style="overflow:hidden; flex-direction:column;">
+      <div id="calendar-tab" class="tab-content active">
         <div class="calendar-header">
           <div class="month-year" id="month-year"></div>
           <div class="month-nav">
@@ -2080,12 +2080,54 @@
       const remaining = 42 - (startDow + daysInMonth);
       for (let i = 1; i <= remaining; i++) html += `<div class="day-cell other-month"><div class="day-number">${i}</div></div>`;
       document.getElementById('calendar-grid').innerHTML = html;
+      renderCalendarDayEvents();
+    }
+
+    // ── Calendar day events (below calendar grid) ──
+    function renderCalendarDayEvents() {
+      const container = document.getElementById('calendar-day-events');
+      if (!container) return;
+      const target = selectedDate || getLocalDateString(new Date());
+      const dateObj = new Date(target + 'T00:00:00');
+      const label = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      const dayEvs = getEventsForDate(target).filter(e => !e.isHoliday);
+      const dayHolidays = holidays.filter(h => h.date === target);
+
+      if (!dayEvs.length && !dayHolidays.length) {
+        container.innerHTML = `<div style="text-align:center;color:var(--text-secondary);font-size:14px;padding:24px 0;">${label}<br><span style="opacity:0.6;">No events</span></div>`;
+        return;
+      }
+
+      const items = [...dayHolidays, ...dayEvs].sort((a, b) => {
+        if (a.isHoliday && !b.isHoliday) return -1;
+        if (!a.isHoliday && b.isHoliday) return 1;
+        if (!a.time && !b.time) return 0;
+        if (!a.time) return 1;
+        if (!b.time) return -1;
+        return a.time.localeCompare(b.time);
+      });
+
+      container.innerHTML = `
+        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;padding:12px 0 8px;">${label}</div>
+        ${items.map(ev => {
+          if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.12);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;">🎉 ${escHtml(ev.title)}</div>`;
+          const color = getCategoryColor(ev.category || 'work');
+          const timeStr = ev.isAllDay ? 'All day' : (ev.time ? formatTimeEastern(ev.time) : '');
+          return `<div onclick="openEditModal('${ev.id}');triggerHaptic([40])" style="padding:10px 12px;background:var(--bg-card);border-radius:10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;border-left:3px solid ${color};">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(ev.title)}</div>
+              ${timeStr ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${timeStr}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      `;
     }
 
     // ── Day modal ──
     function openDayModal(dateStr) {
       selectedDate = dateStr;
       renderCalendar();
+      renderCalendarDayEvents();
       const dayEvents = getEventsForDate(dateStr)
         .sort((a, b) => {
           if (a.isAllDay && !b.isAllDay) return -1;
@@ -2293,6 +2335,7 @@
 
       updateCurrentTimeLine();
       scrollToCurrentTime();
+      renderCalendarDayEvents();
     }
 
     // ── Horizontal drag-to-reschedule for week event bars ──
