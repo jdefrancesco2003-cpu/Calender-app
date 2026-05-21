@@ -59,14 +59,14 @@ self.addEventListener('message', (e) => {
 });
 
 self.addEventListener('push', (e) => {
-  let data = { title: 'CalPal', body: 'You have an upcoming event' };
+  let data = { title: 'Marked', body: 'You have an upcoming event' };
   try { if (e.data) data = e.data.json(); } catch {}
   e.waitUntil(
-    self.registration.showNotification(data.title || 'CalPal', {
+    self.registration.showNotification(data.title || 'Marked', {
       body: data.body,
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
-      tag: data.tag || 'calpal-event',
+      tag: data.tag || 'marked-event',
       data: { url: '/' }
     })
   );

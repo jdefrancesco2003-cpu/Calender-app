@@ -69,7 +69,7 @@ const emailTransport = (process.env.SMTP_USER && process.env.SMTP_PASS)
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
     })
   : null;
-const EMAIL_FROM = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `CalPal <${process.env.SMTP_USER}>` : null);
+const EMAIL_FROM = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `Marked <${process.env.SMTP_USER}>` : null);
 
 async function sendEmail(to, subject, html) {
   if (!emailTransport) { console.log(`[DEV EMAIL] To:${to} | ${subject}`); return; }
@@ -82,11 +82,11 @@ function emailBase(content) {
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f0f5;padding:40px 16px;"><tr><td align="center">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
   <tr><td style="background:#1a1a2e;border-radius:16px 16px 0 0;padding:28px 32px;text-align:center;">
-    <span style="font-size:24px;font-weight:800;color:#fff;">Cal<span style="color:#4a9d6f;">Pal</span></span>
+    <span style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Mark<span style="color:#4a9d6f;">ed</span></span>
   </td></tr>
   <tr><td style="background:#fff;padding:32px 32px 24px;">${content}</td></tr>
   <tr><td style="background:#f8f8fa;border-radius:0 0 16px 16px;padding:18px 32px;text-align:center;border-top:1px solid #e8e8ed;">
-    <p style="margin:0;font-size:12px;color:#9e9ea7;line-height:1.5;">You're receiving this because of activity on your CalPal account.<br>If this wasn't you, you can safely ignore this email.</p>
+    <p style="margin:0;font-size:12px;color:#9e9ea7;line-height:1.5;">You're receiving this because of activity on your Marked account.<br>If this wasn't you, you can safely ignore this email.</p>
   </td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -100,7 +100,7 @@ function emailOTPBlock(code) {
 function resetPasswordEmailHtml(code) {
   return emailBase(`
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1a1a2e;">Reset your password</h2>
-    <p style="margin:0;font-size:15px;color:#6e6e73;line-height:1.6;">Enter this code in the app to reset your CalPal password. It expires in <strong style="color:#1a1a2e;">15 minutes</strong>.</p>
+    <p style="margin:0;font-size:15px;color:#6e6e73;line-height:1.6;">Enter this code in the app to reset your Marked password. It expires in <strong style="color:#1a1a2e;">15 minutes</strong>.</p>
     ${emailOTPBlock(code)}
     <p style="margin:0;font-size:13px;color:#9e9ea7;text-align:center;">Didn't request this? Your account is safe — no action needed.</p>`);
 }
@@ -108,7 +108,7 @@ function resetPasswordEmailHtml(code) {
 function verifyEmailHtml(code) {
   return emailBase(`
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1a1a2e;">Verify your email</h2>
-    <p style="margin:0;font-size:15px;color:#6e6e73;line-height:1.6;">Welcome to CalPal! Enter this code in the app to verify your email address.</p>
+    <p style="margin:0;font-size:15px;color:#6e6e73;line-height:1.6;">Welcome to Marked! Enter this code in the app to verify your email address.</p>
     ${emailOTPBlock(code)}
     <p style="margin:0;font-size:13px;color:#9e9ea7;text-align:center;">This code expires in 1 hour.</p>`);
 }
@@ -379,7 +379,7 @@ app.post('/api/auth/register', async (req, res) => {
     const token = jwt.sign({ sub: userId, email: email.toLowerCase() }, JWT_SECRET, { expiresIn: '30d' });
     console.log('✓ New user registered:', email.toLowerCase());
     // Send verification email (non-blocking)
-    sendEmail(email.toLowerCase(), 'Verify your CalPal email', verifyEmailHtml(verifyOtp)).catch(e => console.error('Verify email failed:', e.message));
+    sendEmail(email.toLowerCase(), 'Verify your Marked email', verifyEmailHtml(verifyOtp)).catch(e => console.error('Verify email failed:', e.message));
     res.json({ token, encryptionSalt, userId, recoveryCodes: codes, emailVerified: false });
   } catch (err) {
     console.error('Register error:', err.message);
@@ -477,7 +477,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const otp = generateOTP();
     const otpHash = await bcrypt.hash(otp, 10);
     await usersCollection.updateOne({ userId: user.userId }, { $set: { resetOtp: otpHash, resetOtpExpiry: new Date(Date.now() + 15 * 60000) } });
-    await sendEmail(user.email, 'Reset your CalPal password', resetPasswordEmailHtml(otp));
+    await sendEmail(user.email, 'Reset your Marked password', resetPasswordEmailHtml(otp));
     console.log('✓ Password reset email sent:', user.email);
     res.json({ sent: true });
   } catch (err) {
@@ -520,7 +520,7 @@ app.post('/api/auth/send-verification', requireAuth, async (req, res) => {
     const otp = generateOTP();
     const otpHash = await bcrypt.hash(otp, 10);
     await usersCollection.updateOne({ userId: req.user.userId }, { $set: { verifyOtp: otpHash, verifyOtpExpiry: new Date(Date.now() + 60 * 60000) } });
-    await sendEmail(user.email, 'Verify your CalPal email', verifyEmailHtml(otp));
+    await sendEmail(user.email, 'Verify your Marked email', verifyEmailHtml(otp));
     res.json({ sent: true });
   } catch (err) {
     console.error('Send verification error:', err.message);
@@ -719,9 +719,9 @@ app.delete('/api/push/unsubscribe', requireAuth, async (req, res) => {
 
 // ── Static legal pages ──
 app.get('/privacy', (req, res) => {
-  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy — CalPal</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
-<h1>CalPal Privacy Policy</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
-<h2>What We Collect</h2><p>CalPal collects your email address and calendar event data (titles, dates, times). All event data is end-to-end encrypted before leaving your device — we cannot read your events.</p>
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy — Marked</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
+<h1>Marked Privacy Policy</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
+<h2>What We Collect</h2><p>Marked collects your email address and calendar event data (titles, dates, times). All event data is end-to-end encrypted before leaving your device — we cannot read your events.</p>
 <h2>How We Use It</h2><p>Your email is used solely for account authentication. Your encrypted event data is stored on our servers to enable sync across devices.</p>
 <h2>Data Storage</h2><p>Data is stored in MongoDB Atlas (cloud). Encryption keys are derived from your password on-device using PBKDF2 and are never transmitted to our servers.</p>
 <h2>Third Parties</h2><p>We use the Anthropic Claude API to parse natural-language event descriptions. Text you type in the event input is sent to Anthropic for parsing. No personal identifying information is included.</p>
@@ -731,11 +731,11 @@ app.get('/privacy', (req, res) => {
 });
 
 app.get('/terms', (req, res) => {
-  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Service — CalPal</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
-<h1>CalPal Terms of Service</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
-<h2>Acceptance</h2><p>By using CalPal you agree to these terms. CalPal is provided as-is for personal productivity use.</p>
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Service — Marked</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
+<h1>Marked Terms of Service</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
+<h2>Acceptance</h2><p>By using Marked you agree to these terms. Marked is provided as-is for personal productivity use.</p>
 <h2>Account Responsibility</h2><p>You are responsible for keeping your password and recovery codes safe. We cannot recover encrypted data if you lose your password and recovery codes.</p>
-<h2>Prohibited Use</h2><p>Do not use CalPal to store illegal content or to abuse the AI parsing service.</p>
+<h2>Prohibited Use</h2><p>Do not use Marked to store illegal content or to abuse the AI parsing service.</p>
 <h2>Service Availability</h2><p>We aim for high availability but do not guarantee 100% uptime. Always export your calendar (.ics) as a backup.</p>
 <h2>Termination</h2><p>You may delete your account at any time. We may suspend accounts that violate these terms.</p>
 <h2>Contact</h2><p>Questions? Email <a href="mailto:jdefrancesco2003@gmail.com">jdefrancesco2003@gmail.com</a></p>
@@ -744,9 +744,9 @@ app.get('/terms', (req, res) => {
 
 // ── Static legal pages ──
 app.get('/privacy', (req, res) => {
-  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy — CalPal</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
-<h1>CalPal Privacy Policy</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
-<h2>What We Collect</h2><p>CalPal collects your email address and calendar event data (titles, dates, times). All event data is end-to-end encrypted before leaving your device — we cannot read your events.</p>
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy — Marked</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
+<h1>Marked Privacy Policy</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
+<h2>What We Collect</h2><p>Marked collects your email address and calendar event data (titles, dates, times). All event data is end-to-end encrypted before leaving your device — we cannot read your events.</p>
 <h2>How We Use It</h2><p>Your email is used solely for account authentication. Your encrypted event data is stored on our servers to enable sync across devices.</p>
 <h2>Data Storage</h2><p>Data is stored in MongoDB Atlas (cloud). Encryption keys are derived from your password on-device using PBKDF2 and are never transmitted to our servers.</p>
 <h2>Third Parties</h2><p>We use the Anthropic Claude API to parse natural-language event descriptions. Text you type in the event input is sent to Anthropic for parsing. No personal identifying information is included.</p>
@@ -756,11 +756,11 @@ app.get('/privacy', (req, res) => {
 });
 
 app.get('/terms', (req, res) => {
-  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Service — CalPal</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
-<h1>CalPal Terms of Service</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
-<h2>Acceptance</h2><p>By using CalPal you agree to these terms. CalPal is provided as-is for personal productivity use.</p>
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Service — Marked</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
+<h1>Marked Terms of Service</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
+<h2>Acceptance</h2><p>By using Marked you agree to these terms. Marked is provided as-is for personal productivity use.</p>
 <h2>Account Responsibility</h2><p>You are responsible for keeping your password and recovery codes safe. We cannot recover encrypted data if you lose your password and recovery codes.</p>
-<h2>Prohibited Use</h2><p>Do not use CalPal to store illegal content or to abuse the AI parsing service.</p>
+<h2>Prohibited Use</h2><p>Do not use Marked to store illegal content or to abuse the AI parsing service.</p>
 <h2>Service Availability</h2><p>We aim for high availability but do not guarantee 100% uptime. Always export your calendar (.ics) as a backup.</p>
 <h2>Termination</h2><p>You may delete your account at any time. We may suspend accounts that violate these terms.</p>
 <h2>Contact</h2><p>Questions? Email <a href="mailto:jdefrancesco2003@gmail.com">jdefrancesco2003@gmail.com</a></p>
@@ -826,7 +826,7 @@ async function startServer() {
           }
           if (!body) continue;
           try {
-            await webpush.sendNotification(sub.subscription, JSON.stringify({ title: 'CalPal', body, tag: `${event.id}-${estMins}` }));
+            await webpush.sendNotification(sub.subscription, JSON.stringify({ title: 'Marked', body, tag: `${event.id}-${estMins}` }));
           } catch (e) {
             if (e.statusCode === 410 || e.statusCode === 404) await pushSubsCollection.deleteOne({ _id: sub._id });
           }
