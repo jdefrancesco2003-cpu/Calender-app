@@ -4,11 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <meta name="theme-color" content="#1a1a2e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="CalPal">
-  <title>CalPal</title>
+  <meta name="apple-mobile-web-app-title" content="Marked">
+  <title>Marked</title>
   <script src="/nacl.min.js"></script>
   <script src="/nacl-util.min.js"></script>
 
@@ -32,7 +35,7 @@
       --hour-w: 64px;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--bg-dark);
       color: var(--text-primary);
       padding-top: max(12px, env(safe-area-inset-top));
@@ -47,7 +50,7 @@
 
     /* ── HEADER ── */
     header { padding: 14px 0 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); }
-    h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary); flex: 1; }
+    h1 { font-size: 26px; font-weight: 800; letter-spacing: -1px; color: var(--text-primary); flex: 1; font-family: 'Inter', sans-serif; }
     h1 span { color: var(--primary); }
     .header-right { display: flex; align-items: center; gap: 10px; }
     .weather-widget { display: flex; align-items: center; gap: 5px; padding: 6px 10px; background: rgba(74,157,111,0.12); border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid rgba(74,157,111,0.22); animation: fadeIn 0.4s ease; }
@@ -152,7 +155,7 @@
       from { transform: translateY(32px); opacity: 0; }
       to   { transform: translateY(0);    opacity: 1; }
     }
-    .auth-logo { text-align: center; margin-bottom: 28px; font-size: 28px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; }
+    .auth-logo { text-align: center; margin-bottom: 28px; font-size: 30px; font-weight: 800; color: var(--text-primary); letter-spacing: -1px; font-family: 'Inter', sans-serif; }
     .auth-logo span { color: var(--primary); }
     .auth-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; text-align: center; }
     .auth-field { margin-bottom: 14px; }
@@ -329,7 +332,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>Cal<span>Pal</span></h1>
+      <h1>Mark<span>ed</span></h1>
       <div class="header-right">
         <div class="weather-widget" id="weather-widget" style="display:none;">
           <span class="weather-icon" id="weather-icon">☀️</span>
@@ -538,7 +541,7 @@
   <!-- ── AUTH MODAL ── -->
   <div id="auth-overlay" class="hidden">
     <div class="auth-box">
-      <div class="auth-logo">Cal<span>Pal</span></div>
+      <div class="auth-logo">Mark<span>ed</span></div>
       <div class="auth-title" id="auth-modal-title">Sign In</div>
       <div class="auth-error" id="auth-error"></div>
       <div class="auth-field">
@@ -564,7 +567,7 @@
       </div>
     </div>
     <div id="reset-panel" class="auth-box" style="display:none;">
-      <div class="auth-logo">Cal<span>Pal</span></div>
+      <div class="auth-logo">Mark<span>ed</span></div>
       <div class="auth-error" id="reset-error"></div>
       <!-- Step 1: enter email -->
       <div id="reset-step-1">
@@ -780,13 +783,13 @@
   <div id="onboarding-overlay" class="hidden">
     <div class="ob-slide active" id="ob-0">
       <div class="ob-icon">📅</div>
-      <div class="ob-title">Welcome to CalPal</div>
-      <div class="ob-desc">Your AI-powered personal calendar. Add events in plain English and let CalPal figure out the rest.</div>
+      <div class="ob-title">Welcome to Marked</div>
+      <div class="ob-desc">Your AI-powered personal calendar. Add events in plain English and let Marked figure out the rest.</div>
     </div>
     <div class="ob-slide" id="ob-1">
       <div class="ob-icon">✨</div>
       <div class="ob-title">Smart Event Parsing</div>
-      <div class="ob-desc">Just type "dentist next Tuesday at 2pm" or "team meeting every Monday 9-10am" and CalPal handles scheduling.</div>
+      <div class="ob-desc">Just type "dentist next Tuesday at 2pm" or "team meeting every Monday 9-10am" and Marked handles scheduling.</div>
     </div>
     <div class="ob-slide" id="ob-2">
       <div class="ob-icon">🔒</div>
@@ -880,9 +883,9 @@
     function shareEvent(ev) {
       if (!ev) return;
       const lines = [
-        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CalPal//CalPal Calendar//EN',
+        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Marked//Marked Calendar//EN',
         'CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
-        `UID:${ev.id}@calpal.app`,`SUMMARY:${ev.title}`
+        `UID:${ev.id}@marked.app`,`SUMMARY:${ev.title}`
       ];
       if (ev.isAllDay || !ev.time) {
         lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`);
@@ -2118,9 +2121,9 @@
           if (s.time > now) {
             const id = setTimeout(() => {
               navigator.serviceWorker?.ready.then(reg => {
-                reg.showNotification('CalPal', { body: s.body, tag: `${event.id}-${s.time.getTime()}`, icon: '/icons/icon-192.png', data: { url: '/' } });
+                reg.showNotification('Marked', { body: s.body, tag: `${event.id}-${s.time.getTime()}`, icon: '/icons/icon-192.png', data: { url: '/' } });
               }).catch(() => {
-                new Notification('CalPal', { body: s.body, tag: `${event.id}-${s.time.getTime()}` });
+                new Notification('Marked', { body: s.body, tag: `${event.id}-${s.time.getTime()}` });
               });
             }, s.time.getTime() - now.getTime());
             notificationTimeouts.push(id);
@@ -2719,7 +2722,7 @@
       const url = URL.createObjectURL(new Blob([dataStr], { type: 'application/json' }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `calpal-backup-${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `marked-backup-${new Date().toISOString().split('T')[0]}.json`;
       link.click();
       URL.revokeObjectURL(url);
       showStatus('Events exported ✓', 'success');
@@ -2745,12 +2748,12 @@
       const events = allEvents.filter(e => !e.isHoliday);
       if (!events.length) { showStatus('No events to export', 'error'); return; }
       const lines = [
-        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CalPal//CalPal Calendar//EN',
-        'X-WR-CALNAME:CalPal','X-WR-TIMEZONE:America/New_York','CALSCALE:GREGORIAN','METHOD:PUBLISH'
+        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Marked//Marked Calendar//EN',
+        'X-WR-CALNAME:Marked','X-WR-TIMEZONE:America/New_York','CALSCALE:GREGORIAN','METHOD:PUBLISH'
       ];
       events.forEach(ev => {
         lines.push('BEGIN:VEVENT');
-        lines.push(`UID:${ev.id}@calpal.app`);
+        lines.push(`UID:${ev.id}@marked.app`);
         lines.push(`SUMMARY:${ev.title}`);
         if (ev.isAllDay || !ev.time) {
           lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`);
@@ -2766,7 +2769,7 @@
       lines.push('END:VCALENDAR');
       const blob = new Blob([lines.join('\r\n')+'\r\n'],{type:'text/calendar'});
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download='calpal.ics'; a.click();
+      const a = document.createElement('a'); a.href=url; a.download='marked.ics'; a.click();
       URL.revokeObjectURL(url);
       showStatus('✓ Calendar exported','success');
     }
@@ -2788,7 +2791,7 @@
         let endDate=null;
         if (end&&end.date!==start.date) { if(isAllDay){const d=new Date(end.date+'T00:00:00');d.setDate(d.getDate()-1);endDate=d.toISOString().slice(0,10);}else{endDate=end.date;} }
         const uid = get('UID') || null;
-        const newEv = { id: uid ? uid.replace('@calpal.app','') : (crypto.randomUUID?(crypto.randomUUID()):(Date.now().toString(36)+Math.random().toString(36).slice(2))), title:get('SUMMARY')||'Imported Event', date:start.date, endDate:endDate||null, time:start.time, endTime:end?.time||null, isAllDay, isMultiDay:!!endDate, createdAt:new Date().toISOString() };
+        const newEv = { id: uid ? uid.replace('@marked.app','') : (crypto.randomUUID?(crypto.randomUUID()):(Date.now().toString(36)+Math.random().toString(36).slice(2))), title:get('SUMMARY')||'Imported Event', date:start.date, endDate:endDate||null, time:start.time, endTime:end?.time||null, isAllDay, isMultiDay:!!endDate, createdAt:new Date().toISOString() };
         if (allEvents.find(e=>e.id===newEv.id)) continue; // skip duplicates
         allEvents.push(newEv); saveEvents(); await apiSaveEvent(newEv); imported++;
       }

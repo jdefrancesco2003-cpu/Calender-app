@@ -1,6 +1,6 @@
 {
-  "appId": "com.calpal.app",
-  "appName": "CalPal",
+  "appId": "com.usemarked.app",
+  "appName": "Marked",
   "webDir": "public",
   "bundledWebRuntime": false,
   "server": {
@@ -8,7 +8,7 @@
     "cleartext": false
   },
   "ios": {
-    "scheme": "CalPal",
+    "scheme": "Marked",
     "contentInset": "always",
     "backgroundColor": "#1a1a2e",
     "preferredContentMode": "mobile",
