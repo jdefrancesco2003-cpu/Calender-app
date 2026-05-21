@@ -284,6 +284,10 @@
     @keyframes slideUpModal { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUpToast { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideOutToLeft { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(-28px); } }
+    @keyframes slideInFromRight { from { opacity:0; transform:translateX(28px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes slideOutToRight { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(28px); } }
+    @keyframes slideInFromLeft { from { opacity:0; transform:translateX(-28px); } to { opacity:1; transform:translateX(0); } }
     @keyframes pulse { 0%,100% { box-shadow: 0 0 8px rgba(48,176,192,0.5); } 50% { box-shadow: 0 0 18px rgba(48,176,192,0.9); } }
 
     /* ── SCROLLBAR ── */
@@ -651,62 +655,71 @@
   <div class="modal-overlay" id="add-event-overlay">
     <div class="modal" style="max-height:90vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,16px);">
       <div class="modal-handle"></div>
-      <h3 style="margin-bottom:16px;">New Event</h3>
-      <div class="section-title" style="font-size:13px;margin-bottom:4px;">Describe it naturally</div>
-      <div class="input-group">
-        <textarea id="event-input" placeholder='e.g. "dentist Friday 2pm" or "team meeting every Monday 9–10am"' maxlength="200" style="min-height:60px;"></textarea>
+      <h3 style="margin-bottom:12px;">New Event</h3>
+
+      <!-- AI Parse -->
+      <div style="background:var(--bg-light);border-radius:12px;padding:10px 12px;margin-bottom:12px;">
+        <textarea id="event-input" placeholder='e.g. "dentist Friday 2pm" or "team meeting every Monday 9–10am"' maxlength="200" style="min-height:50px;background:transparent;border:none;padding:0;resize:none;width:100%;box-sizing:border-box;font-size:14px;color:var(--text-primary);font-family:inherit;outline:none;display:block;"></textarea>
+        <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50,30,50])" style="width:100%;margin-top:8px;">✦ Parse with AI</button>
       </div>
-      <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50,30,50])" style="width:100%;">✦ Parse with AI</button>
-      <div class="divider" style="margin:16px 0;"></div>
-      <div class="section-title" style="font-size:13px;margin-bottom:8px;">Manual Entry</div>
-      <div class="input-group"><label>Title</label><input type="text" id="title-input" placeholder="Event name" maxlength="100"></div>
-      <div class="input-group"><label>Date Range</label>
-        <div class="time-inputs">
-          <div><label style="font-size:10px;color:var(--text-secondary);">Start</label><input type="date" id="date-input"></div>
-          <div><label style="font-size:10px;color:var(--text-secondary);">End</label><input type="date" id="end-date-input"></div>
+
+      <div class="divider" style="margin:0 0 12px;"></div>
+
+      <!-- Title -->
+      <div class="input-group" style="margin-bottom:10px;">
+        <label>Title</label>
+        <input type="text" id="title-input" placeholder="Event name" maxlength="100">
+      </div>
+
+      <!-- Date + Time 2×2 grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div class="input-group"><label>Start Date</label><input type="date" id="date-input"></div>
+        <div class="input-group"><label>End Date</label><input type="date" id="end-date-input"></div>
+        <div class="input-group"><label>Start Time</label><input type="time" id="time-input"></div>
+        <div class="input-group"><label>End Time</label><input type="time" id="end-time-input"></div>
+      </div>
+
+      <!-- Category + All-Day on one row -->
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px;">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:6px;">Category</label>
+          <div class="cat-select" id="add-cat-select">
+            <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('add','work')" title="Work"></button>
+            <button type="button" class="cat-btn cat-personal" data-cat="personal" onclick="selectCategory('add','personal')" title="Personal"></button>
+            <button type="button" class="cat-btn cat-health" data-cat="health" onclick="selectCategory('add','health')" title="Health"></button>
+            <button type="button" class="cat-btn cat-social" data-cat="social" onclick="selectCategory('add','social')" title="Social"></button>
+            <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('add','other')" title="Other"></button>
+          </div>
         </div>
-      </div>
-      <div class="input-group"><label>Time</label>
-        <div class="time-inputs">
-          <div><label style="font-size:10px;color:var(--text-secondary);">Start</label><input type="time" id="time-input"></div>
-          <div><label style="font-size:10px;color:var(--text-secondary);">End</label><input type="time" id="end-time-input"></div>
-        </div>
-      </div>
-      <div style="margin-top:8px;">
-        <label style="font-size:13px;color:var(--text-secondary);">Category</label>
-        <div class="cat-select" id="add-cat-select">
-          <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('add','work')" title="Work"></button>
-          <button type="button" class="cat-btn cat-personal" data-cat="personal" onclick="selectCategory('add','personal')" title="Personal"></button>
-          <button type="button" class="cat-btn cat-health" data-cat="health" onclick="selectCategory('add','health')" title="Health"></button>
-          <button type="button" class="cat-btn cat-social" data-cat="social" onclick="selectCategory('add','social')" title="Social"></button>
-          <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('add','other')" title="Other"></button>
-        </div>
-      </div>
-      <button type="button" onclick="toggleAddMoreOpts()" style="background:none;border:none;color:var(--text-secondary);font-size:13px;padding:10px 0 4px;cursor:pointer;display:flex;align-items:center;gap:6px;min-height:auto;width:auto;">
-        <span id="add-more-opts-chevron" style="font-size:10px;display:inline-block;transition:transform 0.2s;">▶</span> More options
-      </button>
-      <div id="add-more-opts" style="display:none;">
-        <div class="input-group"><label>Notes</label><textarea id="desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
-        <div class="toggle-switch">
-          <label for="all-day-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">All-Day Event</label>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding-bottom:2px;">
+          <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;">All Day</span>
           <label class="switch"><input type="checkbox" id="all-day-toggle" onchange="toggleAllDayManual()"><span class="slider"></span></label>
         </div>
-        <div style="margin-top:10px;">
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Repeat</label>
-          <select class="form-select" id="recurrence-select" onchange="toggleRecurrenceEnd('recurrence-end-row')">
-            <option value="none">Never</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="yearly">Yearly</option>
-          </select>
-        </div>
-        <div id="recurrence-end-row" style="display:none;margin-top:10px;">
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ends On (optional)</label>
-          <input type="date" id="recurrence-end-input" class="form-select" style="padding:10px 12px;">
-        </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:16px;">
+
+      <!-- Notes -->
+      <div class="input-group" style="margin-bottom:10px;">
+        <label>Notes</label>
+        <textarea id="desc-input" placeholder="Add details..." maxlength="500" style="min-height:46px;"></textarea>
+      </div>
+
+      <!-- Repeat inline -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;flex-shrink:0;min-width:48px;">Repeat</label>
+        <select class="form-select" id="recurrence-select" onchange="toggleRecurrenceEnd('recurrence-end-row')" style="flex:1;">
+          <option value="none">Never</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+      <div id="recurrence-end-row" style="display:none;margin-bottom:6px;">
+        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:6px;">Ends On (optional)</label>
+        <input type="date" id="recurrence-end-input" class="form-select" style="width:100%;box-sizing:border-box;padding:10px 12px;">
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:14px;">
         <button class="btn-secondary" style="flex:1;" onclick="closeAddModal(); triggerHaptic(20)">Cancel</button>
         <button class="btn-primary" style="flex:1;" onclick="addEventManually(); triggerHaptic([60,20,60])">Save Event</button>
       </div>
@@ -1329,17 +1342,6 @@
     }
     function closeAddModal() {
       document.getElementById('add-event-overlay').classList.remove('active');
-      const moreOpts = document.getElementById('add-more-opts');
-      const chevron = document.getElementById('add-more-opts-chevron');
-      if (moreOpts) { moreOpts.style.display = 'none'; }
-      if (chevron) { chevron.style.transform = ''; }
-    }
-    function toggleAddMoreOpts() {
-      const d = document.getElementById('add-more-opts');
-      const ch = document.getElementById('add-more-opts-chevron');
-      const open = d.style.display !== 'none';
-      d.style.display = open ? 'none' : 'block';
-      ch.style.transform = open ? '' : 'rotate(90deg)';
     }
     function openAddEventTab() { openAddModal(); }
 
@@ -2213,26 +2215,44 @@
     function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
 
     function toggleView() {
-      // Close day-events panel if open
       const dayEvPanel = document.getElementById('calendar-day-events');
       if (dayEvPanel && dayEvPanel.style.display !== 'none') {
         dayEvPanel.style.display = 'none';
         dayEvPanel.innerHTML = '';
         selectedDate = null;
       }
-      isWeekView = !isWeekView;
       const btn = document.getElementById('view-toggle-btn');
-      btn.textContent = isWeekView ? 'Month' : 'Week';
-      btn.classList.toggle('active', isWeekView);
-      document.getElementById('month-view').style.display = isWeekView ? 'none' : '';
-      document.getElementById('week-view').style.display = isWeekView ? 'flex' : 'none';
-      document.getElementById('upcoming-container').style.display = isWeekView ? 'none' : '';
-      if (isWeekView) {
-        document.getElementById('month-year').textContent = '';
-        renderWeekView();
+      const monthView = document.getElementById('month-view');
+      const weekView = document.getElementById('week-view');
+      const upcoming = document.getElementById('upcoming-container');
+      const ANIM = 180;
+
+      if (!isWeekView) {
+        // → week view
+        btn.textContent = 'Month'; btn.classList.add('active');
+        monthView.style.animation = `slideOutToLeft ${ANIM}ms ease forwards`;
+        setTimeout(() => {
+          isWeekView = true;
+          monthView.style.display = 'none'; monthView.style.animation = '';
+          upcoming.style.display = 'none';
+          weekView.style.display = 'flex';
+          weekView.style.animation = `slideInFromRight ${ANIM}ms ease forwards`;
+          document.getElementById('month-year').textContent = '';
+          renderWeekView();
+        }, ANIM);
       } else {
-        renderCalendar();
-        renderUpcomingEvents();
+        // → month view
+        btn.textContent = 'Week'; btn.classList.remove('active');
+        weekView.style.animation = `slideOutToRight ${ANIM}ms ease forwards`;
+        setTimeout(() => {
+          isWeekView = false;
+          weekView.style.display = 'none'; weekView.style.animation = '';
+          monthView.style.display = '';
+          monthView.style.animation = `slideInFromLeft ${ANIM}ms ease forwards`;
+          upcoming.style.display = '';
+          renderCalendar();
+          renderUpcomingEvents();
+        }, ANIM);
       }
     }
 
