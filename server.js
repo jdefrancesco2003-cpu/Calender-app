@@ -5,6 +5,7 @@ const { MongoClient } = require('mongodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { randomBytes } = require('crypto');
+const webpush = require('web-push');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,12 +42,27 @@ function getCurrentESTInfo() {
 // ── Auth config ──
 const JWT_SECRET = process.env.JWT_SECRET || null; // null = dev mode (no auth required)
 const BCRYPT_ROUNDS = 12;
+
+// ── Web Push (VAPID) ──
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:' + (process.env.ADMIN_EMAIL || 'jdefrancesco2003@gmail.com'),
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+} else {
+  const keys = webpush.generateVAPIDKeys();
+  console.log('⚠ VAPID keys missing — add to Railway env vars:');
+  console.log('  VAPID_PUBLIC_KEY=' + keys.publicKey);
+  console.log('  VAPID_PRIVATE_KEY=' + keys.privateKey);
+}
 function generateSalt() { return randomBytes(16).toString('hex'); }
 
 const client = new Anthropic();
 const mongoUri = process.env.MONGODB_URI;
 let eventsCollection;
 let usersCollection;
+let pushSubsCollection;
 let mongoClient;
 
 // ── Rate limiters ──
@@ -114,8 +130,11 @@ async function connectMongoDB() {
     const db = mongoClient.db('calendar');
     eventsCollection = db.collection('events');
     usersCollection = db.collection('users');
+    pushSubsCollection = db.collection('push_subscriptions');
     await usersCollection.createIndex({ email: 1 }, { unique: true });
     await eventsCollection.createIndex({ userId: 1 });
+    await pushSubsCollection.createIndex({ userId: 1 });
+    await pushSubsCollection.createIndex({ 'subscription.endpoint': 1 }, { unique: true });
     console.log('✓ Connected to MongoDB');
   } catch (err) {
     console.error('✗ MongoDB connection failed:', err.message);
@@ -243,6 +262,7 @@ Return ONLY this JSON:
   }
 
   if (!parsed.title || !parsed.date) throw new Error('Missing title or date');
+  parsed.title = toTitleCase(parsed.title.trim());
   if (!DATE_RE.test(parsed.date)) throw new Error(`Invalid date format: ${parsed.date}`);
   if (parsed.endDate && !DATE_RE.test(parsed.endDate)) parsed.endDate = null;
   if (parsed.time && !TIME_RE.test(parsed.time)) parsed.time = null;
@@ -445,20 +465,6 @@ app.post('/api/migrate/claim-legacy-events', requireAuth, async (req, res) => {
   }
 });
 
-// ── Diagnostic ──
-app.post('/api/test-parse', async (req, res) => {
-  try {
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 100,
-      messages: [{ role: 'user', content: 'Say "API works" in one word' }]
-    });
-    res.json({ status: 'ok', message: response.content[0].text, apiKeyExists: !!process.env.ANTHROPIC_API_KEY });
-  } catch (err) {
-    res.status(400).json({ status: 'error', error: err.message, apiKeyExists: !!process.env.ANTHROPIC_API_KEY });
-  }
-});
-
 // ── Parse endpoint (parse only — client saves after confirmation) ──
 app.post('/api/events/parse', requireAuth, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
@@ -586,37 +592,55 @@ app.delete('/api/events/:id', requireAuth, async (req, res) => {
   }
 });
 
-// ── Sync endpoints ──
-app.get('/api/sync/download', requireAuth, async (req, res) => {
-  try {
-    const events = await loadEvents(req.user.userId);
-    res.json(events);
-  } catch (err) {
-    res.status(500).json({ error: 'Sync download failed' });
-  }
+// ── Push notification routes ──
+app.get('/api/push/vapid-key', (req, res) => {
+  if (!process.env.VAPID_PUBLIC_KEY) return res.status(503).json({ error: 'Push not configured' });
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
 });
 
-app.post('/api/sync/upload', requireAuth, async (req, res) => {
-  const { id, encryptedData, nonce } = req.body;
-  if (!encryptedData || !nonce) return res.status(400).json({ error: 'encryptedData and nonce required' });
+app.post('/api/push/subscribe', requireAuth, async (req, res) => {
+  if (!pushSubsCollection) return res.json({ ok: true });
+  const { subscription, preferences } = req.body;
+  if (!subscription?.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
+  await pushSubsCollection.updateOne(
+    { 'subscription.endpoint': subscription.endpoint },
+    { $set: { userId: req.user.userId, subscription, preferences: preferences || { dayOf: true, hourBefore: false }, updatedAt: new Date() } },
+    { upsert: true }
+  );
+  res.json({ ok: true });
+});
 
-  const event = {
-    id: id || randomBytes(8).toString('hex'),
-    userId: req.user.userId,
-    encryptedData,
-    nonce,
-    updatedAt: new Date()
-  };
+app.delete('/api/push/unsubscribe', requireAuth, async (req, res) => {
+  if (!pushSubsCollection) return res.json({ ok: true });
+  const { endpoint } = req.body;
+  if (endpoint) await pushSubsCollection.deleteOne({ 'subscription.endpoint': endpoint });
+  else await pushSubsCollection.deleteMany({ userId: req.user.userId });
+  res.json({ ok: true });
+});
 
-  if (eventsCollection) {
-    await eventsCollection.updateOne(
-      { id: event.id, userId: req.user.userId },
-      { $set: event, $setOnInsert: { createdAt: new Date() } },
-      { upsert: true }
-    );
-  }
+// ── Static legal pages ──
+app.get('/privacy', (req, res) => {
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy — CalPal</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
+<h1>CalPal Privacy Policy</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
+<h2>What We Collect</h2><p>CalPal collects your email address and calendar event data (titles, dates, times). All event data is end-to-end encrypted before leaving your device — we cannot read your events.</p>
+<h2>How We Use It</h2><p>Your email is used solely for account authentication. Your encrypted event data is stored on our servers to enable sync across devices.</p>
+<h2>Data Storage</h2><p>Data is stored in MongoDB Atlas (cloud). Encryption keys are derived from your password on-device using PBKDF2 and are never transmitted to our servers.</p>
+<h2>Third Parties</h2><p>We use the Anthropic Claude API to parse natural-language event descriptions. Text you type in the event input is sent to Anthropic for parsing. No personal identifying information is included.</p>
+<h2>Data Deletion</h2><p>You can permanently delete your account and all associated data at any time from Settings → Delete Account.</p>
+<h2>Contact</h2><p>Questions? Email us at <a href="mailto:jdefrancesco2003@gmail.com">jdefrancesco2003@gmail.com</a></p>
+</body></html>`);
+});
 
-  res.json(event);
+app.get('/terms', (req, res) => {
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Service — CalPal</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
+<h1>CalPal Terms of Service</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
+<h2>Acceptance</h2><p>By using CalPal you agree to these terms. CalPal is provided as-is for personal productivity use.</p>
+<h2>Account Responsibility</h2><p>You are responsible for keeping your password and recovery codes safe. We cannot recover encrypted data if you lose your password and recovery codes.</p>
+<h2>Prohibited Use</h2><p>Do not use CalPal to store illegal content or to abuse the AI parsing service.</p>
+<h2>Service Availability</h2><p>We aim for high availability but do not guarantee 100% uptime. Always export your calendar (.ics) as a backup.</p>
+<h2>Termination</h2><p>You may delete your account at any time. We may suspend accounts that violate these terms.</p>
+<h2>Contact</h2><p>Questions? Email <a href="mailto:jdefrancesco2003@gmail.com">jdefrancesco2003@gmail.com</a></p>
+</body></html>`);
 });
 
 // ── Static legal pages ──
@@ -657,8 +681,61 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+function toTitleCase(str) {
+  const minors = new Set(['a','an','the','and','but','or','for','nor','on','at','to','by','in','of','up','as','is','with']);
+  return str.replace(/\w\S*/g, (word, idx) => {
+    const lower = word.toLowerCase();
+    return (idx === 0 || !minors.has(lower)) ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : lower;
+  });
+}
+
+function fmt12(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${suffix}`;
+}
+
 async function startServer() {
   await connectMongoDB();
+
+  // ── Push notification scheduler (runs every minute) ──
+  setInterval(async () => {
+    if (!pushSubsCollection || !eventsCollection || !process.env.VAPID_PUBLIC_KEY) return;
+    const now = new Date();
+    const estNow = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+    const p = Object.fromEntries(estNow.map(x => [x.type, x.value]));
+    const estDateStr = `${p.year}-${p.month}-${p.day}`;
+    const estHour = parseInt(p.hour, 10);
+    const estMin = parseInt(p.minute, 10);
+    const estMins = estHour * 60 + estMin;
+    try {
+      const subs = await pushSubsCollection.find({}).toArray();
+      for (const sub of subs) {
+        const prefs = sub.preferences || { dayOf: true, hourBefore: false };
+        const events = await eventsCollection.find({ userId: sub.userId, date: estDateStr }).toArray();
+        for (const event of events) {
+          if (event.encryptedData) continue; // can't read encrypted titles
+          let body = null;
+          if (event.time) {
+            const [eh, em] = event.time.split(':').map(Number);
+            const evMins = eh * 60 + em;
+            if (prefs.dayOf && estMins === 8 * 60) body = `${event.title} at ${fmt12(event.time)} today`;
+            else if (prefs.hourBefore && Math.abs(estMins - (evMins - 60)) <= 1) body = `${event.title} in 1 hour`;
+          } else if (event.isAllDay && prefs.dayOf && estMins === 8 * 60) {
+            body = `All day: ${event.title}`;
+          }
+          if (!body) continue;
+          try {
+            await webpush.sendNotification(sub.subscription, JSON.stringify({ title: 'CalPal', body, tag: `${event.id}-${estMins}` }));
+          } catch (e) {
+            if (e.statusCode === 410 || e.statusCode === 404) await pushSubsCollection.deleteOne({ _id: sub._id });
+          }
+        }
+      }
+    } catch (e) { /* scheduler errors don't crash server */ }
+  }, 60000);
+
   app.listen(PORT, () => {
     console.log(`✓ Calendar API running on port ${PORT}`);
     console.log(`✓ Model: claude-haiku-4-5-20251001`);

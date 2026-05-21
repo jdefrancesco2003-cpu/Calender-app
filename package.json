@@ -36,7 +36,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^5.8.0",
     "tweetnacl": "^1.0.3",
-    "tweetnacl-util": "^0.15.1"
+    "tweetnacl-util": "^0.15.1",
+    "web-push": "^3.6.7"
   },
   "engines": {
     "node": ">=18.0.0"
