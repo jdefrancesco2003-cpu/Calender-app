@@ -64,7 +64,7 @@
     .dropdown-item:active { background: rgba(74,157,111,0.18); }
 
     /* ── FAB ── */
-    .fab { position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 54px; height: 54px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(74,157,111,0.4); z-index: 100; transition: transform 0.2s, box-shadow 0.2s; }
+    .fab { position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 54px; height: 54px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(74,157,111,0.4); z-index: 100; transition: transform 0.15s, box-shadow 0.15s; }
     .fab:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(74,157,111,0.4); }
 
     /* ── STATUS ── */
@@ -75,13 +75,24 @@
 
     /* ── TABS ── */
     .section-tabs { display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-dark); flex-shrink: 0; }
-    .tab-button { flex: 1; padding: 12px 0; background: none; border: none; border-bottom: 3px solid transparent; font-size: 14px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: color 0.2s, border-color 0.2s; letter-spacing: 0.2px; }
+    .tab-button { flex: 1; padding: 12px 0; background: none; border: none; border-bottom: 3px solid transparent; font-size: 14px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: color 0.2s, border-color 0.2s; letter-spacing: 0.2px; position: relative; }
     .tab-button.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 20%; right: 20%;
+      height: 2px; border-radius: 1px;
+      background: var(--primary);
+    }
 
     /* ── MAIN CONTENT ── */
     .main-content { display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
     .tab-content { display: none; flex-direction: column; flex: 1; }
-    .tab-content.active { display: flex; }
+    .tab-content.active { display: flex; animation: tabFadeIn 0.22s ease both; }
+    @keyframes tabFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
     /* ── SECTION / FORM ── */
     .section { background: var(--bg-card); padding: 16px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--border-color); }
@@ -91,7 +102,7 @@
     .input-group label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.6px; }
     input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--bg-light); color: var(--text-primary); appearance: none; min-height: 44px; transition: border-color 0.2s, box-shadow 0.2s; }
     input::placeholder, textarea::placeholder { color: var(--text-secondary); }
-    input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,157,111,0.12); }
+    input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,157,111,0.12); transition: border-color 0.15s, box-shadow 0.15s; }
     textarea { resize: none; min-height: 90px; font-size: 15px; }
     button { padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px; appearance: none; }
     .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 12px rgba(74,157,111,0.25); }
@@ -112,7 +123,7 @@
     input:checked + .slider:before { transform: translateX(20px); }
 
     /* ── CALENDAR (MONTH VIEW) ── */
-    #calendar-tab { overflow: hidden; display: flex; flex-direction: column; }
+    #calendar-tab { overflow-y: auto !important; flex-direction: column !important; padding-bottom: 80px; }
     .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); flex-shrink: 0; }
     .month-year { font-size: 17px; font-weight: 700; color: var(--text-primary); }
     .month-nav { display: flex; gap: 8px; align-items: center; }
@@ -122,8 +133,8 @@
     .view-toggle-btn:active, .view-toggle-btn.active { background: var(--primary); color: white; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 10px 12px; background: var(--bg-card); flex-shrink: 0; }
     .day-header { text-align: center; font-weight: 700; color: var(--text-secondary); padding: 6px 0; font-size: 11px; letter-spacing: 0.5px; }
-    .day-cell { aspect-ratio: 1; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 40px; position: relative; transition: all 0.15s ease; }
-    .day-cell:active { transform: scale(0.93); border-color: var(--primary); }
+    .day-cell { aspect-ratio: 1; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 40px; position: relative; transition: background 0.15s, transform 0.1s, border-color 0.15s; }
+    .day-cell:active { transform: scale(0.94); border-color: var(--primary); }
     .day-cell.other-month { background: transparent; border-color: transparent; opacity: 0.25; }
     .day-cell.today { border: 2px solid var(--primary); box-shadow: 0 0 0 1px var(--primary), inset 0 0 10px rgba(74,157,111,0.08); }
     .day-cell.selected { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-color: var(--primary); }
@@ -136,7 +147,11 @@
     /* ── AUTH MODAL ── */
     #auth-overlay { position: fixed; inset: 0; background: var(--bg-dark); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
     #auth-overlay.hidden { display: none; }
-    .auth-box { width: 100%; max-width: 360px; background: var(--bg-card); border-radius: 20px; padding: 32px 24px; border: 1px solid var(--border-color); }
+    .auth-box { width: 100%; max-width: 360px; background: var(--bg-card); border-radius: 20px; padding: 32px 24px; border: 1px solid var(--border-color); animation: authBoxIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) both; }
+    @keyframes authBoxIn {
+      from { transform: translateY(32px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
     .auth-logo { text-align: center; margin-bottom: 28px; font-size: 28px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; }
     .auth-logo span { color: var(--primary); }
     .auth-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; text-align: center; }
@@ -203,8 +218,8 @@
     .week-current-time::before { content: ''; position: absolute; top: -4px; left: -4px; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; box-shadow: 0 0 6px rgba(255,69,58,0.6); }
 
     /* ── EVENT CARDS ── */
-    .event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58,58,60,0.85) 100%); padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-    .event-item:active { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(74,157,111,0.18); }
+    .event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58,58,60,0.85) 100%); padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: transform 0.1s, background 0.1s, box-shadow 0.15s ease; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    .event-item:active { transform: scale(0.98); background: var(--bg-light) !important; box-shadow: 0 4px 16px rgba(74,157,111,0.18); }
     .event-item.swipe-left { transform: translateX(-100px); }
     .event-swipe-actions { position: absolute; right: 0; top: 0; height: 100%; display: flex; }
     .swipe-action { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; border: none; min-width: 52px; min-height: auto; transition: opacity 0.15s; }
@@ -224,9 +239,14 @@
     .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
 
     /* ── MODALS ── */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 2000; padding: max(12px, env(safe-area-inset-top)) 12px 0 12px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 2000; padding: max(12px, env(safe-area-inset-top)) 12px 0 12px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: background-color 0.2s; }
     .modal-overlay.active { display: flex; align-items: flex-end; animation: fadeIn 0.2s ease; }
-    .modal { background: var(--bg-card); border-radius: 20px 20px 0 0; width: 100%; max-height: 84vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: slideUpModal 0.3s cubic-bezier(0.34,1.3,0.64,1); }
+    .modal-overlay.active .modal { animation: slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1) both; }
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .modal { background: var(--bg-card); border-radius: 20px 20px 0 0; width: 100%; max-height: 84vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
     .modal h3 { font-size: 17px; font-weight: 700; color: var(--text-primary); }
     .modal-handle { width: 36px; height: 4px; background: var(--border-color); border-radius: 2px; margin: 0 auto 8px; }
     .confirmation-modal { padding: 24px 20px; }
@@ -272,8 +292,12 @@
     .cat-btn { width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:border 0.15s; }
     .cat-btn.selected { border-color:white; }
 
-    /* ── PULL-TO-REFRESH (Task 5) ── */
-    .ptr-spinner { text-align:center;padding:12px;color:var(--text-secondary);font-size:13px;display:none; }
+    /* ── PULL-TO-REFRESH ── */
+    .ptr-spinner {
+      text-align:center; padding:12px; color:var(--text-secondary); font-size:13px;
+      display:none; transition: opacity 0.2s;
+      position: sticky; top: 0; z-index: 10; background: var(--bg-dark);
+    }
     .ptr-spinner.visible { display:block; }
 
     /* ── LIGHT MODE (Task 6) ── */
@@ -368,6 +392,9 @@
           <div class="upcoming-day-group" id="month-section"></div>
           <div class="upcoming-day-group" id="later-section"></div>
         </div>
+
+        <!-- Selected-day events below calendar -->
+        <div id="calendar-day-events" style="padding:0 16px 16px;"></div>
       </div>
 
       <!-- ── EVENTS TAB ── -->
@@ -1189,11 +1216,12 @@
     function showTab(tab, btn) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
-      document.getElementById(tab + '-tab').classList.add('active');
+      const tabEl = document.getElementById(tab + '-tab');
+      if (tabEl) tabEl.classList.add('active');
       if (btn) btn.classList.add('active');
       closeMenuOnTab();
       if (tab === 'events') renderEventsPage();
-      if (tab === 'calendar') { renderCalendar(); renderUpcomingEvents(); }
+      if (tab === 'calendar') { renderCalendar(); renderUpcomingEvents(); renderCalendarDayEvents(); }
     }
     function toggleMenu() {
       document.getElementById('dropdown-menu').classList.toggle('active');
@@ -1203,6 +1231,8 @@
     }
     function openAddModal() {
       clearAddForm();
+      const dateEl = document.getElementById('date-input');
+      if (dateEl && !dateEl.value) dateEl.value = selectedDate || getLocalDateString(new Date());
       document.getElementById('add-event-overlay').classList.add('active');
       setTimeout(() => document.getElementById('event-input').focus(), 150);
     }
@@ -1641,6 +1671,13 @@
           data.title = capitalizeTitle(data.title);
           if (checkDuplicateEvent(data)) { showDuplicateModal(data.title); return; }
           pendingParsedEvent = data;
+          // Pre-fill manual form so user can review/edit before confirming
+          if (data.title) document.getElementById('title-input').value = data.title;
+          if (data.date) document.getElementById('date-input').value = data.date;
+          if (data.endDate) document.getElementById('end-date-input').value = data.endDate;
+          if (data.time) document.getElementById('time-input').value = data.time;
+          if (data.endTime) document.getElementById('end-time-input').value = data.endTime;
+          if (data.isAllDay) { document.getElementById('all-day-toggle').checked = true; toggleAllDayManual(); }
           showConfirmationModal(data);
         }
       } catch (err) {
@@ -1772,6 +1809,11 @@
       if (recSel) { recSel.value = 'none'; toggleRecurrenceEnd('recurrence-end-row'); }
       const recEnd = document.getElementById('recurrence-end-input');
       if (recEnd) recEnd.value = '';
+      addEventCategory = 'work';
+      const catSel = document.getElementById('add-cat-select');
+      if (catSel) {
+        catSel.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('selected', b.dataset.cat === 'work'));
+      }
       setTodayDate();
     }
 
