@@ -57,3 +57,28 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('message', (e) => {
   if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
+
+self.addEventListener('push', (e) => {
+  let data = { title: 'CalPal', body: 'You have an upcoming event' };
+  try { if (e.data) data = e.data.json(); } catch {}
+  e.waitUntil(
+    self.registration.showNotification(data.title || 'CalPal', {
+      body: data.body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: data.tag || 'calpal-event',
+      data: { url: '/' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+      const existing = cs.find(c => c.url.includes(self.location.origin));
+      if (existing) return existing.focus();
+      return clients.openWindow(e.notification.data?.url || '/');
+    })
+  );
+});
