@@ -445,20 +445,6 @@ app.post('/api/migrate/claim-legacy-events', requireAuth, async (req, res) => {
   }
 });
 
-// ── Diagnostic ──
-app.post('/api/test-parse', async (req, res) => {
-  try {
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 100,
-      messages: [{ role: 'user', content: 'Say "API works" in one word' }]
-    });
-    res.json({ status: 'ok', message: response.content[0].text, apiKeyExists: !!process.env.ANTHROPIC_API_KEY });
-  } catch (err) {
-    res.status(400).json({ status: 'error', error: err.message, apiKeyExists: !!process.env.ANTHROPIC_API_KEY });
-  }
-});
-
 // ── Parse endpoint (parse only — client saves after confirmation) ──
 app.post('/api/events/parse', requireAuth, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
@@ -584,39 +570,6 @@ app.delete('/api/events/:id', requireAuth, async (req, res) => {
   } else {
     res.status(404).json({ error: 'Event not found' });
   }
-});
-
-// ── Sync endpoints ──
-app.get('/api/sync/download', requireAuth, async (req, res) => {
-  try {
-    const events = await loadEvents(req.user.userId);
-    res.json(events);
-  } catch (err) {
-    res.status(500).json({ error: 'Sync download failed' });
-  }
-});
-
-app.post('/api/sync/upload', requireAuth, async (req, res) => {
-  const { id, encryptedData, nonce } = req.body;
-  if (!encryptedData || !nonce) return res.status(400).json({ error: 'encryptedData and nonce required' });
-
-  const event = {
-    id: id || randomBytes(8).toString('hex'),
-    userId: req.user.userId,
-    encryptedData,
-    nonce,
-    updatedAt: new Date()
-  };
-
-  if (eventsCollection) {
-    await eventsCollection.updateOne(
-      { id: event.id, userId: req.user.userId },
-      { $set: event, $setOnInsert: { createdAt: new Date() } },
-      { upsert: true }
-    );
-  }
-
-  res.json(event);
 });
 
 // ── Static legal pages ──

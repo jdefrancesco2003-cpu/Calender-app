@@ -338,7 +338,6 @@
       <div class="dropdown-menu" id="dropdown-menu">
         <div id="user-chip-wrap" style="padding:10px 14px 6px;display:none;"><div class="user-chip" id="user-chip"></div></div>
         <button class="dropdown-item" id="restore-btn" onclick="restoreLegacyEvents(); triggerHaptic(20)" style="color:var(--primary);">♻️ Restore My Events</button>
-        <button class="dropdown-item" onclick="exportEvents(); triggerHaptic(20)">📥 Export Events</button>
         <button class="dropdown-item" onclick="openArchiveModal(); triggerHaptic(20)">📦 Archive Past Events</button>
         <button class="dropdown-item" onclick="viewArchived(); triggerHaptic(20)">📂 View Archive</button>
         <button class="dropdown-item" onclick="openSettings(); triggerHaptic(20)">⚙️ Settings</button>
@@ -399,13 +398,21 @@
 
       <!-- ── EVENTS TAB ── -->
       <div id="events-tab" class="tab-content" style="flex-direction:column;">
-        <div class="section" style="flex-shrink:0;">
-          <div class="section-title">Search Events</div>
-          <div class="input-group"><input type="text" class="search-input" id="search-input" placeholder="Search by title or notes..." oninput="filterEvents()"></div>
-          <div class="search-filters">
-            <input type="date" id="search-from" onchange="filterEvents()" style="font-size:12px;">
-            <input type="date" id="search-to" onchange="filterEvents()" style="font-size:12px;">
-            <button class="btn-secondary" style="padding:8px 12px;min-height:auto;font-size:12px;" onclick="clearSearchFilters(); triggerHaptic(20)">Clear</button>
+        <div style="padding:10px 14px 6px;background:var(--bg-dark);position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border-color);flex-shrink:0;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="flex:1;position:relative;">
+              <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;opacity:0.5;">🔍</span>
+              <input type="search" id="search-input" placeholder="Search events…" oninput="filterEvents()"
+                style="width:100%;box-sizing:border-box;padding:9px 12px 9px 34px;border-radius:10px;border:1.5px solid var(--border-color);background:var(--bg-light);color:var(--text-primary);font-size:15px;">
+            </div>
+            <button id="filter-toggle-btn" onclick="toggleSearchFilters();triggerHaptic(20)"
+              style="background:var(--bg-light);border:1.5px solid var(--border-color);border-radius:10px;padding:9px 11px;min-height:auto;font-size:14px;color:var(--text-secondary);flex-shrink:0;" title="Date filter">⚙︎</button>
+          </div>
+          <div id="search-filters-row" style="display:none;gap:8px;margin-top:8px;align-items:center;">
+            <input type="date" id="search-from" onchange="filterEvents()" style="flex:1;font-size:12px;padding:7px 10px;">
+            <span style="color:var(--text-secondary);font-size:12px;">→</span>
+            <input type="date" id="search-to" onchange="filterEvents()" style="flex:1;font-size:12px;padding:7px 10px;">
+            <button onclick="clearSearchFilters();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:18px;padding:4px 6px;min-height:auto;">✕</button>
           </div>
         </div>
         <div class="events-container" id="events-list" style="flex:1;overflow-y:auto;padding-bottom:80px;"></div>
@@ -566,22 +573,32 @@
     <div class="modal">
       <div class="modal-handle"></div>
       <h3>Settings</h3>
+
+      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:4px 0 8px;">Display</p>
       <div class="toggle-switch">
-        <label for="notif-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">Enable Notifications</label>
-        <label class="switch"><input type="checkbox" id="notif-toggle" onchange="toggleNotifications()"><span class="slider"></span></label>
-      </div>
-      <div class="toggle-switch" style="margin-top:12px;">
         <label style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">Light Mode</label>
         <label class="switch"><input type="checkbox" id="theme-toggle" onchange="toggleTheme()"><span class="slider"></span></label>
       </div>
-      <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">📤 Export .ics</button>
+      <div class="toggle-switch" style="margin-top:12px;">
+        <label for="notif-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">Enable Notifications</label>
+        <label class="switch"><input type="checkbox" id="notif-toggle" onchange="toggleNotifications()"><span class="slider"></span></label>
+      </div>
+
+      <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
+      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">Calendar Data</p>
+      <button class="btn-secondary" style="width:100%;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">📤 Export .ics</button>
       <label style="width:100%;margin-top:8px;display:block;">
         <input type="file" id="ical-import-input" accept=".ics" style="display:none;" onchange="importIcalFile(event); closeSettings()">
         <span class="btn-secondary" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box;" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">📥 Import .ics</span>
       </label>
-      <button class="btn-secondary" id="change-pw-btn" style="width:100%;margin-top:8px;display:none;" onclick="openChangePassword(); triggerHaptic(20)">🔒 Change Password</button>
+
+      <div style="height:1px;background:var(--border-color);margin:16px 0;" id="account-settings-divider"></div>
+      <p class="settings-section-label" id="account-settings-label" style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">Account</p>
+      <button class="btn-secondary" id="change-pw-btn" style="width:100%;display:none;" onclick="openChangePassword(); triggerHaptic(20)">🔒 Change Password</button>
       <button class="btn-danger" id="delete-acct-btn" style="width:100%;margin-top:8px;display:none;" onclick="openDeleteAccount(); triggerHaptic(20)">🗑 Delete Account</button>
-      <div style="margin-top:8px;text-align:center;font-size:11px;color:var(--text-secondary);opacity:0.6;">
+      <p id="account-settings-guest-msg" style="font-size:13px;color:var(--text-secondary);text-align:center;margin:0;display:none;">Sign in to manage your account.</p>
+
+      <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--text-secondary);opacity:0.6;">
         <a href="/privacy" target="_blank" style="color:inherit;text-decoration:none;">Privacy Policy</a> · <a href="/terms" target="_blank" style="color:inherit;text-decoration:none;">Terms of Service</a>
       </div>
       <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="closeSettings(); triggerHaptic(20)">Done</button>
@@ -666,10 +683,15 @@
     <div class="modal" style="max-width:380px;">
       <div class="modal-handle"></div>
       <h3 style="color:var(--warning);">⚠️ Save Your Recovery Codes</h3>
-      <p style="font-size:13px;color:var(--text-secondary);margin:8px 0 16px;">These 16 codes can reset your password if you forget it. Each code works once. Store them somewhere safe — they won't be shown again.</p>
-      <div id="recovery-codes-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px;"></div>
-      <button class="btn-primary" style="width:100%;margin-bottom:8px;" onclick="copyRecoveryCodes()">📋 Copy All Codes</button>
-      <button class="btn-secondary" style="width:100%;" onclick="closeRecoveryModal()">I've saved them</button>
+      <p style="font-size:13px;color:var(--text-secondary);margin:8px 0 12px;">These 16 one-time codes reset your password if you forget it. They <strong>won't be shown again</strong> — save them somewhere safe.</p>
+      <div id="recovery-codes-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;"></div>
+      <button class="btn-primary" style="width:100%;margin-bottom:12px;" onclick="copyRecoveryCodes()">📋 Copy All Codes</button>
+      <p style="font-size:12px;color:var(--text-secondary);margin:0 0 6px;">Type any one code to confirm you've saved them:</p>
+      <input type="text" id="recovery-confirm-input" placeholder="e.g. a1b2c3d4" autocomplete="off"
+        style="font-family:monospace;letter-spacing:1px;margin-bottom:8px;"
+        oninput="validateRecoveryConfirm()">
+      <div id="recovery-confirm-error" style="font-size:12px;color:#ff6b6b;min-height:16px;margin-bottom:6px;"></div>
+      <button class="btn-secondary" style="width:100%;" id="recovery-done-btn" onclick="closeRecoveryModal()" disabled style="opacity:0.5;">Done — I've saved my codes</button>
     </div>
   </div>
 
@@ -1442,6 +1464,10 @@
       if (changePwBtn) changePwBtn.style.display = currentUserEmail ? '' : 'none';
       const deleteAcctBtn = document.getElementById('delete-acct-btn');
       if (deleteAcctBtn) deleteAcctBtn.style.display = currentUserEmail ? '' : 'none';
+      const restoreBtn = document.getElementById('restore-btn');
+      if (restoreBtn) restoreBtn.style.display = (currentUserEmail && !localStorage.getItem('calpal_restored')) ? '' : 'none';
+      const guestMsg = document.getElementById('account-settings-guest-msg');
+      if (guestMsg) guestMsg.style.display = currentUserEmail ? 'none' : '';
     }
 
     // ── Local storage ──
@@ -2472,6 +2498,14 @@
       });
       _renderEventsList(filtered);
     }
+    function toggleSearchFilters() {
+      const row = document.getElementById('search-filters-row');
+      const btn = document.getElementById('filter-toggle-btn');
+      const open = row.style.display === 'none';
+      row.style.display = open ? 'flex' : 'none';
+      btn.style.background = open ? 'rgba(74,157,111,0.15)' : 'var(--bg-light)';
+      btn.style.borderColor = open ? 'var(--primary)' : 'var(--border-color)';
+    }
     function clearSearchFilters() {
       document.getElementById('search-input').value = '';
       document.getElementById('search-from').value = '';
@@ -2531,11 +2565,12 @@
           renderUpcomingEvents();
           renderEventsPage();
           showStatus(`✓ ${data.claimed} event${data.claimed === 1 ? '' : 's'} restored`, 'success');
-          // Hide the button after successful restore
-          const btn = document.getElementById('restore-btn');
-          if (btn) btn.style.display = 'none';
+          localStorage.setItem('calpal_restored', '1');
+          updateUserChip();
         } else {
           showStatus('No legacy events found', 'error');
+          localStorage.setItem('calpal_restored', '1');
+          updateUserChip();
         }
       } catch (err) {
         showStatus('Restore failed — try again', 'error');
@@ -2663,10 +2698,26 @@
     function showRecoveryCodes(codes) {
       const grid = document.getElementById('recovery-codes-grid');
       grid.innerHTML = codes.map(c => `<code style="background:var(--bg-light);border-radius:6px;padding:6px 8px;font-size:12px;font-family:monospace;text-align:center;">${c}</code>`).join('');
+      const confirmInput = document.getElementById('recovery-confirm-input');
+      const doneBtn = document.getElementById('recovery-done-btn');
+      const errEl = document.getElementById('recovery-confirm-error');
+      if (confirmInput) confirmInput.value = '';
+      if (errEl) errEl.textContent = '';
+      if (doneBtn) { doneBtn.disabled = true; doneBtn.style.opacity = '0.5'; }
       document.getElementById('recovery-overlay').classList.add('active');
       window._recoveryCodes = codes;
     }
+    function validateRecoveryConfirm() {
+      const val = document.getElementById('recovery-confirm-input').value.trim().toLowerCase();
+      const codes = window._recoveryCodes || [];
+      const valid = codes.includes(val);
+      const doneBtn = document.getElementById('recovery-done-btn');
+      const errEl = document.getElementById('recovery-confirm-error');
+      if (doneBtn) { doneBtn.disabled = !valid; doneBtn.style.opacity = valid ? '1' : '0.5'; }
+      if (errEl) errEl.textContent = val.length >= 8 && !valid ? 'Code not recognised — check for typos' : '';
+    }
     function closeRecoveryModal() {
+      if (document.getElementById('recovery-done-btn')?.disabled) return;
       document.getElementById('recovery-overlay').classList.remove('active');
       window._recoveryCodes = null;
     }
