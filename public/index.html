@@ -67,29 +67,24 @@
     .dropdown-item:active { background: rgba(74,157,111,0.18); }
 
     /* ── FAB ── */
-    .fab { position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 54px; height: 54px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(74,157,111,0.4); z-index: 100; transition: transform 0.15s, box-shadow 0.15s; }
-    .fab:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(74,157,111,0.4); }
+    .fab { position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px)); right: 20px; width: 56px; height: 56px; background: var(--primary); color: white; border: none; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(74,157,111,0.45), 0 1px 6px rgba(74,157,111,0.2); z-index: 100; transition: transform 0.12s, box-shadow 0.12s; }
+    .fab:active { transform: scale(0.89); box-shadow: 0 2px 8px rgba(74,157,111,0.3); }
+    body.week-mode .fab { bottom: max(96px, calc(env(safe-area-inset-bottom) + 92px)); }
 
     /* ── STATUS ── */
     #status-message { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 3000; pointer-events: none; }
-    .status-message { padding: 12px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; animation: slideDown 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+    .status-message { padding: 12px 16px; border-radius: 14px; font-size: 13px; font-weight: 600; animation: slideDown 0.25s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
     .status-message.success { background: linear-gradient(135deg, var(--success) 0%, #1fa5a5 100%); color: white; }
     .status-message.error { background: linear-gradient(135deg, var(--error) 0%, #cc2a1e 100%); color: white; }
 
     /* ── TABS ── */
-    .section-tabs { display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-dark); flex-shrink: 0; }
-    .tab-button { flex: 1; padding: 12px 0; background: none; border: none; border-bottom: 3px solid transparent; font-size: 14px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: color 0.2s, border-color 0.2s; letter-spacing: 0.2px; position: relative; }
+    .section-tabs { display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-dark); flex-shrink: 0; padding: 8px 12px 0; gap: 4px; }
+    .tab-button { flex: 1; padding: 8px 0; background: none; border: none; border-bottom: 2.5px solid transparent; font-size: 14px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: color 0.18s, border-color 0.18s; letter-spacing: 0.1px; border-radius: 8px 8px 0 0; }
     .tab-button.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .tab-button.active::after {
-      content: '';
-      position: absolute;
-      bottom: -1px; left: 20%; right: 20%;
-      height: 2px; border-radius: 1px;
-      background: var(--primary);
-    }
+    .tab-button:active { background: rgba(74,157,111,0.08); }
 
     /* ── MAIN CONTENT ── */
-    .main-content { display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
+    .main-content { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
     .tab-content { display: none; flex-direction: column; flex: 1; }
     .tab-content.active { display: flex; animation: tabFadeIn 0.22s ease both; }
     @keyframes tabFadeIn {
@@ -126,26 +121,28 @@
     input:checked + .slider:before { transform: translateX(20px); }
 
     /* ── CALENDAR (MONTH VIEW) ── */
-    #calendar-tab { overflow-y: auto !important; flex-direction: column !important; padding-bottom: 80px; }
-    .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); flex-shrink: 0; }
-    .month-year { font-size: 17px; font-weight: 700; color: var(--text-primary); }
-    .month-nav { display: flex; gap: 8px; align-items: center; }
-    .month-nav button { width: 36px; height: 36px; padding: 0; border-radius: 8px; background: var(--bg-light); font-size: 16px; color: var(--text-primary); min-height: auto; transition: background 0.15s; }
-    .month-nav button:active { background: var(--primary); color: white; }
-    .view-toggle-btn { padding: 6px 12px; font-size: 12px; width: auto; min-height: auto; height: 36px; border-radius: 8px; background: var(--bg-light); color: var(--text-secondary); border: none; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    #calendar-tab { overflow: hidden; flex-direction: column; min-height: 0; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); flex-shrink: 0; }
+    .month-year { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.3px; }
+    .month-nav { display: flex; gap: 6px; align-items: center; }
+    .month-nav button { width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--bg-light); font-size: 15px; color: var(--text-primary); min-height: auto; transition: background 0.12s, transform 0.1s; }
+    .month-nav button:active { background: var(--primary); color: white; transform: scale(0.9); }
+    .view-toggle-btn { padding: 7px 14px; font-size: 12px; width: auto; min-height: auto; height: 34px; border-radius: 20px; background: var(--bg-light); color: var(--text-secondary); border: none; font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.2px; }
     .view-toggle-btn:active, .view-toggle-btn.active { background: var(--primary); color: white; }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 10px 12px; background: var(--bg-card); flex-shrink: 0; }
-    .day-header { text-align: center; font-weight: 700; color: var(--text-secondary); padding: 6px 0; font-size: 11px; letter-spacing: 0.5px; }
-    .day-cell { aspect-ratio: 1; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 40px; position: relative; transition: background 0.15s, transform 0.1s, border-color 0.15s; }
-    .day-cell:active { transform: scale(0.94); border-color: var(--primary); }
-    .day-cell.other-month { background: transparent; border-color: transparent; opacity: 0.25; }
-    .day-cell.today { border: 2px solid var(--primary); box-shadow: 0 0 0 1px var(--primary), inset 0 0 10px rgba(74,157,111,0.08); }
-    .day-cell.selected { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-color: var(--primary); }
-    .day-number { font-size: 13px; font-weight: 700; color: var(--text-primary); }
-    .day-cell.selected .day-number { color: white; }
-    .day-dots { display: flex; gap: 2px; margin-top: 3px; flex-wrap: wrap; justify-content: center; }
-    .day-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
-    .day-cell.selected .day-dot { background: rgba(255,255,255,0.85); }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 6px 10px 10px; background: var(--bg-card); flex-shrink: 0; }
+    .day-header { text-align: center; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; font-size: 11px; letter-spacing: 0.5px; }
+    .day-cell { aspect-ratio: 1; border: none; border-radius: 10px; padding: 3px 2px; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 38px; position: relative; transition: background 0.12s, transform 0.1s; }
+    .day-cell:active { transform: scale(0.88); background: rgba(74,157,111,0.1); }
+    .day-cell.other-month { background: transparent; opacity: 0.2; }
+    .day-cell.today { background: transparent; }
+    .day-cell.selected { background: transparent; }
+    .day-number { font-size: 13px; font-weight: 600; color: var(--text-primary); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.12s, color 0.12s, border-color 0.12s; border: 2px solid transparent; }
+    .day-cell.today .day-number { background: var(--primary); color: white; font-weight: 700; border-color: var(--primary); }
+    .day-cell.selected .day-number { background: transparent; color: var(--primary); font-weight: 700; border-color: var(--primary); }
+    .day-cell.today.selected .day-number { background: var(--primary-dark); color: white; border-color: var(--primary-dark); box-shadow: 0 2px 8px rgba(74,157,111,0.45); }
+    .day-dots { display: flex; gap: 3px; margin-top: 2px; flex-wrap: wrap; justify-content: center; }
+    .day-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--primary); opacity: 0.8; }
+    .day-cell.selected .day-dot { background: var(--primary); opacity: 0.5; }
     .day-dot.more { background: var(--text-secondary); }
     /* ── AUTH MODAL ── */
     #auth-overlay { position: fixed; inset: 0; background: var(--bg-dark); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
@@ -182,33 +179,35 @@
     }
 
     /* ── UPCOMING EVENTS (calendar tab sidebar) ── */
-    .events-container { padding: 10px 14px 80px; background: var(--bg-card); border-top: 1px solid var(--border-color); overflow-y: auto; flex: 1; }
-    .upcoming-day-group { margin-bottom: 20px; }
-    .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-color); }
+    .events-container { padding: 12px 14px 80px; background: var(--bg-dark); border-top: 1px solid var(--border-color); overflow-y: auto; flex: 1; }
+    .upcoming-day-group { margin-bottom: 16px; }
+    .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.7; }
 
     /* ── HORIZONTAL WEEK VIEW ── */
-    #week-view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-    .week-timeline { display: flex; flex: 1; overflow: hidden; }
+    #week-spacer { display: none; flex-shrink: 0; height: 68px; background: var(--bg-dark); border-top: 1px solid var(--border-color); }
+    #week-view { display: none; flex: 1; min-height: 0; overflow: hidden; flex-direction: column; }
+    .week-timeline { display: flex; flex: 1; min-height: 0; overflow: hidden; }
     /* Fixed left label column */
-    .week-labels { width: 90px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--bg-dark); border-right: 2px solid var(--primary); z-index: 2; }
+    .week-labels { width: 84px; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-dark); border-right: 1px solid var(--border-color); z-index: 2; }
     .week-label-header { height: 28px; display: flex; align-items: center; justify-content: center; background: var(--bg-dark); border-bottom: 1px solid var(--border-color); flex-shrink: 0; font-size: 9px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
-    .week-day-label { height: var(--row-h); flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; padding: 4px 8px; border-bottom: 1px solid var(--border-color); gap: 2px; position: relative; overflow: hidden; }
-    .week-day-label.today { background: rgba(74,157,111,0.08); }
-    .week-day-label.today::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--primary); border-radius: 0 2px 2px 0; }
-    .week-day-name-text { font-size: 10px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
-    .week-day-date-text { font-size: 18px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+    .week-day-label { flex: 1; min-height: 54px; display: flex; flex-direction: column; justify-content: center; padding: 4px 10px; border-bottom: 1px solid var(--border-color); gap: 1px; position: relative; overflow: hidden; cursor: pointer; transition: background 0.12s; }
+    .week-day-label:active { background: rgba(74,157,111,0.08); }
+    .week-day-label.today { background: rgba(74,157,111,0.06); }
+    .week-day-label.today::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2.5px; background: var(--primary); border-radius: 0 2px 2px 0; }
+    .week-day-name-text { font-size: 9px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .week-day-date-text { font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1; letter-spacing: -0.5px; }
     .week-day-name-text.today, .week-day-date-text.today { color: var(--primary); }
     /* All-day pills in label column */
     .week-allday-pill { font-size: 8px; font-weight: 700; color: white; background: rgba(74,157,111,0.7); border-radius: 3px; padding: 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 76px; cursor: pointer; margin-top: 1px; }
     .week-allday-pill:active { opacity: 0.7; }
     /* Scrollable time area */
-    .week-scroll-area { flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-gutter: stable; -webkit-overflow-scrolling: touch; }
-    .week-scroll-inner { display: inline-flex; flex-direction: column; min-width: max-content; }
+    .week-scroll-area { flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-gutter: stable; display: flex; align-items: stretch; }
+    .week-scroll-inner { flex: 0 0 auto; min-width: max-content; display: flex; flex-direction: column; }
     /* Hour header */
     .week-hour-header { display: flex; height: 28px; position: relative; border-bottom: 1px solid var(--border-color); background: var(--bg-dark); flex-shrink: 0; }
     .week-hour-cell { width: var(--hour-w); flex-shrink: 0; font-size: 9px; color: var(--text-secondary); text-align: center; border-right: 1px solid rgba(66,66,69,0.4); display: flex; align-items: center; justify-content: center; font-weight: 500; }
     /* Day rows */
-    .week-day-row { display: flex; height: var(--row-h); border-bottom: 1px solid var(--border-color); position: relative; background: var(--bg-card); }
+    .week-day-row { display: flex; flex: 1; min-height: 54px; border-bottom: 1px solid var(--border-color); position: relative; background: var(--bg-card); overflow: hidden; }
     .week-day-row.today { background: rgba(74,157,111,0.05); }
     .week-day-row:last-child { border-bottom: none; }
     .week-hour-slot { width: var(--hour-w); flex-shrink: 0; border-right: 1px solid rgba(66,66,69,0.25); }
@@ -221,8 +220,9 @@
     .week-current-time::before { content: ''; position: absolute; top: -4px; left: -4px; width: 10px; height: 10px; background: #ff453a; border-radius: 50%; box-shadow: 0 0 6px rgba(255,69,58,0.6); }
 
     /* ── EVENT CARDS ── */
-    .event-item { background: linear-gradient(135deg, var(--bg-light) 0%, rgba(58,58,60,0.85) 100%); padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid var(--primary); cursor: pointer; transition: transform 0.1s, background 0.1s, box-shadow 0.15s ease; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-    .event-item:active { transform: scale(0.98); background: var(--bg-light) !important; box-shadow: 0 4px 16px rgba(74,157,111,0.18); }
+    .event-item { background: var(--bg-card); padding: 11px 14px; border-radius: 14px; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 3px solid var(--primary); cursor: pointer; transition: transform 0.12s, opacity 0.12s; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .event-item:active { transform: scale(0.97); opacity: 0.85; }
+    body.light-mode .event-item { box-shadow: 0 1px 8px rgba(0,0,0,0.07); }
     .event-item.swipe-left { transform: translateX(-100px); }
     .event-swipe-actions { position: absolute; right: 0; top: 0; height: 100%; display: flex; }
     .swipe-action { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; border: none; min-width: 52px; min-height: auto; transition: opacity 0.15s; }
@@ -249,16 +249,16 @@
     .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
 
     /* ── MODALS ── */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 2000; padding: max(12px, env(safe-area-inset-top)) 12px 0 12px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: background-color 0.2s; }
-    .modal-overlay.active { display: flex; align-items: flex-end; animation: fadeIn 0.2s ease; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); z-index: 1000; display: none; align-items: flex-end; justify-content: center; transition: opacity 0.2s; }
+    .modal-overlay.active { display: flex; animation: fadeIn 0.18s ease both; }
     .modal-overlay.active .modal { animation: slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1) both; }
     @keyframes slideUp {
       from { transform: translateY(100%); opacity: 0; }
       to   { transform: translateY(0);    opacity: 1; }
     }
-    .modal { background: var(--bg-card); border-radius: 20px 20px 0 0; width: 100%; max-height: 84vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .modal { background: var(--bg-card); border-radius: 24px 24px 0 0; padding: 16px 18px 24px; width: 100%; max-width: 500px; max-height: 88vh; overflow-y: auto; box-shadow: 0 -4px 32px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 12px; }
     .modal h3 { font-size: 17px; font-weight: 700; color: var(--text-primary); }
-    .modal-handle { width: 36px; height: 4px; background: var(--border-color); border-radius: 2px; margin: 0 auto 8px; }
+    .modal-handle { width: 40px; height: 4px; background: rgba(128,128,128,0.35); border-radius: 2px; margin: 0 auto 18px; }
     .confirmation-modal { padding: 24px 20px; }
     .confirmation-detail { background: var(--bg-light); padding: 11px 12px; border-radius: 8px; margin-bottom: 8px; }
     .confirmation-label { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
@@ -284,6 +284,8 @@
     @keyframes slideUpModal { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUpToast { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes bottomPanelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .calendar-bottom-enter { animation: bottomPanelIn 0.2s ease both; }
     @keyframes slideOutToLeft { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(-28px); } }
     @keyframes slideInFromRight { from { opacity:0; transform:translateX(28px); } to { opacity:1; transform:translateX(0); } }
     @keyframes slideOutToRight { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(28px); } }
@@ -332,7 +334,7 @@
     #onboarding-overlay.hidden { display:none; }
     .ob-slide { display:none;flex-direction:column;align-items:center;text-align:center;max-width:320px; }
     .ob-slide.active { display:flex; }
-    .ob-icon { font-size:72px;margin-bottom:24px; }
+    .ob-icon { width:72px;height:72px;border-radius:20px;background:rgba(74,157,111,0.15);border:2px solid rgba(74,157,111,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:28px;font-weight:800;color:var(--primary);letter-spacing:-1px; }
     .ob-title { font-size:26px;font-weight:700;color:var(--text-primary);margin-bottom:12px; }
     .ob-desc { font-size:16px;color:var(--text-secondary);line-height:1.6;margin-bottom:32px; }
     .ob-dots { display:flex;gap:8px;margin-bottom:32px; }
@@ -346,7 +348,7 @@
       <h1>Mark<span>ed</span></h1>
       <div class="header-right">
         <div class="weather-widget" id="weather-widget" style="display:none;">
-          <span class="weather-icon" id="weather-icon">☀️</span>
+          <span class="weather-icon" id="weather-icon"></span>
           <span class="weather-temp" id="weather-temp">--°</span>
         </div>
         <div class="sync-indicator" id="sync-indicator"></div>
@@ -354,10 +356,10 @@
       </div>
       <div class="dropdown-menu" id="dropdown-menu">
         <div id="user-chip-wrap" style="padding:10px 14px 6px;display:none;"><div class="user-chip" id="user-chip"></div></div>
-        <button class="dropdown-item" id="restore-btn" onclick="restoreLegacyEvents(); triggerHaptic(20)" style="color:var(--primary);">♻️ Restore My Events</button>
-        <button class="dropdown-item" onclick="openArchiveModal(); triggerHaptic(20)">📦 Archive Past Events</button>
-        <button class="dropdown-item" onclick="viewArchived(); triggerHaptic(20)">📂 View Archive</button>
-        <button class="dropdown-item" onclick="openSettings(); triggerHaptic(20)">⚙️ Settings</button>
+        <button class="dropdown-item" id="restore-btn" onclick="restoreLegacyEvents(); triggerHaptic(20)" style="color:var(--primary);">Restore My Events</button>
+        <button class="dropdown-item" onclick="openArchiveModal(); triggerHaptic(20)">Archive Past Events</button>
+        <button class="dropdown-item" onclick="viewArchived(); triggerHaptic(20)">View Archive</button>
+        <button class="dropdown-item" onclick="openSettings(); triggerHaptic(20)">Settings</button>
         <button class="dropdown-item" id="logout-btn" onclick="logout(); triggerHaptic(20)" style="display:none;color:#ff6b6b;">↩ Sign Out</button>
       </div>
     </header>
@@ -405,17 +407,11 @@
           </div>
         </div>
 
-        <!-- Upcoming events (calendar tab) -->
-        <div class="events-container" id="upcoming-container">
-          <div class="upcoming-day-group" id="today-section"></div>
-          <div class="upcoming-day-group" id="tomorrow-section"></div>
-          <div class="upcoming-day-group" id="week-section"></div>
-          <div class="upcoming-day-group" id="month-section"></div>
-          <div class="upcoming-day-group" id="later-section"></div>
-        </div>
+        <!-- Week view bottom buffer (visible only in week mode) -->
+        <div id="week-spacer"></div>
 
-        <!-- Selected-day events (shown inline replacing upcoming when a day is tapped) -->
-        <div id="calendar-day-events" style="display:none;flex:1;overflow-y:auto;padding:0 14px 80px;background:var(--bg-card);border-top:1px solid var(--border-color);"></div>
+        <!-- Calendar bottom: upcoming events OR selected-day schedule -->
+        <div id="calendar-bottom" class="events-container"></div>
       </div>
 
       <!-- ── EVENTS TAB ── -->
@@ -423,7 +419,7 @@
         <div style="padding:10px 14px 6px;background:var(--bg-dark);position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border-color);flex-shrink:0;">
           <div style="display:flex;gap:8px;align-items:center;">
             <div style="flex:1;position:relative;">
-              <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;opacity:0.5;">🔍</span>
+              <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;pointer-events:none;opacity:0.4;color:var(--text-secondary);">Search</span>
               <input type="search" id="search-input" placeholder="Search events…" oninput="filterEvents()"
                 style="width:100%;box-sizing:border-box;padding:9px 12px 9px 34px;border-radius:10px;border:1.5px solid var(--border-color);background:var(--bg-light);color:var(--text-primary);font-size:15px;">
             </div>
@@ -451,7 +447,7 @@
       <div class="modal-handle"></div>
       <h3>Confirm Event</h3>
       <div id="confirmation-content"></div>
-      <button class="edit-button-modal" onclick="enterEditMode(); triggerHaptic(20)">✏️ Edit Before Saving</button>
+      <button class="edit-button-modal" onclick="enterEditMode(); triggerHaptic(20)">Edit Before Saving</button>
       <div class="confirmation-buttons">
         <button class="btn-secondary" style="flex:1;" onclick="confirmParsedEvent(); triggerHaptic([60,20,60])">Confirm</button>
         <button class="btn-danger" style="flex:1;" onclick="closeConfirmation(); triggerHaptic([100,50,100])">Cancel</button>
@@ -464,7 +460,6 @@
     <div class="modal" style="max-width:360px;">
       <div class="modal-handle"></div>
       <div style="text-align:center;padding:16px 0;">
-        <div style="font-size:44px;margin-bottom:12px;">🔁</div>
         <div style="font-size:16px;font-weight:700;margin-bottom:8px;color:var(--text-primary);">Duplicate Event</div>
         <div id="duplicate-message" style="font-size:14px;color:var(--text-secondary);line-height:1.5;"></div>
       </div>
@@ -472,15 +467,6 @@
     </div>
   </div>
 
-  <!-- ── DAY MODAL ── -->
-  <div class="modal-overlay" id="day-modal-overlay">
-    <div class="modal">
-      <div class="modal-handle"></div>
-      <div class="day-events-title" id="day-modal-title"></div>
-      <div id="day-modal-events"></div>
-      <button class="btn-secondary" style="margin-top:4px;" onclick="closeDayModal(); triggerHaptic(20)">Close</button>
-    </div>
-  </div>
 
   <!-- ── EDIT MODAL ── -->
   <div class="modal-overlay" id="modal-overlay">
@@ -535,7 +521,7 @@
         <button class="btn-danger" style="flex:1;" onclick="deleteEditingEvent(); triggerHaptic([100,50,100])">Delete</button>
         <button class="btn-secondary" style="flex:1;" onclick="closeModal(); triggerHaptic(20)">Cancel</button>
       </div>
-      <button class="btn-secondary" style="width:100%;margin-top:8px;" onclick="shareEvent(allEvents.find(e=>e.id===editingEventId)); triggerHaptic(20)">📤 Share</button>
+      <button class="btn-secondary" style="width:100%;margin-top:8px;" onclick="shareEvent(allEvents.find(e=>e.id===editingEventId)); triggerHaptic(20)">Share Event</button>
     </div>
   </div>
 
@@ -543,7 +529,7 @@
   <div class="modal-overlay" id="archive-modal-overlay">
     <div class="modal archive-modal">
       <div class="modal-handle"></div>
-      <h3>📂 Archive</h3>
+      <h3>Archive</h3>
       <div id="archived-events-list"></div>
       <button class="btn-secondary" style="width:100%;margin-top:4px;" onclick="closeArchiveModal(); triggerHaptic(20)">Close</button>
     </div>
@@ -563,7 +549,7 @@
         <label>Password</label>
         <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
       </div>
-      <button class="auth-submit" id="auth-submit-btn" onclick="submitAuth()">Sign In</button>
+      <button class="auth-submit" id="auth-submit-btn" onclick="submitAuth();triggerHaptic([30,20,30])">Sign In</button>
       <div class="auth-toggle" id="auth-toggle-text">
         No account? <span onclick="toggleAuthMode()">Create one</span>
       </div>
@@ -596,7 +582,7 @@
           <input type="text" id="reset-code" placeholder="123456" autocomplete="one-time-code" maxlength="6" inputmode="numeric" style="font-family:monospace;letter-spacing:6px;font-size:22px;text-align:center;">
         </div>
         <div class="auth-field"><label>New Password</label><input type="password" id="reset-new-password" placeholder="Min 8 characters" autocomplete="new-password"></div>
-        <p style="font-size:12px;color:var(--warning);margin:4px 0 12px;text-align:center;">⚠️ Events encrypted with your old password will be lost</p>
+        <p style="font-size:12px;color:var(--warning);margin:4px 0 12px;text-align:center;">Events encrypted with your old password will be lost</p>
         <button class="auth-submit" id="reset-submit-btn" onclick="submitResetPassword()">Reset Password</button>
         <div style="margin-top:10px;text-align:center;"><span onclick="showResetStep1()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.8;">← Use a different email</span></div>
       </div>
@@ -632,16 +618,16 @@
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
       <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">Calendar Data</p>
-      <button class="btn-secondary" style="width:100%;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">📤 Export .ics</button>
+      <button class="btn-secondary" style="width:100%;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">Export .ics</button>
       <label style="width:100%;margin-top:8px;display:block;">
         <input type="file" id="ical-import-input" accept=".ics" style="display:none;" onchange="importIcalFile(event); closeSettings()">
-        <span class="btn-secondary" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box;" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">📥 Import .ics</span>
+        <span class="btn-secondary" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box;" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">Import .ics</span>
       </label>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;" id="account-settings-divider"></div>
       <p class="settings-section-label" id="account-settings-label" style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">Account</p>
-      <button class="btn-secondary" id="change-pw-btn" style="width:100%;display:none;" onclick="openChangePassword(); triggerHaptic(20)">🔒 Change Password</button>
-      <button class="btn-danger" id="delete-acct-btn" style="width:100%;margin-top:8px;display:none;" onclick="openDeleteAccount(); triggerHaptic(20)">🗑 Delete Account</button>
+      <button class="btn-secondary" id="change-pw-btn" style="width:100%;display:none;" onclick="openChangePassword(); triggerHaptic(20)">Change Password</button>
+      <button class="btn-danger" id="delete-acct-btn" style="width:100%;margin-top:8px;display:none;" onclick="openDeleteAccount(); triggerHaptic(20)">Delete Account</button>
       <p id="account-settings-guest-msg" style="font-size:13px;color:var(--text-secondary);text-align:center;margin:0;display:none;">Sign in to manage your account.</p>
 
       <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--text-secondary);opacity:0.6;">
@@ -742,10 +728,10 @@
   <div class="modal-overlay" id="recovery-overlay">
     <div class="modal" style="max-width:380px;">
       <div class="modal-handle"></div>
-      <h3 style="color:var(--warning);">⚠️ Save Your Recovery Codes</h3>
+      <h3 style="color:var(--warning);">Save Your Recovery Codes</h3>
       <p style="font-size:13px;color:var(--text-secondary);margin:8px 0 12px;">These 16 one-time codes reset your password if you forget it. They <strong>won't be shown again</strong> — save them somewhere safe.</p>
       <div id="recovery-codes-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;"></div>
-      <button class="btn-primary" style="width:100%;margin-bottom:12px;" onclick="copyRecoveryCodes()">📋 Copy All Codes</button>
+      <button class="btn-primary" style="width:100%;margin-bottom:12px;" onclick="copyRecoveryCodes()">Copy All Codes</button>
       <p style="font-size:12px;color:var(--text-secondary);margin:0 0 6px;">Type any one code to confirm you've saved them:</p>
       <input type="text" id="recovery-confirm-input" placeholder="e.g. a1b2c3d4" autocomplete="off"
         style="font-family:monospace;letter-spacing:1px;margin-bottom:8px;"
@@ -759,7 +745,6 @@
   <div class="modal-overlay" id="verify-email-overlay">
     <div class="modal" style="max-width:340px;">
       <div class="modal-handle"></div>
-      <div style="text-align:center;font-size:48px;margin-bottom:4px;">✉️</div>
       <h3 style="text-align:center;margin-bottom:6px;">Verify Your Email</h3>
       <p style="font-size:14px;color:var(--text-secondary);text-align:center;margin:0 0 16px;line-height:1.5;">We sent a 6-digit code to<br><strong id="verify-email-display" style="color:var(--text-primary);"></strong></p>
       <div id="verify-error" style="font-size:13px;color:#ff6b6b;text-align:center;min-height:18px;margin-bottom:8px;"></div>
@@ -778,7 +763,7 @@
     <div class="modal" style="max-width:340px;">
       <div class="modal-handle"></div>
       <h3>Change Password</h3>
-      <p style="font-size:13px;color:var(--warning);margin:4px 0 12px;">⚠️ Changing your password will re-derive your encryption key. Events encrypted with the old password will be inaccessible.</p>
+      <p style="font-size:13px;color:var(--warning);margin:4px 0 12px;">Changing your password will re-derive your encryption key. Events encrypted with the old password will be inaccessible.</p>
       <div class="auth-field"><label>Current Password</label><input type="password" id="cp-current" placeholder="••••••••"></div>
       <div class="auth-field"><label>New Password</label><input type="password" id="cp-new" placeholder="Min 8 characters"></div>
       <div id="cp-error" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:8px;"></div>
@@ -807,22 +792,22 @@
   <!-- ── ONBOARDING OVERLAY ── -->
   <div id="onboarding-overlay" class="hidden">
     <div class="ob-slide active" id="ob-0">
-      <div class="ob-icon">📅</div>
+      <div class="ob-icon">M</div>
       <div class="ob-title">Welcome to Marked</div>
       <div class="ob-desc">Your AI-powered personal calendar. Add events in plain English and let Marked figure out the rest.</div>
     </div>
     <div class="ob-slide" id="ob-1">
-      <div class="ob-icon">✨</div>
+      <div class="ob-icon">AI</div>
       <div class="ob-title">Smart Event Parsing</div>
       <div class="ob-desc">Just type "dentist next Tuesday at 2pm" or "team meeting every Monday 9-10am" and Marked handles scheduling.</div>
     </div>
     <div class="ob-slide" id="ob-2">
-      <div class="ob-icon">🔒</div>
+      <div class="ob-icon">E2E</div>
       <div class="ob-title">Private &amp; Encrypted</div>
       <div class="ob-desc">All your events are end-to-end encrypted. Only you can read them — not even we can.</div>
     </div>
     <div class="ob-slide" id="ob-3">
-      <div class="ob-icon">🌐</div>
+      <div class="ob-icon">↑↓</div>
       <div class="ob-title">Syncs Everywhere</div>
       <div class="ob-desc">Your calendar stays in sync across all your devices. Sign in anywhere to access your schedule.</div>
     </div>
@@ -886,6 +871,7 @@
     const HOUR_W = 64; // mirrors --hour-w CSS var
     let barDragState = null;
     let barDragJustEnded = false;
+    let barLongPressTimer = null;
 
     // ── Task 2: Category state ──
     let addEventCategory = 'work';
@@ -898,6 +884,7 @@
       container.querySelectorAll('.cat-btn').forEach(btn => {
         btn.classList.toggle('selected', btn.dataset.cat === cat);
       });
+      triggerHaptic(12);
     }
 
     function getCategoryColor(cat) {
@@ -1125,7 +1112,7 @@
       const modal = document.getElementById('archive-modal-overlay');
       const list = document.getElementById('archived-events-list');
       if (archivedEvents.length === 0) {
-        list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div>No archived events</div>';
+        list.innerHTML = '<div class="empty-state">No archived events</div>';
       } else {
         const sorted = [...archivedEvents].sort((a, b) => new Date(b.date) - new Date(a.date));
         list.innerHTML = sorted.map(event => {
@@ -1325,7 +1312,7 @@
       if (btn) btn.classList.add('active');
       closeMenuOnTab();
       if (tab === 'events') renderEventsPage();
-      if (tab === 'calendar') { renderCalendar(); renderUpcomingEvents(); renderCalendarDayEvents(); }
+      if (tab === 'calendar') { renderCalendar(); renderUpcomingEvents(); }
     }
     function toggleMenu() {
       document.getElementById('dropdown-menu').classList.toggle('active');
@@ -1729,12 +1716,12 @@
     }
     function getWeatherIcon(condition) {
       const c = condition.toLowerCase();
-      if (c.includes('cloud')) return '☁️';
-      if (c.includes('rain')) return '🌧️';
-      if (c.includes('snow')) return '❄️';
-      if (c.includes('clear') || c.includes('sunny')) return '☀️';
-      if (c.includes('wind')) return '💨';
-      return '🌤️';
+      if (c.includes('cloud')) return 'Cloudy';
+      if (c.includes('rain')) return 'Rain';
+      if (c.includes('snow')) return 'Snow';
+      if (c.includes('clear') || c.includes('sunny')) return 'Clear';
+      if (c.includes('wind')) return 'Windy';
+      return 'Clear';
     }
 
     // ── Duplicate / overlap checks ──
@@ -1773,8 +1760,8 @@
       const wrap = document.createElement('div');
       wrap.style.cssText = 'text-align:center;padding:16px 0;';
       const icon = document.createElement('div');
-      icon.style.cssText = 'font-size:44px;margin-bottom:12px;';
-      icon.textContent = '⚠️';
+      icon.style.cssText = 'font-size:13px;font-weight:700;color:var(--warning);margin-bottom:8px;';
+      icon.textContent = 'Note';
       const title = document.createElement('div');
       title.style.cssText = 'font-size:16px;font-weight:700;margin-bottom:8px;color:var(--text-primary);';
       title.textContent = `"${eventTitle}" overlaps another event`;
@@ -2215,16 +2202,12 @@
     function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
 
     function toggleView() {
-      const dayEvPanel = document.getElementById('calendar-day-events');
-      if (dayEvPanel && dayEvPanel.style.display !== 'none') {
-        dayEvPanel.style.display = 'none';
-        dayEvPanel.innerHTML = '';
-        selectedDate = null;
-      }
+      if (selectedDate) { selectedDate = null; }
       const btn = document.getElementById('view-toggle-btn');
       const monthView = document.getElementById('month-view');
       const weekView = document.getElementById('week-view');
-      const upcoming = document.getElementById('upcoming-container');
+      const bottom = document.getElementById('calendar-bottom');
+      const spacer = document.getElementById('week-spacer');
       const ANIM = 180;
 
       if (!isWeekView) {
@@ -2233,8 +2216,10 @@
         monthView.style.animation = `slideOutToLeft ${ANIM}ms ease forwards`;
         setTimeout(() => {
           isWeekView = true;
+          document.body.classList.add('week-mode');
           monthView.style.display = 'none'; monthView.style.animation = '';
-          upcoming.style.display = 'none';
+          if (bottom) bottom.style.display = 'none';
+          if (spacer) spacer.style.display = 'block';
           weekView.style.display = 'flex';
           weekView.style.animation = `slideInFromRight ${ANIM}ms ease forwards`;
           document.getElementById('month-year').textContent = '';
@@ -2246,10 +2231,12 @@
         weekView.style.animation = `slideOutToRight ${ANIM}ms ease forwards`;
         setTimeout(() => {
           isWeekView = false;
+          document.body.classList.remove('week-mode');
           weekView.style.display = 'none'; weekView.style.animation = '';
+          if (spacer) spacer.style.display = 'none';
           monthView.style.display = '';
           monthView.style.animation = `slideInFromLeft ${ANIM}ms ease forwards`;
-          upcoming.style.display = '';
+          if (bottom) bottom.style.display = '';
           renderCalendar();
           renderUpcomingEvents();
         }, ANIM);
@@ -2296,32 +2283,39 @@
       const remaining = 42 - (startDow + daysInMonth);
       for (let i = 1; i <= remaining; i++) html += `<div class="day-cell other-month"><div class="day-number">${i}</div></div>`;
       document.getElementById('calendar-grid').innerHTML = html;
-      renderCalendarDayEvents();
     }
 
-    // ── Calendar day events (shown inline replacing upcoming section) ──
-    function renderCalendarDayEvents() {
-      const container = document.getElementById('calendar-day-events');
+    // ── Day events (inline, replaces upcoming section) ──
+    function _setBottomPanel(html) {
+      const container = document.getElementById('calendar-bottom');
       if (!container) return;
-      const target = selectedDate || getLocalDateString(new Date());
-      const dateObj = new Date(target + 'T00:00:00');
-      const label = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-      const dayEvs = getEventsForDate(target).filter(e => !e.isHoliday);
-      const dayHolidays = holidays.filter(h => h.date === target);
+      container.classList.remove('calendar-bottom-enter');
+      void container.offsetWidth;
+      container.innerHTML = html;
+      container.classList.add('calendar-bottom-enter');
+    }
 
+    function openDayModal(dateStr) {
+      selectedDate = dateStr;
+      renderCalendar();
+      const todayStr = getLocalDateString(new Date());
+      const dateObj = new Date(dateStr + 'T00:00:00');
+      const label = dateStr === todayStr
+        ? 'Today'
+        : dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      const dayEvs = getEventsForDate(dateStr).filter(e => !e.isHoliday);
+      const dayHolidays = holidays.filter(h => h.date === dateStr);
       const items = [...dayHolidays, ...dayEvs].sort((a, b) => {
         if (a.isHoliday && !b.isHoliday) return -1;
         if (!a.isHoliday && b.isHoliday) return 1;
         if (!a.time && !b.time) return 0;
-        if (!a.time) return 1;
-        if (!b.time) return -1;
+        if (!a.time) return 1; if (!b.time) return -1;
         return a.time.localeCompare(b.time);
       });
-
       const eventsHtml = items.length === 0
         ? `<div style="text-align:center;color:var(--text-secondary);font-size:14px;padding:32px 0;opacity:0.7;">No events</div>`
         : items.map(ev => {
-            if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.1);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;border-left:3px solid var(--warning);">🎉 ${escHtml(ev.title)}</div>`;
+            if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.1);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;border-left:3px solid var(--warning);">${escHtml(ev.title)}</div>`;
             const color = getCategoryColor(ev.category || 'work');
             const timeStr = ev.isAllDay ? 'All day' : (ev.time ? formatTimeEastern(ev.time) : '');
             return `<div onclick="openEditModal('${ev.id}');triggerHaptic([40])" style="padding:10px 12px;background:var(--bg-dark);border-radius:10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;border-left:3px solid ${color};">
@@ -2331,31 +2325,18 @@
               </div>
             </div>`;
           }).join('');
-
-      container.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;">
+      _setBottomPanel(`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;border-bottom:1px solid var(--border-color);margin-bottom:8px;">
           <span style="font-size:16px;font-weight:700;color:var(--text-primary);">${label}</span>
-          <button onclick="closeDayModal();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:20px;padding:4px 6px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
+          <button onclick="closeDayModal();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:20px;padding:4px 8px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
         </div>
         ${eventsHtml}
-      `;
-    }
-
-    // ── Day events (inline, replaces upcoming section) ──
-    function openDayModal(dateStr) {
-      selectedDate = dateStr;
-      renderCalendar();
-      renderCalendarDayEvents();
-      document.getElementById('upcoming-container').style.display = 'none';
-      document.getElementById('calendar-day-events').style.display = 'flex';
-      document.getElementById('calendar-day-events').style.flexDirection = 'column';
+      `);
     }
     function closeDayModal() {
       selectedDate = null;
       renderCalendar();
-      document.getElementById('calendar-day-events').style.display = 'none';
-      document.getElementById('calendar-day-events').innerHTML = '';
-      document.getElementById('upcoming-container').style.display = '';
+      renderUpcomingEvents();
     }
 
     // ── Upcoming events (calendar tab) ──
@@ -2375,13 +2356,14 @@
     }
 
     function renderUpcomingEvents() {
+      const container = document.getElementById('calendar-bottom');
+      if (!container || selectedDate || isWeekView) return;
       const today = new Date(); today.setHours(0,0,0,0);
       const activeEvents = allEvents.filter(e => !archivedIds.has(e.id) && new Date(e.date + 'T00:00:00') >= today);
       // Include recurring instances for the next 60 days
       const todayForUpcoming = getESTDateString();
       const sixtyDaysOut = (() => { const d = new Date(todayForUpcoming + 'T00:00:00'); d.setDate(d.getDate() + 60); return getLocalDateString(d); })();
       const recurringInstances = getRecurringInstancesInRange(todayForUpcoming, sixtyDaysOut);
-      // Merge into the events array before bucketing (avoid duplicates)
       recurringInstances.forEach(ri => { if (!activeEvents.find(e => e.id === ri.id)) activeEvents.push(ri); });
       const groups = { today: [], tomorrow: [], week: [], month: [], later: [] };
       activeEvents.forEach(event => {
@@ -2397,11 +2379,11 @@
           return (a.time || '').localeCompare(b.time || '');
         });
       });
+      let html = '';
       ['today','tomorrow','week','month','later'].forEach(section => {
-        const container = document.getElementById(`${section}-section`);
         const events = groups[section];
-        if (events.length === 0) { container.innerHTML = ''; return; }
-        let html = `<div class="upcoming-day-header">${events[0].groupLabel}</div>`;
+        if (events.length === 0) return;
+        let sHtml = `<div class="upcoming-day-group"><div class="upcoming-day-header">${events[0].groupLabel}</div>`;
         events.forEach(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
@@ -2410,7 +2392,7 @@
             ? `${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
             : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
           const upcomingCatColor = getCategoryColor(event.category || 'work');
-          html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
+          sHtml += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
               <div class="event-title" style="display:flex;align-items:center;gap:6px;"><span class="cat-dot" style="background:${upcomingCatColor};flex-shrink:0;"></span>${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
               ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
@@ -2420,8 +2402,10 @@
             </div>
           </div>`;
         });
-        container.innerHTML = html;
+        sHtml += '</div>';
+        html += sHtml;
       });
+      _setBottomPanel(html || '<div class="empty-state">Nothing coming up</div>');
     }
 
     // ── HORIZONTAL WEEK VIEW ──
@@ -2524,14 +2508,22 @@
         </div>`;
       }
 
-      // Write to DOM
+      // Write to DOM — rows are direct children of week-scroll-inner (no wrapper div)
       document.getElementById('week-labels').innerHTML = labelsHtml;
-      document.getElementById('week-scroll-inner').innerHTML =
-        `<div>${rowsHtml}</div>`;
+      document.getElementById('week-scroll-inner').innerHTML = rowsHtml;
+
+      // JS fallback: explicitly size rows + labels to fill available height
+      requestAnimationFrame(() => {
+        const scrollArea = document.querySelector('.week-scroll-area');
+        const hourHeader = document.querySelector('.week-hour-header');
+        if (!scrollArea || !hourHeader) return;
+        const rowH = Math.max(54, Math.floor((scrollArea.offsetHeight - hourHeader.offsetHeight) / 7));
+        document.querySelectorAll('.week-day-row').forEach(el => { el.style.height = rowH + 'px'; el.style.flex = 'none'; });
+        document.querySelectorAll('.week-day-label').forEach(el => { el.style.height = rowH + 'px'; el.style.flex = 'none'; });
+      });
 
       updateCurrentTimeLine();
       scrollToCurrentTime();
-      renderCalendarDayEvents();
     }
 
     // ── Horizontal drag-to-reschedule for week event bars ──
@@ -2539,14 +2531,35 @@
       e.stopPropagation();
       const isTouch = !!e.touches;
       const startX = isTouch ? e.touches[0].clientX : e.clientX;
-      barDragState = {
-        eventId, startMins, durationMins, startX,
-        deltaPx: 0, moved: false,
-        el: e.currentTarget,
-        isTouch
+      const startY = isTouch ? e.touches[0].clientY : e.clientY;
+      const el = e.currentTarget;
+
+      const cancel = () => {
+        if (barLongPressTimer) { clearTimeout(barLongPressTimer); barLongPressTimer = null; }
+        document.removeEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove);
+        document.removeEventListener(isTouch ? 'touchend' : 'mouseup', cancel);
       };
-      document.addEventListener(isTouch ? 'touchmove' : 'mousemove', handleBarDragMove, { passive: false });
-      document.addEventListener(isTouch ? 'touchend' : 'mouseup', handleBarDragEnd, { once: true });
+      const checkMove = (mv) => {
+        const cx = isTouch ? mv.touches[0].clientX : mv.clientX;
+        const cy = isTouch ? mv.touches[0].clientY : mv.clientY;
+        if (Math.abs(cx - startX) > 6 || Math.abs(cy - startY) > 6) cancel();
+      };
+
+      barLongPressTimer = setTimeout(() => {
+        barLongPressTimer = null;
+        document.removeEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove);
+        document.removeEventListener(isTouch ? 'touchend' : 'mouseup', cancel);
+        barDragState = { eventId, startMins, durationMins, startX, deltaPx: 0, moved: false, el, isTouch };
+        el.style.transform = 'scale(1.05)';
+        el.style.opacity = '0.8';
+        el.style.zIndex = '20';
+        triggerHaptic([40, 20, 40]);
+        document.addEventListener(isTouch ? 'touchmove' : 'mousemove', handleBarDragMove, { passive: false });
+        document.addEventListener(isTouch ? 'touchend' : 'mouseup', handleBarDragEnd, { once: true });
+      }, 850);
+
+      document.addEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove, { passive: true });
+      document.addEventListener(isTouch ? 'touchend' : 'mouseup', cancel, { once: true });
     }
 
     function handleBarDragMove(e) {
@@ -2565,10 +2578,15 @@
       if (!barDragState) return;
       document.removeEventListener(barDragState.isTouch ? 'touchmove' : 'mousemove', handleBarDragMove);
 
-      if (barDragState.moved) {
-        barDragJustEnded = true;
-        setTimeout(() => { barDragJustEnded = false; }, 150);
+      const el = barDragState.el;
+      el.style.transform = '';
+      el.style.opacity = '';
+      el.style.zIndex = '';
 
+      barDragJustEnded = true;
+      setTimeout(() => { barDragJustEnded = false; }, 200);
+
+      if (barDragState.moved) {
         const MINS_PER_PX = 60 / HOUR_W;
         const rawDeltaMins = barDragState.deltaPx * MINS_PER_PX;
         const snapDeltaMins = Math.round(rawDeltaMins / 15) * 15;
@@ -2584,9 +2602,6 @@
           showStatus(`✓ ${allEvents[idx].title} → ${formatTimeEastern(allEvents[idx].time)}`, 'success');
           showSyncIndicator();
           triggerHaptic([40]);
-        } else {
-          barDragState.el.style.transform = '';
-          barDragState.el.style.opacity = '';
         }
         renderWeekView();
       }
@@ -2686,7 +2701,7 @@
     function _renderEventsList(events) {
       const container = document.getElementById('events-list');
       if (events.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div>No events found</div>';
+        container.innerHTML = '<div class="empty-state">No events found</div>';
         return;
       }
       const today = new Date().toISOString().split('T')[0];
@@ -2979,7 +2994,7 @@
         if (data.encryptionSalt) encryptionKey=await deriveEncryptionKey(nw,data.encryptionSalt);
         closeChangePw();
         showStatus('✓ Password updated','success');
-        showStatus('⚠️ Old encrypted events cleared','error');
+        showStatus('Old encrypted events cleared','error');
       } catch {errEl.textContent='Connection error';}
       finally{btn.disabled=false;btn.textContent='Update';}
     }
