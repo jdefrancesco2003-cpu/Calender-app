@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { randomBytes } = require('crypto');
 const webpush = require('web-push');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -57,6 +58,60 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   console.log('  VAPID_PRIVATE_KEY=' + keys.privateKey);
 }
 function generateSalt() { return randomBytes(16).toString('hex'); }
+function generateOTP() { return String(Math.floor(100000 + Math.random() * 900000)); }
+
+// ── Email (Nodemailer) ──
+const emailTransport = (process.env.SMTP_USER && process.env.SMTP_PASS)
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    })
+  : null;
+const EMAIL_FROM = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `CalPal <${process.env.SMTP_USER}>` : null);
+
+async function sendEmail(to, subject, html) {
+  if (!emailTransport) { console.log(`[DEV EMAIL] To:${to} | ${subject}`); return; }
+  await emailTransport.sendMail({ from: EMAIL_FROM, to, subject, html });
+}
+
+function emailBase(content) {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f0f0f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f0f5;padding:40px 16px;"><tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
+  <tr><td style="background:#1a1a2e;border-radius:16px 16px 0 0;padding:28px 32px;text-align:center;">
+    <span style="font-size:24px;font-weight:800;color:#fff;">Cal<span style="color:#4a9d6f;">Pal</span></span>
+  </td></tr>
+  <tr><td style="background:#fff;padding:32px 32px 24px;">${content}</td></tr>
+  <tr><td style="background:#f8f8fa;border-radius:0 0 16px 16px;padding:18px 32px;text-align:center;border-top:1px solid #e8e8ed;">
+    <p style="margin:0;font-size:12px;color:#9e9ea7;line-height:1.5;">You're receiving this because of activity on your CalPal account.<br>If this wasn't you, you can safely ignore this email.</p>
+  </td></tr>
+</table></td></tr></table></body></html>`;
+}
+
+function emailOTPBlock(code) {
+  return `<div style="background:#f5f5f7;border-radius:12px;padding:28px 16px;text-align:center;margin:20px 0;">
+    <span style="font-size:44px;font-weight:700;letter-spacing:14px;color:#1a1a2e;font-family:'Courier New',monospace;">${code}</span>
+  </div>`;
+}
+
+function resetPasswordEmailHtml(code) {
+  return emailBase(`
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1a1a2e;">Reset your password</h2>
+    <p style="margin:0;font-size:15px;color:#6e6e73;line-height:1.6;">Enter this code in the app to reset your CalPal password. It expires in <strong style="color:#1a1a2e;">15 minutes</strong>.</p>
+    ${emailOTPBlock(code)}
+    <p style="margin:0;font-size:13px;color:#9e9ea7;text-align:center;">Didn't request this? Your account is safe — no action needed.</p>`);
+}
+
+function verifyEmailHtml(code) {
+  return emailBase(`
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1a1a2e;">Verify your email</h2>
+    <p style="margin:0;font-size:15px;color:#6e6e73;line-height:1.6;">Welcome to CalPal! Enter this code in the app to verify your email address.</p>
+    ${emailOTPBlock(code)}
+    <p style="margin:0;font-size:13px;color:#9e9ea7;text-align:center;">This code expires in 1 hour.</p>`);
+}
 
 const client = new Anthropic();
 const mongoUri = process.env.MONGODB_URI;
@@ -306,6 +361,8 @@ app.post('/api/auth/register', async (req, res) => {
     const encryptionSalt = generateSalt();
     const codes = Array.from({length:16}, () => randomBytes(4).toString('hex'));
     const hashedCodes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
+    const verifyOtp = generateOTP();
+    const verifyOtpHash = await bcrypt.hash(verifyOtp, 10);
 
     await usersCollection.insertOne({
       userId,
@@ -313,12 +370,17 @@ app.post('/api/auth/register', async (req, res) => {
       passwordHash,
       encryptionSalt,
       recoveryCodes: hashedCodes,
+      emailVerified: false,
+      verifyOtp: verifyOtpHash,
+      verifyOtpExpiry: new Date(Date.now() + 60 * 60000),
       createdAt: new Date()
     });
 
     const token = jwt.sign({ sub: userId, email: email.toLowerCase() }, JWT_SECRET, { expiresIn: '30d' });
     console.log('✓ New user registered:', email.toLowerCase());
-    res.json({ token, encryptionSalt, userId, recoveryCodes: codes });
+    // Send verification email (non-blocking)
+    sendEmail(email.toLowerCase(), 'Verify your CalPal email', verifyEmailHtml(verifyOtp)).catch(e => console.error('Verify email failed:', e.message));
+    res.json({ token, encryptionSalt, userId, recoveryCodes: codes, emailVerified: false });
   } catch (err) {
     console.error('Register error:', err.message);
     res.status(500).json({ error: 'Registration failed' });
@@ -347,7 +409,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     const token = jwt.sign({ sub: user.userId, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
     console.log('✓ User logged in:', user.email);
-    res.json({ token, encryptionSalt: user.encryptionSalt, userId: user.userId });
+    res.json({ token, encryptionSalt: user.encryptionSalt, userId: user.userId, emailVerified: user.emailVerified !== false });
   } catch (err) {
     console.error('Login error:', err.message);
     res.status(500).json({ error: 'Login failed' });
@@ -403,49 +465,86 @@ app.delete('/api/auth/account', requireAuth, async (req, res) => {
 
 // POST /api/auth/forgot-password
 // Generates 16 one-time recovery codes, stores hashed, returns plaintext once
+// POST /api/auth/forgot-password — sends 6-digit OTP via email
 app.post('/api/auth/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
   if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
   try {
     const user = await usersCollection.findOne({ email: email.toLowerCase() });
-    if (!user) return res.status(404).json({ error: 'No account found with that email' });
-    const codes = Array.from({length:16}, () => randomBytes(4).toString('hex'));
-    const hashedCodes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
-    await usersCollection.updateOne({ userId: user.userId }, { $set: { recoveryCodes: hashedCodes, recoveryGeneratedAt: new Date() } });
-    console.log('✓ Recovery codes generated:', user.email);
-    res.json({ codes });
+    // Always respond sent:true to prevent email enumeration
+    if (!user) return res.json({ sent: true });
+    const otp = generateOTP();
+    const otpHash = await bcrypt.hash(otp, 10);
+    await usersCollection.updateOne({ userId: user.userId }, { $set: { resetOtp: otpHash, resetOtpExpiry: new Date(Date.now() + 15 * 60000) } });
+    await sendEmail(user.email, 'Reset your CalPal password', resetPasswordEmailHtml(otp));
+    console.log('✓ Password reset email sent:', user.email);
+    res.json({ sent: true });
   } catch (err) {
     console.error('Forgot password error:', err.message);
-    res.status(500).json({ error: 'Failed to generate recovery codes' });
+    res.status(500).json({ error: 'Failed to send reset email' });
   }
 });
 
-// POST /api/auth/reset-password
+// POST /api/auth/reset-password — validates OTP, resets password
 app.post('/api/auth/reset-password', async (req, res) => {
   const { email, code, newPassword } = req.body;
-  if (!email || !code || !newPassword) return res.status(400).json({ error: 'Email, code, and new password required' });
+  if (!email || !code || !newPassword) return res.status(400).json({ error: 'All fields required' });
   if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
   if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
   try {
     const user = await usersCollection.findOne({ email: email.toLowerCase() });
-    if (!user || !user.recoveryCodes?.length) return res.status(400).json({ error: 'Invalid or expired recovery code' });
-    let matchIndex = -1;
-    for (let i = 0; i < user.recoveryCodes.length; i++) {
-      if (user.recoveryCodes[i] && await bcrypt.compare(code.trim().toLowerCase(), user.recoveryCodes[i])) { matchIndex = i; break; }
-    }
-    if (matchIndex === -1) return res.status(400).json({ error: 'Invalid or expired recovery code' });
+    if (!user?.resetOtp) return res.status(400).json({ error: 'No reset pending for this email' });
+    if (new Date() > user.resetOtpExpiry) return res.status(400).json({ error: 'Code expired — request a new one' });
+    const valid = await bcrypt.compare(code.trim(), user.resetOtp);
+    if (!valid) return res.status(400).json({ error: 'Incorrect code' });
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     const encryptionSalt = generateSalt();
-    const updatedCodes = [...user.recoveryCodes];
-    updatedCodes[matchIndex] = null;
-    await usersCollection.updateOne({ userId: user.userId }, { $set: { passwordHash, encryptionSalt, recoveryCodes: updatedCodes, updatedAt: new Date() } });
+    await usersCollection.updateOne({ userId: user.userId }, { $set: { passwordHash, encryptionSalt, updatedAt: new Date() }, $unset: { resetOtp: '', resetOtpExpiry: '' } });
     const token = jwt.sign({ sub: user.userId, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
-    console.log('✓ Password reset via recovery code:', user.email);
+    console.log('✓ Password reset:', user.email);
     res.json({ token, encryptionSalt, userId: user.userId, warning: 'Events encrypted with your old password are no longer accessible' });
   } catch (err) {
     console.error('Reset password error:', err.message);
     res.status(500).json({ error: 'Password reset failed' });
+  }
+});
+
+// POST /api/auth/send-verification — (re)sends email verification OTP
+app.post('/api/auth/send-verification', requireAuth, async (req, res) => {
+  if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
+  try {
+    const user = await usersCollection.findOne({ userId: req.user.userId });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.emailVerified) return res.json({ alreadyVerified: true });
+    const otp = generateOTP();
+    const otpHash = await bcrypt.hash(otp, 10);
+    await usersCollection.updateOne({ userId: req.user.userId }, { $set: { verifyOtp: otpHash, verifyOtpExpiry: new Date(Date.now() + 60 * 60000) } });
+    await sendEmail(user.email, 'Verify your CalPal email', verifyEmailHtml(otp));
+    res.json({ sent: true });
+  } catch (err) {
+    console.error('Send verification error:', err.message);
+    res.status(500).json({ error: 'Failed to send verification email' });
+  }
+});
+
+// POST /api/auth/verify-email — validates verification OTP
+app.post('/api/auth/verify-email', requireAuth, async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Code required' });
+  if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
+  try {
+    const user = await usersCollection.findOne({ userId: req.user.userId });
+    if (!user?.verifyOtp) return res.status(400).json({ error: 'No verification pending' });
+    if (new Date() > user.verifyOtpExpiry) return res.status(400).json({ error: 'Code expired — resend it' });
+    const valid = await bcrypt.compare(code.trim(), user.verifyOtp);
+    if (!valid) return res.status(400).json({ error: 'Incorrect code' });
+    await usersCollection.updateOne({ userId: req.user.userId }, { $set: { emailVerified: true }, $unset: { verifyOtp: '', verifyOtpExpiry: '' } });
+    console.log('✓ Email verified:', req.user.email);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Verify email error:', err.message);
+    res.status(500).json({ error: 'Verification failed' });
   }
 });
 

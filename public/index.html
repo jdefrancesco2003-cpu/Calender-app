@@ -350,6 +350,11 @@
 
     <div id="status-message"></div>
 
+    <div id="verify-banner" style="display:none;background:rgba(255,149,0,0.12);border:1px solid rgba(255,149,0,0.3);border-radius:10px;padding:10px 14px;margin:0 0 6px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <span style="font-size:13px;color:var(--warning);line-height:1.3;">Verify your email to secure your account</span>
+      <span onclick="openVerifyEmailOverlay()" style="font-size:13px;font-weight:700;color:var(--warning);cursor:pointer;white-space:nowrap;">Verify →</span>
+    </div>
+
     <div class="section-tabs">
       <button class="tab-button active" id="tab-btn-calendar" onclick="showTab('calendar', this); triggerHaptic(20)">Calendar</button>
       <button class="tab-button" id="tab-btn-events" onclick="showTab('events', this); triggerHaptic(20)">Events</button>
@@ -560,14 +565,28 @@
     </div>
     <div id="reset-panel" class="auth-box" style="display:none;">
       <div class="auth-logo">Cal<span>Pal</span></div>
-      <div class="auth-title">Reset Password</div>
       <div class="auth-error" id="reset-error"></div>
-      <div class="auth-field"><label>Email</label><input type="email" id="reset-email" placeholder="you@example.com"></div>
-      <div class="auth-field"><label>Recovery Code</label><input type="text" id="reset-code" placeholder="e.g. a1b2c3d4" autocomplete="off" style="font-family:monospace;letter-spacing:1px;"></div>
-      <div class="auth-field"><label>New Password</label><input type="password" id="reset-new-password" placeholder="Min 8 characters"></div>
-      <p style="font-size:12px;color:var(--warning);margin:4px 0 12px;text-align:center;">⚠️ Events encrypted with your old password will be lost</p>
-      <button class="auth-submit" id="reset-submit-btn" onclick="submitResetPassword()">Reset Password</button>
-      <div style="margin-top:12px;text-align:center;"><span onclick="hideForgotPassword()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.8;">← Back to Sign In</span></div>
+      <!-- Step 1: enter email -->
+      <div id="reset-step-1">
+        <div class="auth-title">Forgot Password?</div>
+        <p style="font-size:13px;color:var(--text-secondary);text-align:center;margin:0 0 16px;line-height:1.5;">Enter your email and we'll send a 6-digit reset code.</p>
+        <div class="auth-field"><label>Email</label><input type="email" id="reset-email" placeholder="you@example.com" autocomplete="email"></div>
+        <button class="auth-submit" id="reset-send-btn" onclick="submitResetRequest()">Send Reset Code</button>
+      </div>
+      <!-- Step 2: enter code + new password -->
+      <div id="reset-step-2" style="display:none;">
+        <div class="auth-title">Check Your Inbox</div>
+        <p style="font-size:13px;color:var(--text-secondary);text-align:center;margin:0 0 20px;line-height:1.5;">We sent a 6-digit code to <strong id="reset-sent-email" style="color:var(--text-primary);"></strong>. It expires in 15 minutes.</p>
+        <div class="auth-field">
+          <label>6-Digit Code</label>
+          <input type="text" id="reset-code" placeholder="123456" autocomplete="one-time-code" maxlength="6" inputmode="numeric" style="font-family:monospace;letter-spacing:6px;font-size:22px;text-align:center;">
+        </div>
+        <div class="auth-field"><label>New Password</label><input type="password" id="reset-new-password" placeholder="Min 8 characters" autocomplete="new-password"></div>
+        <p style="font-size:12px;color:var(--warning);margin:4px 0 12px;text-align:center;">⚠️ Events encrypted with your old password will be lost</p>
+        <button class="auth-submit" id="reset-submit-btn" onclick="submitResetPassword()">Reset Password</button>
+        <div style="margin-top:10px;text-align:center;"><span onclick="showResetStep1()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.8;">← Use a different email</span></div>
+      </div>
+      <div style="margin-top:14px;text-align:center;border-top:1px solid var(--border-color);padding-top:14px;"><span onclick="hideForgotPassword()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.8;">← Back to Sign In</span></div>
     </div>
   </div>
 
@@ -708,6 +727,24 @@
     </div>
   </div>
 
+  <!-- ── EMAIL VERIFICATION OVERLAY ── -->
+  <div class="modal-overlay" id="verify-email-overlay">
+    <div class="modal" style="max-width:340px;">
+      <div class="modal-handle"></div>
+      <div style="text-align:center;font-size:48px;margin-bottom:4px;">✉️</div>
+      <h3 style="text-align:center;margin-bottom:6px;">Verify Your Email</h3>
+      <p style="font-size:14px;color:var(--text-secondary);text-align:center;margin:0 0 16px;line-height:1.5;">We sent a 6-digit code to<br><strong id="verify-email-display" style="color:var(--text-primary);"></strong></p>
+      <div id="verify-error" style="font-size:13px;color:#ff6b6b;text-align:center;min-height:18px;margin-bottom:8px;"></div>
+      <div class="input-group">
+        <label>6-Digit Code</label>
+        <input type="text" id="verify-code-input" placeholder="123456" autocomplete="one-time-code" maxlength="6" inputmode="numeric" style="font-family:monospace;letter-spacing:6px;font-size:22px;text-align:center;">
+      </div>
+      <button class="btn-primary" style="width:100%;margin-top:12px;" id="verify-submit-btn" onclick="submitVerifyEmail()">Verify Email</button>
+      <button class="btn-secondary" style="width:100%;margin-top:8px;" onclick="resendVerificationCode()">Resend Code</button>
+      <div style="margin-top:12px;text-align:center;"><span onclick="document.getElementById('verify-email-overlay').classList.remove('active')" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.7;">Verify later</span></div>
+    </div>
+  </div>
+
   <!-- ── CHANGE PASSWORD MODAL ── -->
   <div class="modal-overlay" id="change-pw-overlay">
     <div class="modal" style="max-width:340px;">
@@ -813,6 +850,7 @@
     let filterDebounceTimer = null;
     let authToken = localStorage.getItem('calpal_token') || null;
     let currentUserEmail = localStorage.getItem('calpal_email') || null;
+    let emailVerified = localStorage.getItem('calpal_email_verified') === '1';
     let encryptionKey = null; // 32-byte Uint8Array — never persisted
     let authMode = 'login'; // 'login' | 'register'
     let authEnabled = false; // set from /api/health on init
@@ -1430,6 +1468,10 @@
         if (!res.ok) { showAuthError(data.error || 'Authentication failed'); return; }
         authToken = data.token;
         currentUserEmail = email;
+        // emailVerified: treat missing field (old users) as verified
+        emailVerified = data.emailVerified !== false;
+        if (emailVerified) localStorage.setItem('calpal_email_verified', '1');
+        else localStorage.removeItem('calpal_email_verified');
         localStorage.setItem('calpal_token', authToken);
         localStorage.setItem('calpal_email', currentUserEmail);
         if (data.encryptionSalt && data.encryptionSalt !== 'dev-salt') {
@@ -1443,10 +1485,12 @@
         renderCalendar();
         renderUpcomingEvents();
         archivePastEventsSilent();
-        // Show recovery codes after registration
+        // Show recovery codes after registration, then prompt email verification
         if (authMode === 'register' && data.recoveryCodes) {
           showRecoveryCodes(data.recoveryCodes);
-          obSkip(); // dismiss onboarding if showing
+          obSkip();
+        } else if (!emailVerified) {
+          openVerifyEmailOverlay();
         }
       } catch (err) {
         showAuthError('Connection error. Please try again.');
@@ -1460,8 +1504,10 @@
       authToken = null;
       currentUserEmail = null;
       encryptionKey = null;
+      emailVerified = false;
       localStorage.removeItem('calpal_token');
       localStorage.removeItem('calpal_email');
+      localStorage.removeItem('calpal_email_verified');
       allEvents = [];
       saveEvents();
       updateUserChip();
@@ -1484,6 +1530,8 @@
       if (restoreBtn) restoreBtn.style.display = (currentUserEmail && !localStorage.getItem('calpal_restored')) ? '' : 'none';
       const guestMsg = document.getElementById('account-settings-guest-msg');
       if (guestMsg) guestMsg.style.display = currentUserEmail ? 'none' : '';
+      const verifyBanner = document.getElementById('verify-banner');
+      if (verifyBanner) verifyBanner.style.display = (currentUserEmail && !emailVerified) ? 'flex' : 'none';
     }
 
     // ── Local storage ──
@@ -2748,39 +2796,98 @@
       showStatus(`✓ Imported ${imported} event${imported!==1?'s':''}`, 'success');
     }
 
-    // ── Password reset (forgot password flow) ──
+    // ── Password reset (email OTP flow) ──
     function showForgotPassword() {
       document.querySelector('#auth-overlay .auth-box').style.display = 'none';
       document.getElementById('reset-panel').style.display = '';
+      showResetStep1();
       document.getElementById('reset-email').value = document.getElementById('auth-email').value || '';
-      document.getElementById('reset-error').classList.remove('visible');
     }
     function hideForgotPassword() {
       document.getElementById('reset-panel').style.display = 'none';
       document.querySelector('#auth-overlay .auth-box').style.display = '';
+    }
+    function showResetStep1() {
+      document.getElementById('reset-step-1').style.display = '';
+      document.getElementById('reset-step-2').style.display = 'none';
+      document.getElementById('reset-error').textContent = '';
+    }
+    async function submitResetRequest() {
+      const email = document.getElementById('reset-email').value.trim();
+      const btn = document.getElementById('reset-send-btn');
+      const errEl = document.getElementById('reset-error');
+      if (!email) { errEl.textContent = 'Email required'; return; }
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        const res = await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Failed to send email'; return; }
+        errEl.textContent = '';
+        document.getElementById('reset-step-1').style.display = 'none';
+        document.getElementById('reset-step-2').style.display = '';
+        document.getElementById('reset-sent-email').textContent = email;
+        document.getElementById('reset-code').value = '';
+        document.getElementById('reset-new-password').value = '';
+        document.getElementById('reset-code').focus();
+      } catch { errEl.textContent = 'Connection error'; }
+      finally { btn.disabled = false; btn.textContent = 'Send Reset Code'; }
     }
     async function submitResetPassword() {
       const email = document.getElementById('reset-email').value.trim();
       const code = document.getElementById('reset-code').value.trim();
       const newPassword = document.getElementById('reset-new-password').value;
       const btn = document.getElementById('reset-submit-btn');
-      if (!email || !code || !newPassword) { document.getElementById('reset-error').textContent='All fields required'; document.getElementById('reset-error').classList.add('visible'); return; }
-      btn.disabled=true; btn.textContent='Resetting...';
+      const errEl = document.getElementById('reset-error');
+      if (!code || !newPassword) { errEl.textContent = 'All fields required'; return; }
+      btn.disabled = true; btn.textContent = 'Resetting…';
       try {
-        const res = await fetch('/api/auth/reset-password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,code,newPassword}) });
+        const res = await fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, code, newPassword }) });
         const data = await res.json();
-        if (!res.ok) { document.getElementById('reset-error').textContent=data.error||'Reset failed'; document.getElementById('reset-error').classList.add('visible'); return; }
+        if (!res.ok) { errEl.textContent = data.error || 'Reset failed'; return; }
         authToken = data.token; currentUserEmail = email;
-        localStorage.setItem('calpal_token', authToken); localStorage.setItem('calpal_email', email);
+        emailVerified = true;
+        localStorage.setItem('calpal_token', authToken); localStorage.setItem('calpal_email', email); localStorage.setItem('calpal_email_verified', '1');
         if (data.encryptionSalt) encryptionKey = await deriveEncryptionKey(newPassword, data.encryptionSalt);
         hideForgotPassword();
         document.getElementById('auth-overlay').classList.add('hidden');
+        updateUserChip(); await loadEvents(); renderCalendar(); renderUpcomingEvents();
+        showStatus('Password reset — signed in', 'success');
+        if (data.warning) setTimeout(() => showStatus('Old encrypted events were cleared', 'error'), 2500);
+      } catch { errEl.textContent = 'Connection error'; }
+      finally { btn.disabled = false; btn.textContent = 'Reset Password'; }
+    }
+
+    // ── Email verification ──
+    function openVerifyEmailOverlay() {
+      document.getElementById('verify-email-display').textContent = currentUserEmail || '';
+      document.getElementById('verify-code-input').value = '';
+      document.getElementById('verify-error').textContent = '';
+      document.getElementById('verify-email-overlay').classList.add('active');
+    }
+    async function submitVerifyEmail() {
+      const code = document.getElementById('verify-code-input').value.trim();
+      const btn = document.getElementById('verify-submit-btn');
+      const errEl = document.getElementById('verify-error');
+      if (!code) { errEl.textContent = 'Enter the 6-digit code'; return; }
+      btn.disabled = true; btn.textContent = 'Verifying…';
+      try {
+        const res = await fetch('/api/auth/verify-email', { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ code }) });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Verification failed'; return; }
+        emailVerified = true;
+        localStorage.setItem('calpal_email_verified', '1');
+        document.getElementById('verify-email-overlay').classList.remove('active');
         updateUserChip();
-        await loadEvents(); renderCalendar(); renderUpcomingEvents();
-        showStatus('✓ Password reset — signed in', 'success');
-        if (data.warning) setTimeout(() => showStatus('⚠️ Old encrypted events were cleared', 'error'), 2000);
-      } catch { document.getElementById('reset-error').textContent='Connection error'; document.getElementById('reset-error').classList.add('visible'); }
-      finally { btn.disabled=false; btn.textContent='Reset Password'; }
+        showStatus('Email verified ✓', 'success');
+      } catch { errEl.textContent = 'Connection error'; }
+      finally { btn.disabled = false; btn.textContent = 'Verify Email'; }
+    }
+    async function resendVerificationCode() {
+      try {
+        const res = await fetch('/api/auth/send-verification', { method: 'POST', headers: getAuthHeaders() });
+        if (res.ok) showStatus('New code sent to your email', 'success');
+        else showStatus('Could not send code — try again', 'error');
+      } catch { showStatus('Connection error', 'error'); }
     }
 
     // ── Recovery codes modal ──
@@ -2809,6 +2916,8 @@
       if (document.getElementById('recovery-done-btn')?.disabled) return;
       document.getElementById('recovery-overlay').classList.remove('active');
       window._recoveryCodes = null;
+      // Prompt email verification immediately after saving recovery codes
+      if (!emailVerified && currentUserEmail) setTimeout(() => openVerifyEmailOverlay(), 300);
     }
     function copyRecoveryCodes() {
       const codes = window._recoveryCodes;
