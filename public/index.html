@@ -674,6 +674,38 @@
     </div>
   </div>
 
+  <!-- ── ONBOARDING OVERLAY ── -->
+  <div id="onboarding-overlay" class="hidden">
+    <div class="ob-slide active" id="ob-0">
+      <div class="ob-icon">📅</div>
+      <div class="ob-title">Welcome to CalPal</div>
+      <div class="ob-desc">Your AI-powered personal calendar. Add events in plain English and let CalPal figure out the rest.</div>
+    </div>
+    <div class="ob-slide" id="ob-1">
+      <div class="ob-icon">✨</div>
+      <div class="ob-title">Smart Event Parsing</div>
+      <div class="ob-desc">Just type "dentist next Tuesday at 2pm" or "team meeting every Monday 9-10am" and CalPal handles scheduling.</div>
+    </div>
+    <div class="ob-slide" id="ob-2">
+      <div class="ob-icon">🔒</div>
+      <div class="ob-title">Private &amp; Encrypted</div>
+      <div class="ob-desc">All your events are end-to-end encrypted. Only you can read them — not even we can.</div>
+    </div>
+    <div class="ob-slide" id="ob-3">
+      <div class="ob-icon">🌐</div>
+      <div class="ob-title">Syncs Everywhere</div>
+      <div class="ob-desc">Your calendar stays in sync across all your devices. Sign in anywhere to access your schedule.</div>
+    </div>
+    <div class="ob-dots">
+      <div class="ob-dot active" id="od-0"></div>
+      <div class="ob-dot" id="od-1"></div>
+      <div class="ob-dot" id="od-2"></div>
+      <div class="ob-dot" id="od-3"></div>
+    </div>
+    <button class="btn-primary" style="width:100%;max-width:280px;" id="ob-next-btn" onclick="obNext()">Next →</button>
+    <button class="btn-secondary" style="width:100%;max-width:280px;margin-top:10px;" onclick="obSkip()">Skip</button>
+  </div>
+
   <!-- ── DELETE CONFIRM MODAL ── -->
   <div class="modal-overlay" id="delete-confirm-overlay">
     <div class="modal" style="max-width:320px;">
@@ -1338,6 +1370,7 @@
         // Show recovery codes after registration
         if (authMode === 'register' && data.recoveryCodes) {
           showRecoveryCodes(data.recoveryCodes);
+          obSkip(); // dismiss onboarding if showing
         }
       } catch (err) {
         showAuthError('Connection error. Please try again.');
@@ -1462,6 +1495,8 @@
 
     // ── Init ──
     async function init() {
+      loadTheme();
+
       // Check if server requires auth
       try {
         const health = await fetch('/api/health').then(r => r.json()).catch(() => ({}));
@@ -1481,6 +1516,7 @@
       renderUpcomingEvents();
       setTodayDate();
       checkNotificationPermission();
+      showOnboarding();
       scheduleNotifications();
       fetchWeather();
       updateUserChip();
@@ -1644,7 +1680,7 @@
         showOverlapConfirmation(pendingParsedEvent.title, confirmParsedEvent);
         return;
       }
-      const newEvent = { id: generateId(), ...pendingParsedEvent };
+      const newEvent = { id: generateId(), ...pendingParsedEvent, category: addEventCategory };
       allEvents.push(newEvent);
       saveEvents();
       apiSaveEvent(newEvent);
@@ -1691,7 +1727,7 @@
       if (!title || !date) { showStatus('Title and date required', 'error'); return; }
       const recurrence = document.getElementById('recurrence-select')?.value || 'none';
       const recurrenceEnd = document.getElementById('recurrence-end-input')?.value || null;
-      const newEvent = { id: generateId(), title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay, recurrence, recurrenceEnd: recurrenceEnd || null, isRecurring: recurrence !== 'none', recurrenceExceptions: [] };
+      const newEvent = { id: generateId(), title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay, category: addEventCategory, recurrence, recurrenceEnd: recurrenceEnd || null, isRecurring: recurrence !== 'none', recurrenceExceptions: [] };
       if (checkDuplicateEvent(newEvent)) { showDuplicateModal(title); return; }
       if (checkEventOverlap(newEvent)) {
         showOverlapConfirmation(title, () => {
@@ -1823,6 +1859,9 @@
       const recEnd = document.getElementById('modal-recurrence-end-input');
       if (recSel) { recSel.value = event.recurrence || 'none'; toggleRecurrenceEnd('modal-recurrence-end-row'); }
       if (recEnd) recEnd.value = event.recurrenceEnd || '';
+      // Set category
+      editEventCategory = event.category || 'work';
+      selectCategory('edit', editEventCategory);
       toggleAllDayModal();
       document.getElementById('modal-overlay').classList.add('active');
     }
@@ -1854,7 +1893,7 @@
       if (!title || !date) { showStatus('Title and date required', 'error'); return; }
       const recurrence = document.getElementById('modal-recurrence-select')?.value || 'none';
       const recurrenceEnd = document.getElementById('modal-recurrence-end-input')?.value || null;
-      const updatedEvent = { title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay, recurrence, recurrenceEnd: recurrenceEnd || null, isRecurring: recurrence !== 'none', recurrenceExceptions: lastEditedEvent?.recurrenceExceptions || [] };
+      const updatedEvent = { title, date, endDate: endDate || null, time: isAllDay ? null : time || null, endTime: isAllDay ? null : endTime || null, description, isAllDay, category: editEventCategory, recurrence, recurrenceEnd: recurrenceEnd || null, isRecurring: recurrence !== 'none', recurrenceExceptions: lastEditedEvent?.recurrenceExceptions || [] };
       if (checkEventOverlap(updatedEvent, editingEventId)) {
         showOverlapConfirmation(title, () => {
           const idx = allEvents.findIndex(e => e.id === editingEventId);
@@ -1974,7 +2013,11 @@
         let dotsHtml = '';
         if (count > 0 || dayHolidays.length > 0) {
           const dotCount = Math.min(count, 3);
-          for (let i = 0; i < dotCount; i++) dotsHtml += '<div class="day-dot"></div>';
+          for (let i = 0; i < dotCount; i++) {
+            const ev = dayEvents[i];
+            const dotColor = getCategoryColor(ev && ev.category ? ev.category : 'work');
+            dotsHtml += `<div class="day-dot" style="background:${dotColor};"></div>`;
+          }
           if (count > 3) dotsHtml += '<div class="day-dot more"></div>';
           for (let i = 0; i < Math.min(dayHolidays.length, 2); i++)
             dotsHtml += '<div class="day-dot holiday"></div>';
@@ -2076,9 +2119,10 @@
           const dateLabel = event.endDate
             ? `${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
             : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const upcomingCatColor = getCategoryColor(event.category || 'work');
           html += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
             <div class="event-details">
-              <div class="event-title">${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
+              <div class="event-title" style="display:flex;align-items:center;gap:6px;"><span class="cat-dot" style="background:${upcomingCatColor};flex-shrink:0;"></span>${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
               ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
               ${event.endDate && !event.isAllDay ? '<div class="all-day-badge" style="background:rgba(10,132,255,0.15);color:var(--primary);">Multi-Day</div>' : ''}
               <div class="event-day-label">${dateLabel}${timeStr ? ` · ${timeStr}${dur}` : ''}</div>
@@ -2171,8 +2215,9 @@
             const widthPx = Math.max(((endMins - startMins) / 60) * 64, 28);
             const topPx = 4 + idx * (barH + 2);
             const timeLabel = formatEventTime(ev.time, ev.endTime);
+            const barColor = getCategoryColor(ev.category || 'work');
             barsHtml += `<div class="week-event-bar"
-              style="left:${leftPx}px;width:${widthPx}px;top:${topPx}px;height:${barH}px;font-size:${fontSize}px;cursor:grab;"
+              style="left:${leftPx}px;width:${widthPx}px;top:${topPx}px;height:${barH}px;font-size:${fontSize}px;cursor:grab;background:${barColor};"
               data-event-id="${ev.id}"
               onmousedown="startBarDrag(event,'${ev.id}',${startMins},${endMins - startMins})"
               ontouchstart="startBarDrag(event,'${ev.id}',${startMins},${endMins - startMins})"
