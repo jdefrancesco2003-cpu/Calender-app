@@ -233,8 +233,15 @@
     .event-meta { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
     .event-day-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500; }
     .all-day-badge { display: inline-block; font-size: 9px; background: var(--primary); color: white; padding: 2px 6px; border-radius: 3px; margin-top: 3px; font-weight: 700; }
-    .event-day-group { margin-bottom: 20px; }
-    .event-day-label-group { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .event-day-group { margin-bottom: 4px; }
+    .event-day-label-group {
+      font-size: 13px; font-weight: 700; color: var(--text-primary);
+      padding: 14px 0 8px; border-top: 2px solid var(--border-color);
+      margin-top: 8px; display: flex; align-items: baseline; gap: 8px;
+    }
+    .event-day-label-group .day-label-weekday { font-size: 16px; }
+    .event-day-label-group .day-label-date { font-size: 12px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+    .event-day-group:first-child .event-day-label-group { border-top: none; margin-top: 0; padding-top: 6px; }
     .search-input { margin-bottom: 0; }
     .search-filters { display: flex; gap: 8px; }
     .search-filters input { flex: 1; font-size: 12px; }
@@ -403,8 +410,8 @@
           <div class="upcoming-day-group" id="later-section"></div>
         </div>
 
-        <!-- Selected-day events below calendar -->
-        <div id="calendar-day-events" style="padding:0 16px 16px;"></div>
+        <!-- Selected-day events (shown inline replacing upcoming when a day is tapped) -->
+        <div id="calendar-day-events" style="display:none;flex:1;overflow-y:auto;padding:0 14px 80px;background:var(--bg-card);border-top:1px solid var(--border-color);"></div>
       </div>
 
       <!-- ── EVENTS TAB ── -->
@@ -675,24 +682,29 @@
           <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('add','other')" title="Other"></button>
         </div>
       </div>
-      <div class="input-group"><label>Notes</label><textarea id="desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
-      <div class="toggle-switch">
-        <label for="all-day-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">All-Day Event</label>
-        <label class="switch"><input type="checkbox" id="all-day-toggle" onchange="toggleAllDayManual()"><span class="slider"></span></label>
-      </div>
-      <div style="margin-top:10px;">
-        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Repeat</label>
-        <select class="form-select" id="recurrence-select" onchange="toggleRecurrenceEnd('recurrence-end-row')">
-          <option value="none">Never</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="yearly">Yearly</option>
-        </select>
-      </div>
-      <div id="recurrence-end-row" style="display:none;margin-top:10px;">
-        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ends On (optional)</label>
-        <input type="date" id="recurrence-end-input" class="form-select" style="padding:10px 12px;">
+      <button type="button" onclick="toggleAddMoreOpts()" style="background:none;border:none;color:var(--text-secondary);font-size:13px;padding:10px 0 4px;cursor:pointer;display:flex;align-items:center;gap:6px;min-height:auto;width:auto;">
+        <span id="add-more-opts-chevron" style="font-size:10px;display:inline-block;transition:transform 0.2s;">▶</span> More options
+      </button>
+      <div id="add-more-opts" style="display:none;">
+        <div class="input-group"><label>Notes</label><textarea id="desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
+        <div class="toggle-switch">
+          <label for="all-day-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">All-Day Event</label>
+          <label class="switch"><input type="checkbox" id="all-day-toggle" onchange="toggleAllDayManual()"><span class="slider"></span></label>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Repeat</label>
+          <select class="form-select" id="recurrence-select" onchange="toggleRecurrenceEnd('recurrence-end-row')">
+            <option value="none">Never</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </div>
+        <div id="recurrence-end-row" style="display:none;margin-top:10px;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ends On (optional)</label>
+          <input type="date" id="recurrence-end-input" class="form-select" style="padding:10px 12px;">
+        </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button class="btn-secondary" style="flex:1;" onclick="closeAddModal(); triggerHaptic(20)">Cancel</button>
@@ -1317,6 +1329,17 @@
     }
     function closeAddModal() {
       document.getElementById('add-event-overlay').classList.remove('active');
+      const moreOpts = document.getElementById('add-more-opts');
+      const chevron = document.getElementById('add-more-opts-chevron');
+      if (moreOpts) { moreOpts.style.display = 'none'; }
+      if (chevron) { chevron.style.transform = ''; }
+    }
+    function toggleAddMoreOpts() {
+      const d = document.getElementById('add-more-opts');
+      const ch = document.getElementById('add-more-opts-chevron');
+      const open = d.style.display !== 'none';
+      d.style.display = open ? 'none' : 'block';
+      ch.style.transform = open ? '' : 'rotate(90deg)';
     }
     function openAddEventTab() { openAddModal(); }
 
@@ -2190,6 +2213,13 @@
     function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
 
     function toggleView() {
+      // Close day-events panel if open
+      const dayEvPanel = document.getElementById('calendar-day-events');
+      if (dayEvPanel && dayEvPanel.style.display !== 'none') {
+        dayEvPanel.style.display = 'none';
+        dayEvPanel.innerHTML = '';
+        selectedDate = null;
+      }
       isWeekView = !isWeekView;
       const btn = document.getElementById('view-toggle-btn');
       btn.textContent = isWeekView ? 'Month' : 'Week';
@@ -2249,7 +2279,7 @@
       renderCalendarDayEvents();
     }
 
-    // ── Calendar day events (below calendar grid) ──
+    // ── Calendar day events (shown inline replacing upcoming section) ──
     function renderCalendarDayEvents() {
       const container = document.getElementById('calendar-day-events');
       if (!container) return;
@@ -2258,11 +2288,6 @@
       const label = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
       const dayEvs = getEventsForDate(target).filter(e => !e.isHoliday);
       const dayHolidays = holidays.filter(h => h.date === target);
-
-      if (!dayEvs.length && !dayHolidays.length) {
-        container.innerHTML = `<div style="text-align:center;color:var(--text-secondary);font-size:14px;padding:24px 0;">${label}<br><span style="opacity:0.6;">No events</span></div>`;
-        return;
-      }
 
       const items = [...dayHolidays, ...dayEvs].sort((a, b) => {
         if (a.isHoliday && !b.isHoliday) return -1;
@@ -2273,59 +2298,44 @@
         return a.time.localeCompare(b.time);
       });
 
+      const eventsHtml = items.length === 0
+        ? `<div style="text-align:center;color:var(--text-secondary);font-size:14px;padding:32px 0;opacity:0.7;">No events</div>`
+        : items.map(ev => {
+            if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.1);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;border-left:3px solid var(--warning);">🎉 ${escHtml(ev.title)}</div>`;
+            const color = getCategoryColor(ev.category || 'work');
+            const timeStr = ev.isAllDay ? 'All day' : (ev.time ? formatTimeEastern(ev.time) : '');
+            return `<div onclick="openEditModal('${ev.id}');triggerHaptic([40])" style="padding:10px 12px;background:var(--bg-dark);border-radius:10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;border-left:3px solid ${color};">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(ev.title)}</div>
+                ${timeStr ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${timeStr}</div>` : ''}
+              </div>
+            </div>`;
+          }).join('');
+
       container.innerHTML = `
-        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;padding:12px 0 8px;">${label}</div>
-        ${items.map(ev => {
-          if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.12);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;">🎉 ${escHtml(ev.title)}</div>`;
-          const color = getCategoryColor(ev.category || 'work');
-          const timeStr = ev.isAllDay ? 'All day' : (ev.time ? formatTimeEastern(ev.time) : '');
-          return `<div onclick="openEditModal('${ev.id}');triggerHaptic([40])" style="padding:10px 12px;background:var(--bg-card);border-radius:10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;border-left:3px solid ${color};">
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(ev.title)}</div>
-              ${timeStr ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${timeStr}</div>` : ''}
-            </div>
-          </div>`;
-        }).join('')}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;">
+          <span style="font-size:16px;font-weight:700;color:var(--text-primary);">${label}</span>
+          <button onclick="closeDayModal();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:20px;padding:4px 6px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
+        </div>
+        ${eventsHtml}
       `;
     }
 
-    // ── Day modal ──
+    // ── Day events (inline, replaces upcoming section) ──
     function openDayModal(dateStr) {
       selectedDate = dateStr;
       renderCalendar();
       renderCalendarDayEvents();
-      const dayEvents = getEventsForDate(dateStr)
-        .sort((a, b) => {
-          if (a.isAllDay && !b.isAllDay) return -1;
-          if (!a.isAllDay && b.isAllDay) return 1;
-          return (a.time || '').localeCompare(b.time || '');
-        });
-      const dateLabel = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-      document.getElementById('day-modal-title').textContent = dateLabel;
-      if (dayEvents.length === 0) {
-        document.getElementById('day-modal-events').innerHTML = '<div class="empty-state"><div class="empty-state-icon">✓</div>No events on this day</div>';
-      } else {
-        document.getElementById('day-modal-events').innerHTML = dayEvents.map(event => {
-          const timeStr = formatEventTime(event.time, event.endTime);
-          const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          return `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
-            <div class="event-details">
-              <div class="event-title">${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
-              ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
-              ${timeStr ? `<div class="event-meta">${timeStr}${dur}</div>` : ''}
-              ${event.description ? `<div class="event-meta">${escHtml(event.description)}</div>` : ''}
-            </div>
-            <div class="event-swipe-actions">
-              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic([40])">Edit</button>
-              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); closeDayModal(); triggerHaptic([100,50,100])">Delete</button>
-            </div>
-          </div>`;
-        }).join('');
-      }
-      document.getElementById('day-modal-overlay').classList.add('active');
+      document.getElementById('upcoming-container').style.display = 'none';
+      document.getElementById('calendar-day-events').style.display = 'flex';
+      document.getElementById('calendar-day-events').style.flexDirection = 'column';
     }
     function closeDayModal() {
-      document.getElementById('day-modal-overlay').classList.remove('active');
+      selectedDate = null;
+      renderCalendar();
+      document.getElementById('calendar-day-events').style.display = 'none';
+      document.getElementById('calendar-day-events').innerHTML = '';
+      document.getElementById('upcoming-container').style.display = '';
     }
 
     // ── Upcoming events (calendar tab) ──
@@ -2663,8 +2673,13 @@
       const grouped = {};
       events.forEach(e => { if (!grouped[e.date]) grouped[e.date] = []; grouped[e.date].push(e); });
       container.innerHTML = Object.keys(grouped).sort().map(dateKey => {
-        const dateLabel = dateKey === today ? 'Today' :
-          new Date(dateKey + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const d = new Date(dateKey + 'T00:00:00');
+        const isToday = dateKey === today;
+        const weekday = isToday ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'long' });
+        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const headerHtml = isToday
+          ? `<span class="day-label-weekday">Today</span><span class="day-label-date">${dateStr}</span>`
+          : `<span class="day-label-weekday">${weekday}</span><span class="day-label-date">${dateStr}</span>`;
         const eventsHtml = grouped[dateKey].map(event => {
           const timeStr = formatEventTime(event.time, event.endTime);
           const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
@@ -2682,7 +2697,7 @@
             </div>
           </div>`;
         }).join('');
-        return `<div class="event-day-group"><div class="event-day-label-group">${dateLabel}</div>${eventsHtml}</div>`;
+        return `<div class="event-day-group"><div class="event-day-label-group">${headerHtml}</div>${eventsHtml}</div>`;
       }).join('');
       // Attach swipe-to-reveal handlers after DOM is built
       container.querySelectorAll('.event-item').forEach(item => {
