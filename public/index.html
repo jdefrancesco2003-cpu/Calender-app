@@ -199,13 +199,13 @@
     .week-allday-pill { font-size: 8px; font-weight: 700; color: white; background: rgba(74,157,111,0.7); border-radius: 3px; padding: 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 76px; cursor: pointer; margin-top: 1px; }
     .week-allday-pill:active { opacity: 0.7; }
     /* Scrollable time area */
-    .week-scroll-area { flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-gutter: stable; -webkit-overflow-scrolling: touch; }
-    .week-scroll-inner { height: 100%; display: inline-flex; flex-direction: column; min-width: max-content; }
+    .week-scroll-area { flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-gutter: stable; display: flex; align-items: stretch; }
+    .week-scroll-inner { flex: 0 0 auto; min-width: max-content; display: flex; flex-direction: column; }
     /* Hour header */
     .week-hour-header { display: flex; height: 28px; position: relative; border-bottom: 1px solid var(--border-color); background: var(--bg-dark); flex-shrink: 0; }
     .week-hour-cell { width: var(--hour-w); flex-shrink: 0; font-size: 9px; color: var(--text-secondary); text-align: center; border-right: 1px solid rgba(66,66,69,0.4); display: flex; align-items: center; justify-content: center; font-weight: 500; }
     /* Day rows */
-    .week-day-row { display: flex; flex: 1; min-height: 54px; border-bottom: 1px solid var(--border-color); position: relative; background: var(--bg-card); }
+    .week-day-row { display: flex; flex: 1; min-height: 54px; border-bottom: 1px solid var(--border-color); position: relative; background: var(--bg-card); overflow: hidden; }
     .week-day-row.today { background: rgba(74,157,111,0.05); }
     .week-day-row:last-child { border-bottom: none; }
     .week-hour-slot { width: var(--hour-w); flex-shrink: 0; border-right: 1px solid rgba(66,66,69,0.25); }
@@ -2500,10 +2500,19 @@
         </div>`;
       }
 
-      // Write to DOM
+      // Write to DOM — rows are direct children of week-scroll-inner (no wrapper div)
       document.getElementById('week-labels').innerHTML = labelsHtml;
-      document.getElementById('week-scroll-inner').innerHTML =
-        `<div>${rowsHtml}</div>`;
+      document.getElementById('week-scroll-inner').innerHTML = rowsHtml;
+
+      // JS fallback: explicitly size rows + labels to fill available height
+      requestAnimationFrame(() => {
+        const scrollArea = document.querySelector('.week-scroll-area');
+        const hourHeader = document.querySelector('.week-hour-header');
+        if (!scrollArea || !hourHeader) return;
+        const rowH = Math.max(54, Math.floor((scrollArea.offsetHeight - hourHeader.offsetHeight) / 7));
+        document.querySelectorAll('.week-day-row').forEach(el => { el.style.height = rowH + 'px'; el.style.flex = 'none'; });
+        document.querySelectorAll('.week-day-label').forEach(el => { el.style.height = rowH + 'px'; el.style.flex = 'none'; });
+      });
 
       updateCurrentTimeLine();
       scrollToCurrentTime();
