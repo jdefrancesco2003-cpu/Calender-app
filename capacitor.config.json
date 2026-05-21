@@ -2,28 +2,38 @@
   "appId": "com.calpal.app",
   "appName": "CalPal",
   "webDir": "public",
+  "bundledWebRuntime": false,
   "server": {
-    "androidScheme": "https"
+    "url": "https://pacific-success.up.railway.app",
+    "cleartext": false
+  },
+  "ios": {
+    "scheme": "CalPal",
+    "contentInset": "always",
+    "backgroundColor": "#1a1a2e",
+    "preferredContentMode": "mobile",
+    "limitsNavigationsToAppBoundDomains": true
   },
   "plugins": {
-    "PushNotifications": {
-      "presentationOptions": ["badge", "sound", "alert"]
-    },
-    "LocalNotifications": {
-      "smallIcon": "ic_stat_icon_config_sample",
-      "iconColor": "#30d158",
-      "sound": "beep.wav"
-    },
-    "StatusBar": {
-      "style": "dark",
-      "backgroundColor": "#1a1a2e"
-    },
     "SplashScreen": {
       "launchShowDuration": 1500,
       "backgroundColor": "#1a1a2e",
-      "androidSplashResourceName": "splash",
+      "showSpinner": false,
       "androidScaleType": "CENTER_CROP",
-      "showSpinner": false
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#1a1a2e"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "DARK",
+      "resizeOnFullScreen": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
     }
   }
 }
