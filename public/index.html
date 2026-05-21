@@ -510,9 +510,23 @@
       <div class="auth-toggle" id="auth-toggle-text">
         No account? <span onclick="toggleAuthMode()">Create one</span>
       </div>
+      <div style="margin-top:8px;text-align:center;">
+        <span id="forgot-link" onclick="showForgotPassword()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.8;">Forgot password?</span>
+      </div>
       <div style="margin-top:16px;text-align:center;">
         <span onclick="continueAsGuest()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;text-decoration:underline;opacity:0.7;">Continue as Guest</span>
       </div>
+    </div>
+    <div id="reset-panel" class="auth-box" style="display:none;">
+      <div class="auth-logo">Cal<span>Pal</span></div>
+      <div class="auth-title">Reset Password</div>
+      <div class="auth-error" id="reset-error"></div>
+      <div class="auth-field"><label>Email</label><input type="email" id="reset-email" placeholder="you@example.com"></div>
+      <div class="auth-field"><label>Recovery Code</label><input type="text" id="reset-code" placeholder="e.g. a1b2c3d4" autocomplete="off" style="font-family:monospace;letter-spacing:1px;"></div>
+      <div class="auth-field"><label>New Password</label><input type="password" id="reset-new-password" placeholder="Min 8 characters"></div>
+      <p style="font-size:12px;color:var(--warning);margin:4px 0 12px;text-align:center;">⚠️ Events encrypted with your old password will be lost</p>
+      <button class="auth-submit" id="reset-submit-btn" onclick="submitResetPassword()">Reset Password</button>
+      <div style="margin-top:12px;text-align:center;"><span onclick="hideForgotPassword()" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.8;">← Back to Sign In</span></div>
     </div>
   </div>
 
@@ -525,7 +539,14 @@
         <label for="notif-toggle" style="margin:0;font-size:14px;font-weight:500;color:var(--text-primary);">Enable Notifications</label>
         <label class="switch"><input type="checkbox" id="notif-toggle" onchange="toggleNotifications()"><span class="slider"></span></label>
       </div>
-      <button class="btn-secondary" style="width:100%;margin-top:4px;" onclick="closeSettings(); triggerHaptic(20)">Done</button>
+      <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">📤 Export .ics</button>
+      <label style="width:100%;margin-top:8px;display:block;">
+        <input type="file" id="ical-import-input" accept=".ics" style="display:none;" onchange="importIcalFile(event); closeSettings()">
+        <span class="btn-secondary" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box;" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">📥 Import .ics</span>
+      </label>
+      <button class="btn-secondary" id="change-pw-btn" style="width:100%;margin-top:8px;display:none;" onclick="openChangePassword(); triggerHaptic(20)">🔒 Change Password</button>
+      <button class="btn-danger" id="delete-acct-btn" style="width:100%;margin-top:8px;display:none;" onclick="openDeleteAccount(); triggerHaptic(20)">🗑 Delete Account</button>
+      <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="closeSettings(); triggerHaptic(20)">Done</button>
     </div>
   </div>
 
@@ -537,6 +558,61 @@
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button class="btn-danger" style="flex:1;" onclick="cancelOverlapSave(); triggerHaptic([100,50,100])">Cancel</button>
         <button class="btn-secondary" style="flex:1;" onclick="confirmOverlapSave(); triggerHaptic([60,20,60])">Save Anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RECOVERY CODES MODAL ── -->
+  <div class="modal-overlay" id="recovery-overlay">
+    <div class="modal" style="max-width:380px;">
+      <div class="modal-handle"></div>
+      <h3 style="color:var(--warning);">⚠️ Save Your Recovery Codes</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin:8px 0 16px;">These 16 codes can reset your password if you forget it. Each code works once. Store them somewhere safe — they won't be shown again.</p>
+      <div id="recovery-codes-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px;"></div>
+      <button class="btn-primary" style="width:100%;margin-bottom:8px;" onclick="copyRecoveryCodes()">📋 Copy All Codes</button>
+      <button class="btn-secondary" style="width:100%;" onclick="closeRecoveryModal()">I've saved them</button>
+    </div>
+  </div>
+
+  <!-- ── CHANGE PASSWORD MODAL ── -->
+  <div class="modal-overlay" id="change-pw-overlay">
+    <div class="modal" style="max-width:340px;">
+      <div class="modal-handle"></div>
+      <h3>Change Password</h3>
+      <p style="font-size:13px;color:var(--warning);margin:4px 0 12px;">⚠️ Changing your password will re-derive your encryption key. Events encrypted with the old password will be inaccessible.</p>
+      <div class="auth-field"><label>Current Password</label><input type="password" id="cp-current" placeholder="••••••••"></div>
+      <div class="auth-field"><label>New Password</label><input type="password" id="cp-new" placeholder="Min 8 characters"></div>
+      <div id="cp-error" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeChangePw()">Cancel</button>
+        <button class="btn-primary" style="flex:1;" id="cp-submit" onclick="submitChangePassword()">Update</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DELETE ACCOUNT MODAL ── -->
+  <div class="modal-overlay" id="delete-account-overlay">
+    <div class="modal" style="max-width:340px;">
+      <div class="modal-handle"></div>
+      <h3 style="color:#ff6b6b;">Delete Account</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin:8px 0 16px;">This is permanent. Your account and ALL events will be deleted. Type your password to confirm.</p>
+      <div class="auth-field"><label>Password</label><input type="password" id="da-password" placeholder="••••••••"></div>
+      <div id="da-error" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeDeleteAccount()">Cancel</button>
+        <button class="btn-danger" style="flex:1;" id="da-submit" onclick="submitDeleteAccount()">Delete Forever</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DELETE CONFIRM MODAL ── -->
+  <div class="modal-overlay" id="delete-confirm-overlay">
+    <div class="modal" style="max-width:320px;">
+      <div class="modal-handle"></div>
+      <p style="font-size:15px;text-align:center;margin:8px 0 20px;" id="delete-confirm-msg">Delete this event?</p>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" style="flex:1;" onclick="document.getElementById('delete-confirm-overlay').classList.remove('active'); window._deleteConfirmReject&&window._deleteConfirmReject()">Cancel</button>
+        <button class="btn-danger" style="flex:1;" onclick="document.getElementById('delete-confirm-overlay').classList.remove('active'); window._deleteConfirmResolve&&window._deleteConfirmResolve()">Delete</button>
       </div>
     </div>
   </div>
@@ -745,8 +821,8 @@
       renderUpcomingEvents();
       renderEventsPage();
     }
-    function deleteFromArchive(eventId) {
-      if (!confirm('Permanently delete this event?')) return;
+    async function deleteFromArchive(eventId) {
+      try { await confirmDelete('Permanently delete this event?'); } catch { return; }
       archivedEvents = archivedEvents.filter(e => e.id !== eventId);
       saveArchive();
       showStatus('Event permanently deleted', 'success');
@@ -961,35 +1037,43 @@
       } catch { return null; }
     }
 
+    let offlineQueue = []; // {type:'save'|'update'|'delete', id?, data?}
+
     async function apiSaveEvent(eventObj) {
-      if (guestMode) return; // guest mode — local only
+      if (guestMode) return;
+      if (!navigator.onLine) { offlineQueue.push({type:'save',data:eventObj}); showStatus('Saved locally — will sync when online','success'); return; }
       const encrypted = encryptEvent(eventObj);
-      const body = encrypted
-        ? { id: eventObj.id, encryptedData: encrypted.encryptedData, nonce: encrypted.nonce }
-        : { ...eventObj };
+      const body = encrypted ? {id:eventObj.id,encryptedData:encrypted.encryptedData,nonce:encrypted.nonce} : {...eventObj};
       try {
-        await fetch('/api/events', {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(body)
-        });
-      } catch { /* best-effort */ }
+        const res = await fetch('/api/events', {method:'POST',headers:getAuthHeaders(),body:JSON.stringify(body)});
+        if (res.status === 401) { showStatus('Session expired — please sign in again','error'); return; }
+        if (!res.ok) { offlineQueue.push({type:'save',data:eventObj}); }
+      } catch { offlineQueue.push({type:'save',data:eventObj}); }
     }
 
     async function apiUpdateEvent(eventId, eventObj) {
-      if (guestMode) return; // guest mode — local only
+      if (guestMode) return;
+      if (!navigator.onLine) { offlineQueue.push({type:'update',id:eventId,data:eventObj}); return; }
       const encrypted = encryptEvent(eventObj);
-      const body = encrypted
-        ? { encryptedData: encrypted.encryptedData, nonce: encrypted.nonce }
-        : { ...eventObj };
+      const body = encrypted ? {encryptedData:encrypted.encryptedData,nonce:encrypted.nonce} : {...eventObj};
       try {
-        await fetch(`/api/events/${eventId}`, {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(body)
-        });
-      } catch { /* best-effort */ }
+        const res = await fetch(`/api/events/${eventId}`,{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify(body)});
+        if (res.status === 401) showStatus('Session expired — please sign in again','error');
+        else if (!res.ok) offlineQueue.push({type:'update',id:eventId,data:eventObj});
+      } catch { offlineQueue.push({type:'update',id:eventId,data:eventObj}); }
     }
+
+    async function flushOfflineQueue() {
+      if (!offlineQueue.length) return;
+      const q = [...offlineQueue]; offlineQueue = [];
+      for (const item of q) {
+        if (item.type==='save') await apiSaveEvent(item.data);
+        else if (item.type==='update') await apiUpdateEvent(item.id, item.data);
+        else if (item.type==='delete') { try { await fetch(`/api/events/${item.id}`,{method:'DELETE',headers:getAuthHeaders()}); } catch {} }
+      }
+    }
+    window.addEventListener('online', () => { showStatus('Back online — syncing...','success'); flushOfflineQueue(); });
+    window.addEventListener('offline', () => showStatus('You\'re offline — changes will sync when reconnected','error'));
 
     // ── Auth UI ──
     function showAuthModal(mode = 'login') {
@@ -1003,6 +1087,14 @@
       document.getElementById('auth-error').classList.remove('visible');
       document.getElementById('auth-email').value = '';
       document.getElementById('auth-password').value = '';
+      // Show forgot-link only in login mode
+      const forgotLink = document.getElementById('forgot-link');
+      if (forgotLink) forgotLink.style.display = mode === 'login' ? '' : 'none';
+      // Make sure reset panel is hidden when showing auth box
+      const resetPanel = document.getElementById('reset-panel');
+      if (resetPanel) resetPanel.style.display = 'none';
+      const authBox = document.querySelector('#auth-overlay .auth-box');
+      if (authBox) authBox.style.display = '';
       setTimeout(() => document.getElementById('auth-email').focus(), 100);
     }
 
@@ -1069,6 +1161,10 @@
         renderCalendar();
         renderUpcomingEvents();
         archivePastEventsSilent();
+        // Show recovery codes after registration
+        if (authMode === 'register' && data.recoveryCodes) {
+          showRecoveryCodes(data.recoveryCodes);
+        }
       } catch (err) {
         showAuthError('Connection error. Please try again.');
       } finally {
@@ -1097,6 +1193,10 @@
       if (chipWrap) chipWrap.style.display = currentUserEmail ? '' : 'none';
       const logoutBtn = document.getElementById('logout-btn');
       if (logoutBtn) logoutBtn.style.display = currentUserEmail ? '' : 'none';
+      const changePwBtn = document.getElementById('change-pw-btn');
+      if (changePwBtn) changePwBtn.style.display = currentUserEmail ? '' : 'none';
+      const deleteAcctBtn = document.getElementById('delete-acct-btn');
+      if (deleteAcctBtn) deleteAcctBtn.style.display = currentUserEmail ? '' : 'none';
     }
 
     // ── Local storage ──
@@ -2152,6 +2252,168 @@
       const diff = swipeStartX - swipeCurrX;
       if (diff > 40) this.classList.add('swipe-left');
       else { this.style.transform = ''; this.classList.remove('swipe-left'); }
+    }
+
+    // ── iCal Export ──
+    function exportIcal() {
+      const events = allEvents.filter(e => !e.isHoliday);
+      if (!events.length) { showStatus('No events to export', 'error'); return; }
+      const lines = [
+        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CalPal//CalPal Calendar//EN',
+        'X-WR-CALNAME:CalPal','X-WR-TIMEZONE:America/New_York','CALSCALE:GREGORIAN','METHOD:PUBLISH'
+      ];
+      events.forEach(ev => {
+        lines.push('BEGIN:VEVENT');
+        lines.push(`UID:${ev.id}@calpal.app`);
+        lines.push(`SUMMARY:${ev.title}`);
+        if (ev.isAllDay || !ev.time) {
+          lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`);
+          const d = new Date((ev.endDate||ev.date)+'T00:00:00'); d.setDate(d.getDate()+1);
+          lines.push(`DTEND;VALUE=DATE:${d.toISOString().slice(0,10).replace(/-/g,'')}`);
+        } else {
+          lines.push(`DTSTART;TZID=America/New_York:${ev.date.replace(/-/g,'')}T${(ev.time).replace(':','')}00`);
+          const endT=ev.endTime||ev.time, endD=ev.endDate||ev.date;
+          lines.push(`DTEND;TZID=America/New_York:${endD.replace(/-/g,'')}T${endT.replace(':','')}00`);
+        }
+        lines.push('END:VEVENT');
+      });
+      lines.push('END:VCALENDAR');
+      const blob = new Blob([lines.join('\r\n')+'\r\n'],{type:'text/calendar'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='calpal.ics'; a.click();
+      URL.revokeObjectURL(url);
+      showStatus('✓ Calendar exported','success');
+    }
+
+    // ── iCal Import ──
+    async function importIcalFile(e) {
+      const file = e.target.files[0]; if (!file) return;
+      e.target.value = '';
+      const text = await file.text();
+      const vevents = text.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g)||[];
+      if (!vevents.length) { showStatus('No events found in file','error'); return; }
+      let imported = 0;
+      for (const block of vevents) {
+        const get = k => { const m=block.match(new RegExp(`^${k}[;:][^\r\n]+`,'m')); return m?m[0].replace(new RegExp(`^${k}[^:]*:`),'').trim():null; };
+        const dtstart=get('DTSTART'); if (!dtstart) continue;
+        const parseD = s => { const c=s.replace(/TZID=[^:]+:/,'').replace(/VALUE=DATE:/,''); return c.length===8?{date:`${c.slice(0,4)}-${c.slice(4,6)}-${c.slice(6,8)}`,time:null}:{date:`${c.slice(0,4)}-${c.slice(4,6)}-${c.slice(6,8)}`,time:`${c.slice(9,11)}:${c.slice(11,13)}`}; };
+        const start=parseD(dtstart), dtend=get('DTEND'), end=dtend?parseD(dtend):null;
+        const isAllDay=!start.time;
+        let endDate=null;
+        if (end&&end.date!==start.date) { if(isAllDay){const d=new Date(end.date+'T00:00:00');d.setDate(d.getDate()-1);endDate=d.toISOString().slice(0,10);}else{endDate=end.date;} }
+        const uid = get('UID') || null;
+        const newEv = { id: uid ? uid.replace('@calpal.app','') : (crypto.randomUUID?(crypto.randomUUID()):(Date.now().toString(36)+Math.random().toString(36).slice(2))), title:get('SUMMARY')||'Imported Event', date:start.date, endDate:endDate||null, time:start.time, endTime:end?.time||null, isAllDay, isMultiDay:!!endDate, createdAt:new Date().toISOString() };
+        if (allEvents.find(e=>e.id===newEv.id)) continue; // skip duplicates
+        allEvents.push(newEv); saveEvents(); await apiSaveEvent(newEv); imported++;
+      }
+      renderCalendar(); renderUpcomingEvents();
+      showStatus(`✓ Imported ${imported} event${imported!==1?'s':''}`, 'success');
+    }
+
+    // ── Password reset (forgot password flow) ──
+    function showForgotPassword() {
+      document.querySelector('#auth-overlay .auth-box').style.display = 'none';
+      document.getElementById('reset-panel').style.display = '';
+      document.getElementById('reset-email').value = document.getElementById('auth-email').value || '';
+      document.getElementById('reset-error').classList.remove('visible');
+    }
+    function hideForgotPassword() {
+      document.getElementById('reset-panel').style.display = 'none';
+      document.querySelector('#auth-overlay .auth-box').style.display = '';
+    }
+    async function submitResetPassword() {
+      const email = document.getElementById('reset-email').value.trim();
+      const code = document.getElementById('reset-code').value.trim();
+      const newPassword = document.getElementById('reset-new-password').value;
+      const btn = document.getElementById('reset-submit-btn');
+      if (!email || !code || !newPassword) { document.getElementById('reset-error').textContent='All fields required'; document.getElementById('reset-error').classList.add('visible'); return; }
+      btn.disabled=true; btn.textContent='Resetting...';
+      try {
+        const res = await fetch('/api/auth/reset-password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,code,newPassword}) });
+        const data = await res.json();
+        if (!res.ok) { document.getElementById('reset-error').textContent=data.error||'Reset failed'; document.getElementById('reset-error').classList.add('visible'); return; }
+        authToken = data.token; currentUserEmail = email;
+        localStorage.setItem('calpal_token', authToken); localStorage.setItem('calpal_email', email);
+        if (data.encryptionSalt) encryptionKey = await deriveEncryptionKey(newPassword, data.encryptionSalt);
+        hideForgotPassword();
+        document.getElementById('auth-overlay').classList.add('hidden');
+        updateUserChip();
+        await loadEvents(); renderCalendar(); renderUpcomingEvents();
+        showStatus('✓ Password reset — signed in', 'success');
+        if (data.warning) setTimeout(() => showStatus('⚠️ Old encrypted events were cleared', 'error'), 2000);
+      } catch { document.getElementById('reset-error').textContent='Connection error'; document.getElementById('reset-error').classList.add('visible'); }
+      finally { btn.disabled=false; btn.textContent='Reset Password'; }
+    }
+
+    // ── Recovery codes modal ──
+    function showRecoveryCodes(codes) {
+      const grid = document.getElementById('recovery-codes-grid');
+      grid.innerHTML = codes.map(c => `<code style="background:var(--bg-light);border-radius:6px;padding:6px 8px;font-size:12px;font-family:monospace;text-align:center;">${c}</code>`).join('');
+      document.getElementById('recovery-overlay').classList.add('active');
+      window._recoveryCodes = codes;
+    }
+    function closeRecoveryModal() {
+      document.getElementById('recovery-overlay').classList.remove('active');
+      window._recoveryCodes = null;
+    }
+    function copyRecoveryCodes() {
+      const codes = window._recoveryCodes;
+      if (codes) navigator.clipboard.writeText(codes.join('\n')).then(() => showStatus('✓ Codes copied', 'success'));
+    }
+
+    // ── Change password modal ──
+    function openChangePassword() { closeSettings(); document.getElementById('change-pw-overlay').classList.add('active'); document.getElementById('cp-current').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-error').textContent=''; }
+    function closeChangePw() { document.getElementById('change-pw-overlay').classList.remove('active'); }
+    async function submitChangePassword() {
+      const cur=document.getElementById('cp-current').value, nw=document.getElementById('cp-new').value;
+      const errEl=document.getElementById('cp-error'), btn=document.getElementById('cp-submit');
+      if (!cur||!nw){errEl.textContent='Both fields required';return;}
+      if (nw.length<8){errEl.textContent='New password must be at least 8 characters';return;}
+      btn.disabled=true; btn.textContent='Updating...';
+      try {
+        const res=await fetch('/api/auth/password',{method:'PATCH',headers:getAuthHeaders(),body:JSON.stringify({currentPassword:cur,newPassword:nw})});
+        const data=await res.json();
+        if (!res.ok){errEl.textContent=data.error||'Update failed';return;}
+        authToken=data.token; localStorage.setItem('calpal_token',authToken);
+        if (data.encryptionSalt) encryptionKey=await deriveEncryptionKey(nw,data.encryptionSalt);
+        closeChangePw();
+        showStatus('✓ Password updated','success');
+        showStatus('⚠️ Old encrypted events cleared','error');
+      } catch {errEl.textContent='Connection error';}
+      finally{btn.disabled=false;btn.textContent='Update';}
+    }
+
+    // ── Delete account modal ──
+    function openDeleteAccount() { closeSettings(); document.getElementById('delete-account-overlay').classList.add('active'); document.getElementById('da-password').value=''; document.getElementById('da-error').textContent=''; }
+    function closeDeleteAccount() { document.getElementById('delete-account-overlay').classList.remove('active'); }
+    async function submitDeleteAccount() {
+      const pw=document.getElementById('da-password').value;
+      const errEl=document.getElementById('da-error'), btn=document.getElementById('da-submit');
+      if (!pw){errEl.textContent='Password required';return;}
+      btn.disabled=true; btn.textContent='Deleting...';
+      try {
+        const res=await fetch('/api/auth/account',{method:'DELETE',headers:getAuthHeaders(),body:JSON.stringify({password:pw})});
+        const data=await res.json();
+        if (!res.ok){errEl.textContent=data.error||'Deletion failed';return;}
+        authToken=null; currentUserEmail=null; encryptionKey=null;
+        localStorage.removeItem('calpal_token'); localStorage.removeItem('calpal_email');
+        localStorage.removeItem('calendarEvents');
+        allEvents=[]; archivedEvents=[]; archivedIds=new Set();
+        closeDeleteAccount(); updateUserChip(); renderCalendar(); renderUpcomingEvents();
+        if (authEnabled) showAuthModal('register');
+        showStatus('Account deleted','success');
+      } catch {errEl.textContent='Connection error';}
+      finally{btn.disabled=false;btn.textContent='Delete Forever';}
+    }
+
+    // ── Delete confirm modal ──
+    function confirmDelete(msg) {
+      return new Promise((resolve, reject) => {
+        document.getElementById('delete-confirm-msg').textContent = msg || 'Delete this event?';
+        document.getElementById('delete-confirm-overlay').classList.add('active');
+        window._deleteConfirmResolve = resolve;
+        window._deleteConfirmReject = reject;
+      });
     }
 
     window.addEventListener('load', init);

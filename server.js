@@ -284,18 +284,21 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const userId = randomBytes(16).toString('hex');
     const encryptionSalt = generateSalt();
+    const codes = Array.from({length:16}, () => randomBytes(4).toString('hex'));
+    const hashedCodes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
 
     await usersCollection.insertOne({
       userId,
       email: email.toLowerCase(),
       passwordHash,
       encryptionSalt,
+      recoveryCodes: hashedCodes,
       createdAt: new Date()
     });
 
     const token = jwt.sign({ sub: userId, email: email.toLowerCase() }, JWT_SECRET, { expiresIn: '30d' });
     console.log('✓ New user registered:', email.toLowerCase());
-    res.json({ token, encryptionSalt, userId });
+    res.json({ token, encryptionSalt, userId, recoveryCodes: codes });
   } catch (err) {
     console.error('Register error:', err.message);
     res.status(500).json({ error: 'Registration failed' });
@@ -375,6 +378,54 @@ app.delete('/api/auth/account', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Account delete error:', err.message);
     res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// POST /api/auth/forgot-password
+// Generates 16 one-time recovery codes, stores hashed, returns plaintext once
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
+  try {
+    const user = await usersCollection.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ error: 'No account found with that email' });
+    const codes = Array.from({length:16}, () => randomBytes(4).toString('hex'));
+    const hashedCodes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
+    await usersCollection.updateOne({ userId: user.userId }, { $set: { recoveryCodes: hashedCodes, recoveryGeneratedAt: new Date() } });
+    console.log('✓ Recovery codes generated:', user.email);
+    res.json({ codes });
+  } catch (err) {
+    console.error('Forgot password error:', err.message);
+    res.status(500).json({ error: 'Failed to generate recovery codes' });
+  }
+});
+
+// POST /api/auth/reset-password
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { email, code, newPassword } = req.body;
+  if (!email || !code || !newPassword) return res.status(400).json({ error: 'Email, code, and new password required' });
+  if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
+  try {
+    const user = await usersCollection.findOne({ email: email.toLowerCase() });
+    if (!user || !user.recoveryCodes?.length) return res.status(400).json({ error: 'Invalid or expired recovery code' });
+    let matchIndex = -1;
+    for (let i = 0; i < user.recoveryCodes.length; i++) {
+      if (user.recoveryCodes[i] && await bcrypt.compare(code.trim().toLowerCase(), user.recoveryCodes[i])) { matchIndex = i; break; }
+    }
+    if (matchIndex === -1) return res.status(400).json({ error: 'Invalid or expired recovery code' });
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    const encryptionSalt = generateSalt();
+    const updatedCodes = [...user.recoveryCodes];
+    updatedCodes[matchIndex] = null;
+    await usersCollection.updateOne({ userId: user.userId }, { $set: { passwordHash, encryptionSalt, recoveryCodes: updatedCodes, updatedAt: new Date() } });
+    const token = jwt.sign({ sub: user.userId, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+    console.log('✓ Password reset via recovery code:', user.email);
+    res.json({ token, encryptionSalt, userId: user.userId, warning: 'Events encrypted with your old password are no longer accessible' });
+  } catch (err) {
+    console.error('Reset password error:', err.message);
+    res.status(500).json({ error: 'Password reset failed' });
   }
 });
 
