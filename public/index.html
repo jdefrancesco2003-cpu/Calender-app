@@ -135,10 +135,10 @@
     .day-cell.other-month { background: transparent; opacity: 0.2; }
     .day-cell.today { background: transparent; }
     .day-cell.selected { background: transparent; }
-    .day-number { font-size: 13px; font-weight: 600; color: var(--text-primary); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.12s, color 0.12s; }
-    .day-cell.today .day-number { background: var(--primary); color: white; font-weight: 700; }
-    .day-cell.selected .day-number { background: var(--primary); color: white; font-weight: 700; box-shadow: 0 2px 8px rgba(74,157,111,0.35); }
-    .day-cell.today.selected .day-number { background: var(--primary-dark); box-shadow: 0 2px 8px rgba(74,157,111,0.45); }
+    .day-number { font-size: 13px; font-weight: 600; color: var(--text-primary); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.12s, color 0.12s, border-color 0.12s; border: 2px solid transparent; }
+    .day-cell.today .day-number { background: var(--primary); color: white; font-weight: 700; border-color: var(--primary); }
+    .day-cell.selected .day-number { background: transparent; color: var(--primary); font-weight: 700; border-color: var(--primary); }
+    .day-cell.today.selected .day-number { background: var(--primary-dark); color: white; border-color: var(--primary-dark); box-shadow: 0 2px 8px rgba(74,157,111,0.45); }
     .day-dots { display: flex; gap: 3px; margin-top: 2px; flex-wrap: wrap; justify-content: center; }
     .day-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--primary); opacity: 0.8; }
     .day-cell.selected .day-dot { background: var(--primary); opacity: 0.5; }
@@ -183,6 +183,7 @@
     .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.7; }
 
     /* ── HORIZONTAL WEEK VIEW ── */
+    #week-spacer { display: none; flex-shrink: 0; height: 68px; background: var(--bg-dark); border-top: 1px solid var(--border-color); }
     #week-view { display: none; flex: 1; min-height: 0; overflow: hidden; flex-direction: column; }
     .week-timeline { display: flex; flex: 1; min-height: 0; overflow: hidden; }
     /* Fixed left label column */
@@ -404,6 +405,9 @@
             </div>
           </div>
         </div>
+
+        <!-- Week view bottom buffer (visible only in week mode) -->
+        <div id="week-spacer"></div>
 
         <!-- Calendar bottom: upcoming events OR selected-day schedule -->
         <div id="calendar-bottom" class="events-container"></div>
@@ -2204,6 +2208,7 @@
       const monthView = document.getElementById('month-view');
       const weekView = document.getElementById('week-view');
       const bottom = document.getElementById('calendar-bottom');
+      const spacer = document.getElementById('week-spacer');
       const ANIM = 180;
 
       if (!isWeekView) {
@@ -2214,6 +2219,7 @@
           isWeekView = true;
           monthView.style.display = 'none'; monthView.style.animation = '';
           if (bottom) bottom.style.display = 'none';
+          if (spacer) spacer.style.display = 'block';
           weekView.style.display = 'flex';
           weekView.style.animation = `slideInFromRight ${ANIM}ms ease forwards`;
           document.getElementById('month-year').textContent = '';
@@ -2226,6 +2232,7 @@
         setTimeout(() => {
           isWeekView = false;
           weekView.style.display = 'none'; weekView.style.animation = '';
+          if (spacer) spacer.style.display = 'none';
           monthView.style.display = '';
           monthView.style.animation = `slideInFromLeft ${ANIM}ms ease forwards`;
           if (bottom) bottom.style.display = '';
