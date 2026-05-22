@@ -131,19 +131,21 @@
     .view-toggle-btn:active, .view-toggle-btn.active { background: var(--primary); color: white; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 6px 10px 10px; background: var(--bg-card); flex-shrink: 0; }
     .day-header { text-align: center; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; font-size: 11px; letter-spacing: 0.5px; }
-    .day-cell { aspect-ratio: 1; border: none; border-radius: 10px; padding: 3px 2px; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 38px; position: relative; transition: background 0.12s, transform 0.1s; }
-    .day-cell:active { transform: scale(0.88); background: rgba(74,157,111,0.1); }
-    .day-cell.other-month { background: transparent; opacity: 0.2; }
-    .day-cell.today { background: transparent; }
-    .day-cell.selected { background: transparent; }
-    .day-number { font-size: 13px; font-weight: 600; color: var(--text-primary); width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; transition: background 0.12s, color 0.12s, border-color 0.12s; border: 2px solid transparent; }
-    .day-cell.today .day-number { background: var(--primary); color: white; font-weight: 700; border-color: var(--primary); }
-    .day-cell.selected .day-number { background: transparent; color: var(--primary); font-weight: 700; border-color: var(--primary); }
-    .day-cell.today.selected .day-number { background: var(--primary-dark); color: white; border-color: var(--primary-dark); box-shadow: 0 2px 8px rgba(74,157,111,0.45); }
-    .day-dots { display: flex; gap: 3px; margin-top: 2px; flex-wrap: wrap; justify-content: center; }
-    .day-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--primary); opacity: 0.8; }
-    .day-cell.selected .day-dot { background: var(--primary); opacity: 0.5; }
-    .day-dot.more { background: var(--text-secondary); }
+    .day-cell { aspect-ratio: 1; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px 5px 4px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; min-height: 40px; position: relative; overflow: hidden; transition: background 0.15s, transform 0.1s, border-color 0.15s; }
+    .day-cell:active { transform: scale(0.94); border-color: var(--primary); }
+    .day-cell.other-month { background: transparent; border-color: transparent; opacity: 0.25; }
+    .day-cell.today { border-color: var(--primary); }
+    .day-cell.selected { border-color: var(--primary); background: rgba(74,157,111,0.07); }
+    .day-cell.today.selected { background: rgba(74,157,111,0.1); }
+    .day-number { font-size: 15px; font-weight: 700; color: var(--text-primary); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-bottom: 3px; }
+    .day-cell.today .day-number { background: var(--primary); color: white; }
+    .day-cell.selected .day-number { background: var(--primary-dark); color: white; }
+    .day-cell.today.selected .day-number { background: var(--primary-dark); color: white; }
+    .day-dots { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+    .day-dot { width: 80%; height: 3px; border-radius: 2px; opacity: 0.9; flex-shrink: 0; }
+    .day-cell.selected .day-dot { opacity: 0.75; }
+    .day-dot.more { background: var(--text-secondary) !important; width: 40%; }
+    .day-dot.holiday { background: var(--warning); }
     /* ── AUTH MODAL ── */
     #auth-overlay { position: fixed; inset: 0; background: var(--bg-dark); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
     #auth-overlay.hidden { display: none; }
@@ -233,15 +235,24 @@
     .event-meta { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
     .event-day-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500; }
     .all-day-badge { display: inline-block; font-size: 9px; background: var(--primary); color: white; padding: 2px 6px; border-radius: 3px; margin-top: 3px; font-weight: 700; }
-    .event-day-group { margin-bottom: 4px; }
-    .event-day-label-group {
-      font-size: 13px; font-weight: 700; color: var(--text-primary);
-      padding: 14px 0 8px; border-top: 2px solid var(--border-color);
-      margin-top: 8px; display: flex; align-items: baseline; gap: 8px;
-    }
-    .event-day-label-group .day-label-weekday { font-size: 16px; }
-    .event-day-label-group .day-label-date { font-size: 12px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
-    .event-day-group:first-child .event-day-label-group { border-top: none; margin-top: 0; padding-top: 6px; }
+    /* ── EVENTS PAGE — Apple list style ── */
+    .ev-date-group { }
+    .ev-date-header { font-size: 20px; font-weight: 700; color: var(--text-primary); padding: 18px 14px 6px; }
+    .ev-date-header.is-today { color: var(--primary); }
+    .ev-date-sep { height: 1px; background: var(--border-color); }
+    .ev-row { display: flex; align-items: stretch; padding: 12px 14px; gap: 12px; cursor: pointer; transition: background 0.12s; position: relative; overflow: hidden; }
+    .ev-row:active { background: rgba(74,157,111,0.06); }
+    .ev-row.swipe-left { transform: translateX(-104px); }
+    .ev-bar { width: 3px; border-radius: 2px; flex-shrink: 0; align-self: stretch; min-height: 18px; }
+    .ev-body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .ev-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .ev-title.holiday { color: var(--warning); }
+    .ev-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .ev-time { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+    .ev-time-start { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+    .ev-time-end { font-size: 11px; color: var(--text-secondary); opacity: 0.65; white-space: nowrap; }
+    .ev-allday { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+    .ev-row-sep { height: 1px; background: var(--border-color); margin: 0 14px 0 29px; opacity: 0.45; }
     .search-input { margin-bottom: 0; }
     .search-filters { display: flex; gap: 8px; }
     .search-filters input { flex: 1; font-size: 12px; }
@@ -2649,10 +2660,15 @@
 
     // ── Events page (search tab) ──
     function renderEventsPage() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const farOut = new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0];
       const activeEvents = allEvents.filter(e => !archivedIds.has(e.id));
-      const sorted = [...activeEvents].sort((a, b) => {
-        const dc = new Date(a.date) - new Date(b.date);
+      const upcomingHolidays = holidays.filter(h => h.date >= todayStr && h.date <= farOut);
+      const sorted = [...activeEvents, ...upcomingHolidays].sort((a, b) => {
+        const dc = a.date.localeCompare(b.date);
         if (dc !== 0) return dc;
+        if (a.isHoliday && !b.isHoliday) return -1;
+        if (!a.isHoliday && b.isHoliday) return 1;
         if (a.isAllDay && !b.isAllDay) return -1;
         if (!a.isAllDay && b.isAllDay) return 1;
         return (a.time || '').localeCompare(b.time || '');
@@ -2668,15 +2684,28 @@
       const query = document.getElementById('search-input').value.toLowerCase();
       const fromDate = document.getElementById('search-from').value;
       const toDate = document.getElementById('search-to').value;
-      const filtered = allEvents.filter(e => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const farOut = new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0];
+      const filteredEvents = allEvents.filter(e => {
         if (archivedIds.has(e.id)) return false;
-        const textMatch = e.title.toLowerCase().includes(query) || (e.description || '').toLowerCase().includes(query);
+        const textMatch = !query || e.title.toLowerCase().includes(query) || (e.description || '').toLowerCase().includes(query);
         const fromMatch = !fromDate || e.date >= fromDate || (e.endDate && e.endDate >= fromDate);
         const toMatch = !toDate || e.date <= toDate;
         return textMatch && fromMatch && toMatch;
-      }).sort((a, b) => {
-        const dc = new Date(a.date) - new Date(b.date);
+      });
+      // Always include upcoming holidays (filtered by text if query active)
+      const filteredHolidays = holidays.filter(h => {
+        if (h.date < todayStr || h.date > farOut) return false;
+        if (query && !h.title.toLowerCase().includes(query)) return false;
+        if (fromDate && h.date < fromDate) return false;
+        if (toDate && h.date > toDate) return false;
+        return true;
+      });
+      const filtered = [...filteredEvents, ...filteredHolidays].sort((a, b) => {
+        const dc = a.date.localeCompare(b.date);
         if (dc !== 0) return dc;
+        if (a.isHoliday && !b.isHoliday) return -1;
+        if (!a.isHoliday && b.isHoliday) return 1;
         if (a.isAllDay && !b.isAllDay) return -1;
         if (!a.isAllDay && b.isAllDay) return 1;
         return (a.time || '').localeCompare(b.time || '');
@@ -2707,35 +2736,54 @@
       const today = new Date().toISOString().split('T')[0];
       const grouped = {};
       events.forEach(e => { if (!grouped[e.date]) grouped[e.date] = []; grouped[e.date].push(e); });
+
       container.innerHTML = Object.keys(grouped).sort().map(dateKey => {
         const d = new Date(dateKey + 'T00:00:00');
         const isToday = dateKey === today;
         const weekday = isToday ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'long' });
-        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const headerHtml = isToday
-          ? `<span class="day-label-weekday">Today</span><span class="day-label-date">${dateStr}</span>`
-          : `<span class="day-label-weekday">${weekday}</span><span class="day-label-date">${dateStr}</span>`;
-        const eventsHtml = grouped[dateKey].map(event => {
-          const timeStr = formatEventTime(event.time, event.endTime);
-          const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          return `<div class="event-item" data-event-id="${event.id}" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
-            <div class="event-details">
-              <div class="event-title">${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
-              ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
-              ${event.endDate ? `<div class="event-meta" style="color:var(--primary);font-weight:600;">${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>` : ''}
-              ${timeStr ? `<div class="event-meta">${timeStr}${dur}</div>` : ''}
-              ${event.description ? `<div class="event-meta">${escHtml(event.description)}</div>` : ''}
+        const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const headerLabel = isToday ? `Today – ${monthDay}` : `${weekday} – ${monthDay}`;
+
+        const rowsHtml = grouped[dateKey].map((ev, idx, arr) => {
+          const sep = idx < arr.length - 1 ? '<div class="ev-row-sep"></div>' : '';
+          if (ev.isHoliday) {
+            return `<div class="ev-row">
+              <div class="ev-bar" style="background:var(--warning);"></div>
+              <div class="ev-body"><div class="ev-title holiday">${escHtml(ev.title)}</div></div>
+              <div class="ev-time"><span class="ev-allday">all-day</span></div>
+            </div>${sep}`;
+          }
+          const color = getCategoryColor(ev.category || 'work');
+          const startFmt = ev.time ? formatTimeEastern(ev.time) : '';
+          const endFmt = ev.endTime ? formatTimeEastern(ev.endTime) : '';
+          const timeHtml = ev.isAllDay
+            ? `<span class="ev-allday">all-day</span>`
+            : startFmt
+              ? `<div class="ev-time-start">${startFmt}</div>${endFmt ? `<div class="ev-time-end">${endFmt}</div>` : ''}`
+              : '';
+          const badge = ev.isRecurring || ev.isVirtual ? ' <span class="recurrence-badge">↻</span>' : '';
+          return `<div class="ev-row" data-event-id="${ev.id}" onclick="openEditModal('${ev.id}'); triggerHaptic([40])">
+            <div class="ev-bar" style="background:${color};"></div>
+            <div class="ev-body">
+              <div class="ev-title">${escHtml(ev.title)}${badge}</div>
+              ${ev.description ? `<div class="ev-sub">${escHtml(ev.description)}</div>` : ''}
             </div>
+            <div class="ev-time">${timeHtml}</div>
             <div class="event-swipe-actions">
-              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${event.id}'); triggerHaptic([40])">Edit</button>
-              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${event.id}'); triggerHaptic([100,50,100])">Delete</button>
+              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${ev.id}'); triggerHaptic([40])">Edit</button>
+              <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${ev.id}'); triggerHaptic([100,50,100])">Delete</button>
             </div>
-          </div>`;
+          </div>${sep}`;
         }).join('');
-        return `<div class="event-day-group"><div class="event-day-label-group">${headerHtml}</div>${eventsHtml}</div>`;
+
+        return `<div class="ev-date-group">
+          <div class="ev-date-header${isToday ? ' is-today' : ''}">${headerLabel}</div>
+          <div class="ev-date-sep"></div>
+          ${rowsHtml}
+        </div>`;
       }).join('');
-      // Attach swipe-to-reveal handlers after DOM is built
-      container.querySelectorAll('.event-item').forEach(item => {
+
+      container.querySelectorAll('.ev-row[data-event-id]').forEach(item => {
         item.addEventListener('touchstart', _swipeTouchStart, { passive: true });
         item.addEventListener('touchmove', _swipeTouchMove, { passive: false });
         item.addEventListener('touchend', _swipeTouchEnd, false);
