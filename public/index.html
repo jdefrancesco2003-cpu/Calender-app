@@ -79,7 +79,7 @@
 
     /* ── TABS ── */
     .section-tabs { display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-dark); flex-shrink: 0; padding: 8px 12px 0; gap: 4px; }
-    .tab-button { flex: 1; padding: 8px 0; background: none; border: none; border-bottom: 2.5px solid transparent; font-size: 14px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: color 0.18s, border-color 0.18s; letter-spacing: 0.1px; border-radius: 8px 8px 0 0; }
+    .tab-button { flex: 1; padding: 8px 0; background: none; border: none; border-bottom: 2.5px solid transparent; font-size: 14px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: color 0.18s, border-color 0.18s; letter-spacing: 0.1px; border-radius: 0; }
     .tab-button.active { color: var(--primary); border-bottom-color: var(--primary); }
     .tab-button:active { background: rgba(74,157,111,0.08); }
 
@@ -2211,14 +2211,14 @@
       const ANIM = 180;
 
       if (!isWeekView) {
-        // → week view
+        // → week view: hide bottom panel immediately so it doesn't affect layout
+        if (bottom) bottom.style.display = 'none';
         btn.textContent = 'Month'; btn.classList.add('active');
         monthView.style.animation = `slideOutToLeft ${ANIM}ms ease forwards`;
         setTimeout(() => {
           isWeekView = true;
           document.body.classList.add('week-mode');
           monthView.style.display = 'none'; monthView.style.animation = '';
-          if (bottom) bottom.style.display = 'none';
           if (spacer) spacer.style.display = 'block';
           weekView.style.display = 'flex';
           weekView.style.animation = `slideInFromRight ${ANIM}ms ease forwards`;
@@ -2512,15 +2512,16 @@
       document.getElementById('week-labels').innerHTML = labelsHtml;
       document.getElementById('week-scroll-inner').innerHTML = rowsHtml;
 
-      // JS fallback: explicitly size rows + labels to fill available height
-      requestAnimationFrame(() => {
+      // Double-rAF: wait two frames so flex layout fully settles before measuring
+      requestAnimationFrame(() => requestAnimationFrame(() => {
         const scrollArea = document.querySelector('.week-scroll-area');
         const hourHeader = document.querySelector('.week-hour-header');
         if (!scrollArea || !hourHeader) return;
-        const rowH = Math.max(54, Math.floor((scrollArea.offsetHeight - hourHeader.offsetHeight) / 7));
+        const available = scrollArea.offsetHeight - hourHeader.offsetHeight;
+        const rowH = available > 100 ? Math.floor(available / 7) : 72;
         document.querySelectorAll('.week-day-row').forEach(el => { el.style.height = rowH + 'px'; el.style.flex = 'none'; });
         document.querySelectorAll('.week-day-label').forEach(el => { el.style.height = rowH + 'px'; el.style.flex = 'none'; });
-      });
+      }));
 
       updateCurrentTimeLine();
       scrollToCurrentTime();
