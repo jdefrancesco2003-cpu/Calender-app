@@ -85,7 +85,7 @@
 
     /* ── MAIN CONTENT ── */
     .main-content { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
-    .tab-content { display: none; flex-direction: column; flex: 1; }
+    .tab-content { display: none; flex-direction: column; flex: 1; min-height: 0; }
     .tab-content.active { display: flex; animation: tabFadeIn 0.22s ease both; }
     @keyframes tabFadeIn {
       from { opacity: 0; transform: translateY(6px); }
@@ -127,22 +127,23 @@
     .month-nav { display: flex; gap: 6px; align-items: center; }
     .month-nav button { width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--bg-light); font-size: 15px; color: var(--text-primary); min-height: auto; transition: background 0.12s, transform 0.1s; }
     .month-nav button:active { background: var(--primary); color: white; transform: scale(0.9); }
-    .view-toggle-btn { padding: 7px 16px; font-size: 12px; width: auto !important; min-height: auto; height: 34px; border-radius: 20px; background: var(--bg-light); color: var(--text-secondary); border: none; font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.2px; white-space: nowrap; }
+    .view-toggle-btn { padding: 7px 16px; font-size: 12px; width: auto !important; min-height: auto; height: 34px; border-radius: 10px; background: var(--bg-light); color: var(--text-secondary); border: none; font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.2px; white-space: nowrap; }
     .view-toggle-btn:active, .view-toggle-btn.active { background: var(--primary); color: white; }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 6px 10px 10px; background: var(--bg-card); flex-shrink: 0; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 6px 10px 2px; background: var(--bg-card); flex-shrink: 0; }
     .day-header { text-align: center; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; font-size: 11px; letter-spacing: 0.5px; }
     .day-cell { aspect-ratio: 1; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px 5px 4px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; min-height: 40px; position: relative; overflow: hidden; transition: background 0.15s, transform 0.1s, border-color 0.15s; }
     .day-cell:active { transform: scale(0.94); border-color: var(--primary); }
     .day-cell.other-month { background: transparent; border-color: transparent; opacity: 0.25; }
-    .day-cell.today { border-color: var(--primary); }
-    .day-cell.selected { border-color: var(--primary); background: rgba(74,157,111,0.07); }
-    .day-cell.today.selected { background: rgba(74,157,111,0.1); }
+    .day-cell.today { background: var(--primary); border-color: var(--primary); }
+    .day-cell.selected { background: transparent; border-color: var(--primary); border-width: 2px; }
+    .day-cell.today.selected { background: var(--primary-dark); border-color: var(--primary-dark); }
     .day-number { font-size: 15px; font-weight: 700; color: var(--text-primary); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-bottom: 3px; }
-    .day-cell.today .day-number { background: var(--primary); color: white; }
-    .day-cell.selected .day-number { background: var(--primary-dark); color: white; }
-    .day-cell.today.selected .day-number { background: var(--primary-dark); color: white; }
+    .day-cell.today .day-number { background: transparent; color: white; }
+    .day-cell.selected .day-number { background: var(--primary); color: white; }
+    .day-cell.today.selected .day-number { background: transparent; color: white; }
     .day-dots { display: flex; flex-direction: column; gap: 2px; width: 100%; }
     .day-dot { width: 80%; height: 3px; border-radius: 2px; opacity: 0.9; flex-shrink: 0; }
+    .day-cell.today .day-dot { background: rgba(255,255,255,0.65) !important; }
     .day-cell.selected .day-dot { opacity: 0.75; }
     .day-dot.more { background: var(--text-secondary) !important; width: 40%; }
     .day-dot.holiday { background: var(--warning); }
@@ -186,7 +187,7 @@
     .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.7; }
 
     /* ── HORIZONTAL WEEK VIEW ── */
-    #week-spacer { display: none; flex-shrink: 0; height: 68px; background: var(--bg-dark); border-top: 1px solid var(--border-color); }
+    #week-spacer { display: none; flex-shrink: 0; height: 0; }
     #week-view { display: none; flex: 1; min-height: 0; overflow: hidden; flex-direction: column; }
     .week-timeline { display: flex; flex: 1; min-height: 0; overflow: hidden; }
     /* Fixed left label column */
@@ -2553,21 +2554,24 @@
       const checkMove = (mv) => {
         const cx = isTouch ? mv.touches[0].clientX : mv.clientX;
         const cy = isTouch ? mv.touches[0].clientY : mv.clientY;
-        if (Math.abs(cx - startX) > 4 || Math.abs(cy - startY) > 4) cancel();
+        if (Math.abs(cx - startX) > 6 || Math.abs(cy - startY) > 6) cancel();
       };
 
       barLongPressTimer = setTimeout(() => {
         barLongPressTimer = null;
         document.removeEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove);
         document.removeEventListener(isTouch ? 'touchend' : 'mouseup', cancel);
-        barDragState = { eventId, startMins, durationMins, startX, deltaPx: 0, moved: false, el, isTouch };
+        // Lock the scroll area so horizontal scroll doesn't compete with drag
+        const scrollArea = document.getElementById('week-scroll-area');
+        if (scrollArea) scrollArea.style.overflowX = 'hidden';
+        barDragState = { eventId, startMins, durationMins, startX, deltaPx: 0, moved: false, el, isTouch, scrollArea };
         el.style.transform = 'scale(1.05)';
         el.style.opacity = '0.8';
         el.style.zIndex = '20';
         triggerHaptic([40, 20, 40]);
         document.addEventListener(isTouch ? 'touchmove' : 'mousemove', handleBarDragMove, { passive: false });
         document.addEventListener(isTouch ? 'touchend' : 'mouseup', handleBarDragEnd, { once: true });
-      }, 1200);
+      }, 600);
 
       document.addEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove, { passive: true });
       document.addEventListener(isTouch ? 'touchend' : 'mouseup', cancel, { once: true });
@@ -2588,6 +2592,8 @@
     function handleBarDragEnd(e) {
       if (!barDragState) return;
       document.removeEventListener(barDragState.isTouch ? 'touchmove' : 'mousemove', handleBarDragMove);
+      // Restore scroll area
+      if (barDragState.scrollArea) barDragState.scrollArea.style.overflowX = '';
 
       const el = barDragState.el;
       el.style.transform = '';
