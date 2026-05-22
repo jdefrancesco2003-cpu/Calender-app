@@ -125,9 +125,9 @@
     .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); flex-shrink: 0; }
     .month-year { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.3px; }
     .month-nav { display: flex; gap: 6px; align-items: center; }
-    .month-nav button { width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--bg-light); font-size: 15px; color: var(--text-primary); min-height: auto; transition: background 0.12s, transform 0.1s; }
-    .month-nav button:active { background: var(--primary); color: white; transform: scale(0.9); }
-    .view-toggle-btn { padding: 7px 16px; font-size: 12px; width: auto !important; min-height: auto; height: 34px; border-radius: 10px !important; background: var(--bg-light); color: var(--text-secondary); border: none; font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.2px; white-space: nowrap; }
+    .month-nav button:not(.view-toggle-btn) { width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--bg-light); font-size: 15px; color: var(--text-primary); min-height: auto; transition: background 0.12s, transform 0.1s; }
+    .month-nav button:not(.view-toggle-btn):active { background: var(--primary); color: white; transform: scale(0.9); }
+    .view-toggle-btn { padding: 9px 20px; font-size: 14px; width: auto; min-height: auto; height: 40px; border-radius: 10px; background: var(--bg-light); color: var(--text-secondary); border: none; font-weight: 700; cursor: pointer; transition: all 0.15s; letter-spacing: 0.1px; white-space: nowrap; }
     .view-toggle-btn:active, .view-toggle-btn.active { background: var(--primary); color: white; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 6px 10px 2px; background: var(--bg-card); flex-shrink: 0; }
     .day-header { text-align: center; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; font-size: 11px; letter-spacing: 0.5px; }
@@ -185,6 +185,10 @@
     .events-container { padding: 12px 14px 80px; background: var(--bg-dark); border-top: 1px solid var(--border-color); overflow-y: auto; flex: 1; min-height: 0; }
     .upcoming-day-group { margin-bottom: 16px; }
     .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.7; }
+
+    /* ── VIEW SLIDE CONTAINER ── */
+    #cal-view-container { flex-shrink: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+    body.week-mode #cal-view-container { flex: 1; min-height: 0; flex-shrink: 1; }
 
     /* ── HORIZONTAL WEEK VIEW ── */
     #week-spacer { display: none; flex-shrink: 0; height: 0; }
@@ -397,24 +401,27 @@
           <div class="month-year" id="month-year"></div>
           <div class="month-nav">
             <button onclick="navigatePrevious(); triggerHaptic(20)">←</button>
-            <button class="view-toggle-btn" id="view-toggle-btn" onclick="toggleView(); triggerHaptic(20)">Weekly</button>
+            <button class="view-toggle-btn" id="view-toggle-btn" onclick="toggleView(); triggerHaptic(20)">Monthly</button>
             <button onclick="navigateNext(); triggerHaptic(20)">→</button>
           </div>
         </div>
 
-        <!-- Month view -->
-        <div id="month-view">
-          <div class="calendar-grid" id="calendar-grid"></div>
-        </div>
+        <!-- Sliding view container -->
+        <div id="cal-view-container">
+          <!-- Month view -->
+          <div id="month-view">
+            <div class="calendar-grid" id="calendar-grid"></div>
+          </div>
 
-        <!-- Horizontal Week view -->
-        <div id="week-view">
-          <div class="week-timeline">
-            <div class="week-labels" id="week-labels">
-              <div class="week-label-header">Day</div>
-            </div>
-            <div class="week-scroll-area" id="week-scroll-area">
-              <div class="week-scroll-inner" id="week-scroll-inner"></div>
+          <!-- Horizontal Week view -->
+          <div id="week-view">
+            <div class="week-timeline">
+              <div class="week-labels" id="week-labels">
+                <div class="week-label-header">Day</div>
+              </div>
+              <div class="week-scroll-area" id="week-scroll-area">
+                <div class="week-scroll-inner" id="week-scroll-inner"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -2215,42 +2222,105 @@
     function toggleView() {
       if (selectedDate) { selectedDate = null; }
       const btn = document.getElementById('view-toggle-btn');
+      const wrap = document.getElementById('cal-view-container');
       const monthView = document.getElementById('month-view');
       const weekView = document.getElementById('week-view');
       const bottom = document.getElementById('calendar-bottom');
       const spacer = document.getElementById('week-spacer');
-      const ANIM = 180;
+      const ANIM = 300;
+      const EASE = `transform ${ANIM}ms cubic-bezier(0.4,0,0.2,1)`;
 
       if (!isWeekView) {
-        // → week view: hide bottom panel immediately so it doesn't affect layout
+        // Monthly → Weekly
         if (bottom) bottom.style.display = 'none';
-        btn.textContent = 'Monthly'; btn.classList.add('active');
-        monthView.style.animation = `slideOutToLeft ${ANIM}ms ease forwards`;
-        setTimeout(() => {
-          isWeekView = true;
-          document.body.classList.add('week-mode');
-          monthView.style.display = 'none'; monthView.style.animation = '';
-          if (spacer) spacer.style.display = 'block';
+        btn.textContent = 'Weekly'; btn.classList.add('active');
+
+        // Switch body class first so container gets flex:1 height
+        document.body.classList.add('week-mode');
+        if (spacer) spacer.style.display = 'block';
+
+        // One frame to let the container expand to full height
+        requestAnimationFrame(() => {
+          const h = wrap.offsetHeight;
+          wrap.style.height = h + 'px'; // lock during slide
+
+          // Render week view off-screen right
           weekView.style.display = 'flex';
-          weekView.style.animation = `slideInFromRight ${ANIM}ms ease forwards`;
+          weekView.style.position = 'absolute';
+          weekView.style.inset = `0 0 auto 0`;
+          weekView.style.width = '100%';
+          weekView.style.height = h + 'px';
+          weekView.style.transform = 'translateX(100%)';
           document.getElementById('month-year').textContent = '';
           renderWeekView();
-        }, ANIM);
+
+          // Anchor outgoing month view absolutely too
+          monthView.style.position = 'absolute';
+          monthView.style.inset = `0 0 auto 0`;
+          monthView.style.width = '100%';
+
+          requestAnimationFrame(() => {
+            monthView.style.transition = EASE;
+            weekView.style.transition = EASE;
+            monthView.style.transform = 'translateX(-100%)';
+            weekView.style.transform = 'translateX(0)';
+          });
+
+          setTimeout(() => {
+            isWeekView = true;
+            monthView.style.display = 'none';
+            for (const el of [monthView, weekView]) {
+              el.style.position = ''; el.style.inset = '';
+              el.style.width = ''; el.style.height = '';
+              el.style.transform = ''; el.style.transition = '';
+            }
+            wrap.style.height = '';
+          }, ANIM + 30);
+        });
+
       } else {
-        // → month view
-        btn.textContent = 'Weekly'; btn.classList.remove('active');
-        weekView.style.animation = `slideOutToRight ${ANIM}ms ease forwards`;
+        // Weekly → Monthly
+        btn.textContent = 'Monthly'; btn.classList.remove('active');
+
+        const h = wrap.offsetHeight;
+        wrap.style.height = h + 'px';
+
+        // Show month view off-screen left, render it
+        monthView.style.display = '';
+        monthView.style.position = 'absolute';
+        monthView.style.inset = `0 0 auto 0`;
+        monthView.style.width = '100%';
+        monthView.style.height = h + 'px';
+        monthView.style.transform = 'translateX(-100%)';
+        renderCalendar();
+
+        // Anchor week view absolutely
+        weekView.style.position = 'absolute';
+        weekView.style.inset = `0 0 auto 0`;
+        weekView.style.width = '100%';
+        weekView.style.height = h + 'px';
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          weekView.style.transition = EASE;
+          monthView.style.transition = EASE;
+          weekView.style.transform = 'translateX(100%)';
+          monthView.style.transform = 'translateX(0)';
+        }));
+
         setTimeout(() => {
           isWeekView = false;
           document.body.classList.remove('week-mode');
-          weekView.style.display = 'none'; weekView.style.animation = '';
+          weekView.style.display = 'none';
+          for (const el of [monthView, weekView]) {
+            el.style.position = ''; el.style.inset = '';
+            el.style.width = ''; el.style.height = '';
+            el.style.transform = ''; el.style.transition = '';
+          }
+          wrap.style.height = '';
           if (spacer) spacer.style.display = 'none';
-          monthView.style.display = '';
-          monthView.style.animation = `slideInFromLeft ${ANIM}ms ease forwards`;
           if (bottom) bottom.style.display = '';
-          renderCalendar();
           renderUpcomingEvents();
-        }, ANIM);
+        }, ANIM + 30);
       }
     }
 
