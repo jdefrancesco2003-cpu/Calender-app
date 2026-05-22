@@ -385,7 +385,7 @@
           <div class="month-year" id="month-year"></div>
           <div class="month-nav">
             <button onclick="navigatePrevious(); triggerHaptic(20)">←</button>
-            <button class="view-toggle-btn" id="view-toggle-btn" onclick="toggleView(); triggerHaptic(20)">Week</button>
+            <button class="view-toggle-btn" id="view-toggle-btn" onclick="toggleView(); triggerHaptic(20)">Weekly</button>
             <button onclick="navigateNext(); triggerHaptic(20)">→</button>
           </div>
         </div>
@@ -2213,7 +2213,7 @@
       if (!isWeekView) {
         // → week view: hide bottom panel immediately so it doesn't affect layout
         if (bottom) bottom.style.display = 'none';
-        btn.textContent = 'Month'; btn.classList.add('active');
+        btn.textContent = 'Monthly'; btn.classList.add('active');
         monthView.style.animation = `slideOutToLeft ${ANIM}ms ease forwards`;
         setTimeout(() => {
           isWeekView = true;
@@ -2227,7 +2227,7 @@
         }, ANIM);
       } else {
         // → month view
-        btn.textContent = 'Week'; btn.classList.remove('active');
+        btn.textContent = 'Weekly'; btn.classList.remove('active');
         weekView.style.animation = `slideOutToRight ${ANIM}ms ease forwards`;
         setTimeout(() => {
           isWeekView = false;
