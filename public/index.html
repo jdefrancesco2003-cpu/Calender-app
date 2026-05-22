@@ -419,9 +419,8 @@
         <div style="padding:10px 14px 6px;background:var(--bg-dark);position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border-color);flex-shrink:0;">
           <div style="display:flex;gap:8px;align-items:center;">
             <div style="flex:1;position:relative;">
-              <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;pointer-events:none;opacity:0.4;color:var(--text-secondary);">Search</span>
               <input type="search" id="search-input" placeholder="Search events…" oninput="filterEvents()"
-                style="width:100%;box-sizing:border-box;padding:9px 12px 9px 34px;border-radius:10px;border:1.5px solid var(--border-color);background:var(--bg-light);color:var(--text-primary);font-size:15px;">
+                style="width:100%;box-sizing:border-box;padding:9px 14px;border-radius:10px;border:1.5px solid var(--border-color);background:var(--bg-light);color:var(--text-primary);font-size:15px;">
             </div>
             <button id="filter-toggle-btn" onclick="toggleSearchFilters();triggerHaptic(20)"
               style="background:var(--bg-light);border:1.5px solid var(--border-color);border-radius:10px;padding:9px 11px;min-height:auto;font-size:14px;color:var(--text-secondary);flex-shrink:0;" title="Date filter">⚙︎</button>
