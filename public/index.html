@@ -2546,22 +2546,10 @@
       const startY = isTouch ? e.touches[0].clientY : e.clientY;
       const el = e.currentTarget;
 
-      const cancel = () => {
+      const activateDrag = () => {
         if (barLongPressTimer) { clearTimeout(barLongPressTimer); barLongPressTimer = null; }
-        document.removeEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove);
-        document.removeEventListener(isTouch ? 'touchend' : 'mouseup', cancel);
-      };
-      const checkMove = (mv) => {
-        const cx = isTouch ? mv.touches[0].clientX : mv.clientX;
-        const cy = isTouch ? mv.touches[0].clientY : mv.clientY;
-        if (Math.abs(cx - startX) > 6 || Math.abs(cy - startY) > 6) cancel();
-      };
-
-      barLongPressTimer = setTimeout(() => {
-        barLongPressTimer = null;
-        document.removeEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove);
-        document.removeEventListener(isTouch ? 'touchend' : 'mouseup', cancel);
-        // Lock the scroll area so horizontal scroll doesn't compete with drag
+        document.removeEventListener(isTouch ? 'touchmove' : 'mousemove', onEarlyMove);
+        document.removeEventListener(isTouch ? 'touchend' : 'mouseup', onEarlyUp);
         const scrollArea = document.getElementById('week-scroll-area');
         if (scrollArea) scrollArea.style.overflowX = 'hidden';
         barDragState = { eventId, startMins, durationMins, startX, deltaPx: 0, moved: false, el, isTouch, scrollArea };
@@ -2571,10 +2559,28 @@
         triggerHaptic([40, 20, 40]);
         document.addEventListener(isTouch ? 'touchmove' : 'mousemove', handleBarDragMove, { passive: false });
         document.addEventListener(isTouch ? 'touchend' : 'mouseup', handleBarDragEnd, { once: true });
-      }, 600);
+      };
+      const cancel = () => {
+        if (barLongPressTimer) { clearTimeout(barLongPressTimer); barLongPressTimer = null; }
+        document.removeEventListener(isTouch ? 'touchmove' : 'mousemove', onEarlyMove);
+        document.removeEventListener(isTouch ? 'touchend' : 'mouseup', onEarlyUp);
+      };
+      const onEarlyUp = () => cancel();
+      const onEarlyMove = (mv) => {
+        const cx = isTouch ? mv.touches[0].clientX : mv.clientX;
+        const cy = isTouch ? mv.touches[0].clientY : mv.clientY;
+        const dx = Math.abs(cx - startX), dy = Math.abs(cy - startY);
+        // Vertical movement = scroll intent, cancel drag tracking
+        if (dy > dx && dy > 6) { cancel(); return; }
+        // Strong horizontal movement before timer fires = immediately activate drag
+        if (dx > 12 && dx > dy * 2) { activateDrag(); return; }
+      };
 
-      document.addEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove, { passive: true });
-      document.addEventListener(isTouch ? 'touchend' : 'mouseup', cancel, { once: true });
+      // Activate after short hold without significant movement
+      barLongPressTimer = setTimeout(activateDrag, 400);
+
+      document.addEventListener(isTouch ? 'touchmove' : 'mousemove', onEarlyMove, { passive: true });
+      document.addEventListener(isTouch ? 'touchend' : 'mouseup', onEarlyUp, { once: true });
     }
 
     function handleBarDragMove(e) {
