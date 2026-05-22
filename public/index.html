@@ -2553,7 +2553,7 @@
       const checkMove = (mv) => {
         const cx = isTouch ? mv.touches[0].clientX : mv.clientX;
         const cy = isTouch ? mv.touches[0].clientY : mv.clientY;
-        if (Math.abs(cx - startX) > 6 || Math.abs(cy - startY) > 6) cancel();
+        if (Math.abs(cx - startX) > 4 || Math.abs(cy - startY) > 4) cancel();
       };
 
       barLongPressTimer = setTimeout(() => {
@@ -2567,7 +2567,7 @@
         triggerHaptic([40, 20, 40]);
         document.addEventListener(isTouch ? 'touchmove' : 'mousemove', handleBarDragMove, { passive: false });
         document.addEventListener(isTouch ? 'touchend' : 'mouseup', handleBarDragEnd, { once: true });
-      }, 850);
+      }, 1200);
 
       document.addEventListener(isTouch ? 'touchmove' : 'mousemove', checkMove, { passive: true });
       document.addEventListener(isTouch ? 'touchend' : 'mouseup', cancel, { once: true });
