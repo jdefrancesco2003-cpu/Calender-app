@@ -182,7 +182,7 @@
     }
 
     /* ── UPCOMING EVENTS (calendar tab sidebar) ── */
-    .events-container { padding: 12px 14px 80px; background: var(--bg-dark); border-top: 1px solid var(--border-color); overflow-y: auto; flex: 1; min-height: 0; }
+    .events-container { padding: 12px 14px 16px; background: var(--bg-dark); border-top: 1px solid var(--border-color); overflow-y: auto; flex: 1; min-height: 0; }
     .upcoming-day-group { margin-bottom: 16px; }
     .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.7; }
 
@@ -244,18 +244,19 @@
     .ev-date-group { margin-bottom: 4px; }
     .ev-date-header { font-size: 12px; font-weight: 700; color: var(--text-secondary); padding: 16px 14px 6px; text-transform: uppercase; letter-spacing: 0.7px; }
     .ev-date-header.is-today { color: var(--primary); }
-    .ev-card { position: relative; overflow: hidden; border-radius: 12px; margin: 0 10px 8px; }
-    .ev-card-body { display: flex; align-items: stretch; background: var(--bg-card); border-radius: 12px; position: relative; z-index: 1; cursor: pointer; transition: transform 0.2s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+    .ev-card { overflow: hidden; border-radius: 12px; margin: 0 10px 8px; }
+    .ev-card-inner { display: flex; align-items: stretch; width: calc(100% + 112px); transition: transform 0.2s cubic-bezier(0.4,0,0.2,1); }
+    .ev-card-inner.swipe-left { transform: translateX(-112px); }
+    .ev-card-body { flex: 1; display: flex; align-items: stretch; background: var(--bg-card); border-radius: 12px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.12); overflow: hidden; min-width: 0; }
     .ev-card-body:active { opacity: 0.82; }
-    .ev-card-body.swipe-left { transform: translateX(-112px); }
-    .ev-accent { width: 4px; border-radius: 12px 0 0 12px; flex-shrink: 0; }
+    .ev-accent { width: 4px; flex-shrink: 0; }
     .ev-content { flex: 1; min-width: 0; padding: 12px 14px; }
     .ev-card-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
     .ev-card-title.holiday { color: var(--warning); }
     .ev-card-time { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
     .ev-card-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ev-card-actions { position: absolute; right: 0; top: 0; bottom: 0; width: 112px; display: flex; }
-    .ev-action-btn { flex: 1; border: none; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; border-left: 1.5px solid currentColor; }
+    .ev-card-actions { flex: 0 0 112px; display: flex; background: var(--bg-card); }
+    .ev-action-btn { flex: 1; border: none; border-left: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; padding: 0; min-height: auto; }
     .ev-action-btn:active { opacity: 0.65; }
     .ev-action-btn.del { color: var(--error); }
     .empty-state { text-align: center; padding: 36px 16px; color: var(--text-secondary); font-size: 15px; line-height: 1.6; }
@@ -448,7 +449,7 @@
             <button onclick="clearSearchFilters();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:18px;padding:4px 6px;min-height:auto;">✕</button>
           </div>
         </div>
-        <div class="events-container" id="events-list" style="flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding-bottom:80px;"></div>
+        <div class="events-container" id="events-list" style="flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding-bottom:16px;"></div>
       </div>
 
     </div><!-- .main-content -->
@@ -1092,24 +1093,29 @@
       archivedEvents = saved ? JSON.parse(saved) : [];
       archivedIds = new Set(archivedEvents.map(e => e.id));
     }
+    function getWeekStartStr() {
+      const d = new Date();
+      d.setDate(d.getDate() - d.getDay()); // back to Sunday
+      return d.toISOString().split('T')[0];
+    }
     function archivePastEventsSilent() {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const past = allEvents.filter(e => (e.endDate || e.date) < todayStr && !archivedIds.has(e.id));
+      const cutoff = getWeekStartStr();
+      const past = allEvents.filter(e => (e.endDate || e.date) < cutoff && !archivedIds.has(e.id));
       if (past.length === 0) return;
       archivedEvents.push(...past);
-      allEvents = allEvents.filter(e => (e.endDate || e.date) >= todayStr);
+      allEvents = allEvents.filter(e => (e.endDate || e.date) >= cutoff);
       saveArchive();
       saveEvents();
     }
     function archivePastEvents() {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const past = allEvents.filter(e => (e.endDate || e.date) < todayStr && !archivedIds.has(e.id));
+      const cutoff = getWeekStartStr();
+      const past = allEvents.filter(e => (e.endDate || e.date) < cutoff && !archivedIds.has(e.id));
       if (past.length === 0) {
         showStatus('No past events to archive', 'error');
         return false;
       }
       archivedEvents.push(...past);
-      allEvents = allEvents.filter(e => (e.endDate || e.date) >= todayStr);
+      allEvents = allEvents.filter(e => (e.endDate || e.date) >= cutoff);
       saveArchive();
       saveEvents();
       showStatus(`✓ ${past.length} event(s) archived`, 'success');
@@ -2629,7 +2635,7 @@
         document.removeEventListener(isTouch ? 'touchend' : 'mouseup', onEarlyUp);
         const scrollArea = document.getElementById('week-scroll-area');
         if (scrollArea) scrollArea.style.overflowX = 'hidden';
-        barDragState = { eventId, startMins, durationMins, startX, deltaPx: 0, moved: false, el, isTouch, scrollArea };
+        barDragState = { eventId, startMins, durationMins, startX, deltaPx: 0, moved: false, el, isTouch, scrollArea, lastSnapMins: startMins };
         el.style.transform = 'scale(1.05)';
         el.style.opacity = '0.8';
         el.style.zIndex = '20';
@@ -2647,10 +2653,8 @@
         const cx = isTouch ? mv.touches[0].clientX : mv.clientX;
         const cy = isTouch ? mv.touches[0].clientY : mv.clientY;
         const dx = Math.abs(cx - startX), dy = Math.abs(cy - startY);
-        // Vertical movement = scroll intent, cancel drag tracking
-        if (dy > dx && dy > 6) { cancel(); return; }
-        // Strong horizontal movement before timer fires = immediately activate drag
-        if (dx > 12 && dx > dy * 2) { activateDrag(); return; }
+        // Any significant movement before timer fires = scroll intent, cancel
+        if (dx > 8 || dy > 8) { cancel(); }
       };
 
       // Activate after short hold without significant movement
@@ -2665,11 +2669,17 @@
       e.preventDefault();
       const x = barDragState.isTouch ? e.touches[0].clientX : e.clientX;
       barDragState.deltaPx = x - barDragState.startX;
-      if (Math.abs(barDragState.deltaPx) >= 8) barDragState.moved = true;
-      if (!barDragState.moved) return;
+      barDragState.moved = true;
       barDragState.el.style.transform = `translateX(${barDragState.deltaPx}px)`;
       barDragState.el.style.opacity = '0.82';
       barDragState.el.style.zIndex = '20';
+      // Fire haptic on each 15-min snap crossing
+      const MINS_PER_PX = 60 / HOUR_W;
+      const snapped = Math.round(Math.round(barDragState.deltaPx * MINS_PER_PX / 15) * 15 + barDragState.startMins);
+      if (snapped !== barDragState.lastSnapMins) {
+        barDragState.lastSnapMins = snapped;
+        triggerHaptic(10);
+      }
     }
 
     function handleBarDragEnd(e) {
@@ -2836,11 +2846,13 @@
         const cardsHtml = grouped[dateKey].map(ev => {
           if (ev.isHoliday) {
             return `<div class="ev-card">
-              <div class="ev-card-body" style="cursor:default;">
-                <div class="ev-accent" style="background:var(--warning);"></div>
-                <div class="ev-content">
-                  <div class="ev-card-title holiday">${escHtml(ev.title)}</div>
-                  <div class="ev-card-time">All day</div>
+              <div class="ev-card-inner">
+                <div class="ev-card-body" style="cursor:default;">
+                  <div class="ev-accent" style="background:var(--warning);"></div>
+                  <div class="ev-content">
+                    <div class="ev-card-title holiday">${escHtml(ev.title)}</div>
+                    <div class="ev-card-time">All day</div>
+                  </div>
                 </div>
               </div>
             </div>`;
@@ -2851,17 +2863,19 @@
           const timeStr = ev.isAllDay ? 'All day' : startFmt ? (endFmt ? `${startFmt} – ${endFmt}` : startFmt) : '';
           const badge = ev.isRecurring || ev.isVirtual ? ' <span class="recurrence-badge">↻</span>' : '';
           return `<div class="ev-card" data-event-id="${ev.id}">
-            <div class="ev-card-body" onclick="openEditModal('${ev.id}'); triggerHaptic([40])">
-              <div class="ev-accent" style="background:${color};"></div>
-              <div class="ev-content">
-                <div class="ev-card-title">${escHtml(ev.title)}${badge}</div>
-                ${timeStr ? `<div class="ev-card-time">${timeStr}</div>` : ''}
-                ${ev.description ? `<div class="ev-card-desc">${escHtml(ev.description)}</div>` : ''}
+            <div class="ev-card-inner">
+              <div class="ev-card-body" onclick="openEditModal('${ev.id}'); triggerHaptic([40])">
+                <div class="ev-accent" style="background:${color};"></div>
+                <div class="ev-content">
+                  <div class="ev-card-title">${escHtml(ev.title)}${badge}</div>
+                  ${timeStr ? `<div class="ev-card-time">${timeStr}</div>` : ''}
+                  ${ev.description ? `<div class="ev-card-desc">${escHtml(ev.description)}</div>` : ''}
+                </div>
               </div>
-            </div>
-            <div class="ev-card-actions">
-              <button class="ev-action-btn" style="color:${color};" onclick="event.stopPropagation(); openEditModal('${ev.id}'); triggerHaptic([40])">Edit</button>
-              <button class="ev-action-btn del" onclick="event.stopPropagation(); deleteEvent('${ev.id}'); triggerHaptic([100,50,100])">Delete</button>
+              <div class="ev-card-actions">
+                <button class="ev-action-btn" style="color:${color};" onclick="event.stopPropagation(); openEditModal('${ev.id}'); triggerHaptic([40])">Edit</button>
+                <button class="ev-action-btn del" onclick="event.stopPropagation(); deleteEvent('${ev.id}'); triggerHaptic([100,50,100])">Delete</button>
+              </div>
             </div>
           </div>`;
         }).join('');
@@ -2873,10 +2887,10 @@
       }).join('');
 
       container.querySelectorAll('.ev-card[data-event-id]').forEach(card => {
-        const body = card.querySelector('.ev-card-body');
-        body.addEventListener('touchstart', _swipeTouchStart, { passive: true });
-        body.addEventListener('touchmove', _swipeTouchMove, { passive: false });
-        body.addEventListener('touchend', _swipeTouchEnd, false);
+        const inner = card.querySelector('.ev-card-inner');
+        inner.addEventListener('touchstart', _swipeTouchStart, { passive: true });
+        inner.addEventListener('touchmove', _swipeTouchMove, { passive: false });
+        inner.addEventListener('touchend', _swipeTouchEnd, false);
       });
     }
 
