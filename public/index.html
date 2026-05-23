@@ -39,7 +39,7 @@
       background: var(--bg-dark);
       color: var(--text-primary);
       padding-top: max(12px, env(safe-area-inset-top));
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      padding-bottom: 0;
       padding-left: max(12px, env(safe-area-inset-left));
       padding-right: max(12px, env(safe-area-inset-right));
       overflow: hidden;
@@ -182,7 +182,7 @@
     }
 
     /* ── UPCOMING EVENTS (calendar tab sidebar) ── */
-    .events-container { padding: 12px 14px 16px; background: var(--bg-dark); border-top: 1px solid var(--border-color); overflow-y: auto; flex: 1; min-height: 0; }
+    .events-container { padding: 12px 14px; background: var(--bg-dark); border-top: 1px solid var(--border-color); overflow-y: auto; flex: 1; min-height: 0; }
     .upcoming-day-group { margin-bottom: 16px; }
     .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.7; }
 
@@ -449,7 +449,7 @@
             <button onclick="clearSearchFilters();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:18px;padding:4px 6px;min-height:auto;">✕</button>
           </div>
         </div>
-        <div class="events-container" id="events-list" style="flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding-bottom:16px;"></div>
+        <div class="events-container" id="events-list" style="flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding-bottom:max(80px,calc(env(safe-area-inset-bottom,0px) + 76px));"></div>
       </div>
 
     </div><!-- .main-content -->
