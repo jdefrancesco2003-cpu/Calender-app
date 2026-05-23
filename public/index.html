@@ -105,7 +105,7 @@
     button { padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px; appearance: none; }
     .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 12px rgba(74,157,111,0.25); }
     .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
-    .btn-secondary { background: var(--bg-light); color: var(--primary); border: 1.5px solid var(--primary); font-weight: 600; }
+    .btn-secondary { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); font-weight: 600; }
     .btn-secondary:active { background: var(--primary); color: white; transform: scale(0.98); }
     .btn-danger { background: transparent; color: var(--error); border: 1.5px solid var(--error); font-size: 14px; padding: 10px 14px; min-height: auto; }
     .btn-danger:active { background: var(--error); color: white; transform: scale(0.96); }
@@ -255,7 +255,7 @@
     .ev-card-time { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
     .ev-card-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ev-card-actions { position: absolute; right: 0; top: 0; bottom: 0; width: 112px; display: flex; }
-    .ev-action-btn { flex: 1; border: none; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: var(--bg-card); border-left: 1.5px solid currentColor; }
+    .ev-action-btn { flex: 1; border: none; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; border-left: 1.5px solid currentColor; }
     .ev-action-btn:active { opacity: 0.65; }
     .ev-action-btn.del { color: var(--error); }
     .empty-state { text-align: center; padding: 36px 16px; color: var(--text-secondary); font-size: 15px; line-height: 1.6; }
@@ -1827,15 +1827,27 @@
         } else {
           data.title = capitalizeTitle(data.title);
           if (checkDuplicateEvent(data)) { showDuplicateModal(data.title); return; }
-          pendingParsedEvent = data;
-          // Pre-fill manual form so user can review/edit before confirming
-          if (data.title) document.getElementById('title-input').value = data.title;
-          if (data.date) document.getElementById('date-input').value = data.date;
-          if (data.endDate) document.getElementById('end-date-input').value = data.endDate;
-          if (data.time) document.getElementById('time-input').value = data.time;
-          if (data.endTime) document.getElementById('end-time-input').value = data.endTime;
-          if (data.isAllDay) { document.getElementById('all-day-toggle').checked = true; toggleAllDayManual(); }
-          showConfirmationModal(data);
+          const doSave = () => {
+            const newEvent = { id: generateId(), ...data, category: addEventCategory };
+            allEvents.push(newEvent);
+            saveEvents();
+            apiSaveEvent(newEvent);
+            showStatus(`✓ ${data.title} added`, 'success');
+            showSyncIndicator();
+            document.getElementById('event-input').value = '';
+            clearAddForm();
+            closeAddModal();
+            renderCalendar();
+            renderUpcomingEvents();
+            if (isWeekView) renderWeekView();
+            scheduleNotifications();
+            triggerHaptic([60, 20, 60]);
+          };
+          if (checkEventOverlap(data)) {
+            showOverlapConfirmation(data.title, doSave);
+          } else {
+            doSave();
+          }
         }
       } catch (err) {
         clearTimeout(tid);
