@@ -85,7 +85,7 @@
 
     /* ── MAIN CONTENT ── */
     .main-content { display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
-    .tab-content { display: none; flex-direction: column; flex: 1; min-height: 0; }
+    .tab-content { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
     .tab-content.active { display: flex; animation: tabFadeIn 0.22s ease both; }
     @keyframes tabFadeIn {
       from { opacity: 0; transform: translateY(6px); }
@@ -451,7 +451,7 @@
             <button onclick="clearSearchFilters();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:18px;padding:4px 6px;min-height:auto;">✕</button>
           </div>
         </div>
-        <div class="events-container" id="events-list" style="flex:1;overflow-y:auto;padding-bottom:80px;"></div>
+        <div class="events-container" id="events-list" style="flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding-bottom:80px;"></div>
       </div>
 
     </div><!-- .main-content -->
