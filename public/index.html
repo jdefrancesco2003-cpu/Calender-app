@@ -127,7 +127,7 @@
     .month-nav { display: flex; gap: 6px; align-items: center; }
     .month-nav button:not(.view-toggle-btn) { width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--bg-light); font-size: 15px; color: var(--text-primary); min-height: auto; transition: background 0.12s, transform 0.1s; }
     .month-nav button:not(.view-toggle-btn):active { background: var(--primary); color: white; transform: scale(0.9); }
-    .view-toggle-btn { width: 40px; height: 40px; padding: 0; font-size: 13px; min-height: auto; border-radius: 8px; background: var(--bg-light); color: var(--text-secondary); border: none; font-weight: 800; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; white-space: nowrap; }
+    .view-toggle-btn { padding: 0 14px; height: 34px; font-size: 13px; min-height: auto; border-radius: 10px; background: var(--bg-light); color: var(--text-secondary); border: none; font-weight: 700; cursor: pointer; transition: all 0.15s; letter-spacing: 0.2px; white-space: nowrap; }
     .view-toggle-btn:active, .view-toggle-btn.active { background: var(--primary); color: white; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 6px 10px 2px; background: var(--bg-card); flex-shrink: 0; }
     .day-header { text-align: center; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; font-size: 11px; letter-spacing: 0.5px; }
@@ -232,7 +232,7 @@
     body.light-mode .event-item { box-shadow: 0 1px 8px rgba(0,0,0,0.07); }
     .event-item.swipe-left { transform: translateX(-100px); }
     .event-swipe-actions { position: absolute; right: 0; top: 0; height: 100%; display: flex; }
-    .swipe-action { background: var(--bg-card); color: var(--primary); border: none; border-left: 1.5px solid var(--primary); padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; min-width: 52px; min-height: auto; transition: opacity 0.15s; }
+    .swipe-action { background: var(--bg-card); border: none; border-left: 1.5px solid currentColor; padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; min-width: 52px; min-height: auto; transition: opacity 0.15s; }
     .swipe-action:active { opacity: 0.7; }
     .swipe-action.delete { color: var(--error); border-left-color: var(--error); }
     .event-details { flex: 1; min-width: 0; }
@@ -401,7 +401,7 @@
           <div class="month-year" id="month-year"></div>
           <div class="month-nav">
             <button onclick="navigatePrevious(); triggerHaptic(20)">←</button>
-            <button class="view-toggle-btn" id="view-toggle-btn" onclick="toggleView(); triggerHaptic(20)">Wk</button>
+            <button class="view-toggle-btn" id="view-toggle-btn" onclick="toggleView(); triggerHaptic(20)">Weekly</button>
             <button onclick="navigateNext(); triggerHaptic(20)">→</button>
           </div>
         </div>
@@ -434,7 +434,7 @@
       </div>
 
       <!-- ── EVENTS TAB ── -->
-      <div id="events-tab" class="tab-content" style="flex-direction:column;">
+      <div id="events-tab" class="tab-content" style="flex-direction:column;overflow:hidden;">
         <div style="padding:10px 14px 6px;background:var(--bg-dark);position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border-color);flex-shrink:0;">
           <div style="display:flex;gap:8px;align-items:center;">
             <div style="flex:1;position:relative;">
@@ -2241,7 +2241,7 @@
       if (!isWeekView) {
         // Monthly → Weekly
         if (bottom) bottom.style.display = 'none';
-        btn.textContent = 'Mo'; btn.classList.add('active');
+        btn.textContent = 'Monthly'; btn.classList.add('active');
 
         // Switch body class first so container gets flex:1 height
         document.body.classList.add('week-mode');
@@ -2288,7 +2288,7 @@
 
       } else {
         // Weekly → Monthly
-        btn.textContent = 'Wk'; btn.classList.remove('active');
+        btn.textContent = 'Weekly'; btn.classList.remove('active');
 
         const h = wrap.offsetHeight;
         wrap.style.height = h + 'px';
@@ -2850,7 +2850,7 @@
             </div>
             <div class="ev-time">${timeHtml}</div>
             <div class="event-swipe-actions">
-              <button class="swipe-action" onclick="event.stopPropagation(); openEditModal('${ev.id}'); triggerHaptic([40])">Edit</button>
+              <button class="swipe-action" style="color:${color};border-left-color:${color};" onclick="event.stopPropagation(); openEditModal('${ev.id}'); triggerHaptic([40])">Edit</button>
               <button class="swipe-action delete" onclick="event.stopPropagation(); deleteEvent('${ev.id}'); triggerHaptic([100,50,100])">Delete</button>
             </div>
           </div>${sep}`;
