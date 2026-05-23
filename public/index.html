@@ -1832,7 +1832,7 @@
             allEvents.push(newEvent);
             saveEvents();
             apiSaveEvent(newEvent);
-            showStatus(`✓ ${data.title} added`, 'success');
+            showStatus(`Marked — ${data.title}`, 'success');
             showSyncIndicator();
             document.getElementById('event-input').value = '';
             clearAddForm();
@@ -1898,7 +1898,7 @@
       allEvents.push(newEvent);
       saveEvents();
       apiSaveEvent(newEvent);
-      showStatus(`✓ ${pendingParsedEvent.title} added`, 'success');
+      showStatus(`Marked — ${pendingParsedEvent.title}`, 'success');
       showSyncIndicator();
       document.getElementById('event-input').value = '';
       closeConfirmation();
@@ -1947,7 +1947,7 @@
       if (checkEventOverlap(newEvent)) {
         showOverlapConfirmation(title, () => {
           allEvents.push(newEvent); saveEvents(); apiSaveEvent(newEvent);
-          showStatus(`✓ ${title} saved`, 'success'); showSyncIndicator();
+          showStatus(`Marked — ${title}`, 'success'); showSyncIndicator();
           clearAddForm(); closeAddModal(); renderCalendar(); renderUpcomingEvents();
           if (isWeekView) renderWeekView(); scheduleNotifications();
         });
@@ -1956,7 +1956,7 @@
       allEvents.push(newEvent);
       saveEvents();
       apiSaveEvent(newEvent);
-      showStatus(`✓ ${title} saved`, 'success');
+      showStatus(`Marked — ${title}`, 'success');
       showSyncIndicator();
       clearAddForm();
       closeAddModal();
@@ -2119,7 +2119,7 @@
         showOverlapConfirmation(title, () => {
           const idx = allEvents.findIndex(e => e.id === editingEventId);
           if (idx >= 0) allEvents[idx] = { ...allEvents[idx], ...updatedEvent };
-          saveEvents(); apiUpdateEvent(editingEventId, allEvents.find(e=>e.id===editingEventId)||updatedEvent); showStatus(`✓ ${title} updated`, 'success'); showSyncIndicator();
+          saveEvents(); apiUpdateEvent(editingEventId, allEvents.find(e=>e.id===editingEventId)||updatedEvent); showStatus(`Marked — ${title}`, 'success'); showSyncIndicator();
           closeModal(); renderCalendar(); renderUpcomingEvents(); renderEventsPage();
           if (isWeekView) renderWeekView(); scheduleNotifications();
         });
@@ -2129,7 +2129,7 @@
       if (idx >= 0) allEvents[idx] = { ...allEvents[idx], ...updatedEvent };
       saveEvents();
       apiUpdateEvent(editingEventId, allEvents.find(e=>e.id===editingEventId)||updatedEvent);
-      showStatus(`✓ ${title} updated`, 'success');
+      showStatus(`Marked — ${title}`, 'success');
       showSyncIndicator();
       closeModal();
       renderCalendar(); renderUpcomingEvents(); renderEventsPage();
