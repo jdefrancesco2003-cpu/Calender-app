@@ -1188,8 +1188,16 @@
       return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     }
     function triggerHaptic(pattern = 20) {
-      if (!navigator.vibrate) return;
-      navigator.vibrate(Array.isArray(pattern) ? pattern : pattern);
+      const dur = Array.isArray(pattern) ? pattern[0] : pattern;
+      // Capacitor Haptics (iOS native app)
+      const haptics = window.Capacitor?.Plugins?.Haptics;
+      if (haptics) {
+        const style = dur >= 80 ? 'Heavy' : dur >= 40 ? 'Medium' : 'Light';
+        haptics.impact({ style }).catch(() => {});
+        return;
+      }
+      // Web Vibration API (Android Chrome)
+      if (navigator.vibrate) navigator.vibrate(Array.isArray(pattern) ? pattern : [pattern]);
     }
     function generateId() {
       return 'evt-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
@@ -2909,7 +2917,7 @@
     }
     function _swipeTouchEnd() {
       const diff = swipeStartX - swipeCurrX;
-      if (diff > 40) this.classList.add('swipe-left');
+      if (diff > 40) { this.classList.add('swipe-left'); triggerHaptic(20); }
       else { this.style.transform = ''; this.classList.remove('swipe-left'); }
     }
 
