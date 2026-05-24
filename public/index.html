@@ -449,7 +449,7 @@
             <button onclick="clearSearchFilters();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:18px;padding:4px 6px;min-height:auto;">✕</button>
           </div>
         </div>
-        <div class="events-container" id="events-list" style="flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding-bottom:max(80px,calc(env(safe-area-inset-bottom,0px) + 76px));"></div>
+        <div class="events-container" id="events-list" style="flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding-bottom:0;"></div>
       </div>
 
     </div><!-- .main-content -->
@@ -1911,6 +1911,7 @@
       closeAddModal();
       renderCalendar();
       renderUpcomingEvents();
+      renderEventsPage();
       if (isWeekView) renderWeekView();
       scheduleNotifications();
     }
@@ -1954,7 +1955,7 @@
         showOverlapConfirmation(title, () => {
           allEvents.push(newEvent); saveEvents(); apiSaveEvent(newEvent);
           showStatus(`Marked — ${title}`, 'success'); showSyncIndicator();
-          clearAddForm(); closeAddModal(); renderCalendar(); renderUpcomingEvents();
+          clearAddForm(); closeAddModal(); renderCalendar(); renderUpcomingEvents(); renderEventsPage();
           if (isWeekView) renderWeekView(); scheduleNotifications();
         });
         return;
@@ -1968,6 +1969,7 @@
       closeAddModal();
       renderCalendar();
       renderUpcomingEvents();
+      renderEventsPage();
       if (isWeekView) renderWeekView();
       scheduleNotifications();
     }
@@ -2678,7 +2680,7 @@
       const snapped = Math.round(Math.round(barDragState.deltaPx * MINS_PER_PX / 15) * 15 + barDragState.startMins);
       if (snapped !== barDragState.lastSnapMins) {
         barDragState.lastSnapMins = snapped;
-        triggerHaptic(10);
+        triggerHaptic(20);
       }
     }
 
@@ -2709,9 +2711,13 @@
           allEvents[idx].time = minsToTimeStr(newStart);
           allEvents[idx].endTime = minsToTimeStr(newEnd);
           saveEvents();
+          apiUpdateEvent(barDragState.eventId, allEvents[idx]);
           showStatus(`✓ ${allEvents[idx].title} → ${formatTimeEastern(allEvents[idx].time)}`, 'success');
           showSyncIndicator();
           triggerHaptic([40]);
+          renderCalendar();
+          renderUpcomingEvents();
+          renderEventsPage();
         }
         renderWeekView();
       }
