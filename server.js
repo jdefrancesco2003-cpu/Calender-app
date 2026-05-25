@@ -612,7 +612,7 @@ app.post('/api/events', requireAuth, async (req, res) => {
     };
   } else {
     // Legacy plaintext (dev mode / no encryption)
-    const { title, date, endDate, time, endTime, description, isAllDay } = body;
+    const { title, date, endDate, time, endTime, description, isAllDay, recurrence, recurrenceEnd, isRecurring, recurrenceExceptions, category } = body;
     if (!title || !date) return res.status(400).json({ error: 'Title and date are required' });
     const validationError = validateEventFields({ date, endDate, time, endTime });
     if (validationError) return res.status(400).json({ error: validationError });
@@ -627,6 +627,11 @@ app.post('/api/events', requireAuth, async (req, res) => {
       isAllDay: isAllDay || (!time && !endTime),
       description: (description || '').slice(0, 500),
       isMultiDay: !!endDate,
+      recurrence: recurrence || 'none',
+      recurrenceEnd: recurrenceEnd || null,
+      isRecurring: isRecurring || false,
+      recurrenceExceptions: recurrenceExceptions || [],
+      category: category || 'work',
       createdAt: new Date()
     };
   }
@@ -653,7 +658,7 @@ app.put('/api/events/:id', requireAuth, async (req, res) => {
       updatedAt: new Date()
     };
   } else {
-    const { title, date, endDate, time, endTime, description, isAllDay } = body;
+    const { title, date, endDate, time, endTime, description, isAllDay, recurrence, recurrenceEnd, isRecurring, recurrenceExceptions, category } = body;
     if (!title || !date) return res.status(400).json({ error: 'Title and date are required' });
     const validationError = validateEventFields({ date, endDate, time, endTime });
     if (validationError) return res.status(400).json({ error: validationError });
@@ -666,6 +671,11 @@ app.put('/api/events/:id', requireAuth, async (req, res) => {
       isAllDay: isAllDay || (!time && !endTime),
       description: (description || '').slice(0, 500),
       isMultiDay: !!endDate,
+      recurrence: recurrence || 'none',
+      recurrenceEnd: recurrenceEnd || null,
+      isRecurring: isRecurring || false,
+      recurrenceExceptions: recurrenceExceptions || [],
+      category: category || 'work',
       updatedAt: new Date()
     };
   }
