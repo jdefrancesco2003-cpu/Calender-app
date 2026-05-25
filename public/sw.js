@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calpal-v10';
+const CACHE_NAME = 'calpal-v11';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

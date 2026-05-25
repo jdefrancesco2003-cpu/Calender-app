@@ -939,11 +939,12 @@
     // ── Task 5: Pull-to-refresh ──
     let ptrStartY = 0;
     let ptrActive = false;
+    let lastSaveTimestamp = 0;
 
     document.addEventListener('touchstart', e => { ptrStartY = e.touches[0].clientY; }, { passive: true });
     document.addEventListener('touchend', async e => {
       const dy = e.changedTouches[0].clientY - ptrStartY;
-      if (dy > 80 && window.scrollY === 0 && !ptrActive) {
+      if (dy > 80 && window.scrollY === 0 && !ptrActive && (Date.now() - lastSaveTimestamp > 2000)) {
         ptrActive = true;
         document.getElementById('ptr-spinner').classList.add('visible');
         await loadEvents();
@@ -1581,6 +1582,7 @@
     // ── Local storage ──
     function saveEvents() {
       localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
+      lastSaveTimestamp = Date.now();
     }
 
     // ── Load events (with fetch timeout + auth + decryption) ──
@@ -1594,10 +1596,16 @@
         });
         clearTimeout(tid);
         if (response.status === 401) {
-          // Token expired or invalid — show login
           authToken = null;
           localStorage.removeItem('calpal_token');
-          if (authEnabled) showAuthModal('login');
+          if (guestMode) {
+            const saved = localStorage.getItem('calendarEvents');
+            let loaded = saved ? JSON.parse(saved) : [];
+            loadArchive();
+            allEvents = loaded.filter(e => !archivedIds.has(e.id));
+          } else if (authEnabled) {
+            showAuthModal('login');
+          }
           return;
         }
         let loaded = await response.json();
@@ -1613,15 +1621,23 @@
         }
         loadArchive();
         loaded = loaded.filter(e => !archivedIds.has(e.id));
+        // One-time migration: capitalize all titles
+        const needsCap = loaded.some(e => e.title && e.title !== capitalizeTitle(e.title));
+        if (needsCap) {
+          loaded = loaded.map(e => ({ ...e, title: capitalizeTitle(e.title || '') }));
+        }
         allEvents = loaded;
-        saveEvents();
+        if (needsCap) saveEvents();
       } catch (err) {
         clearTimeout(tid);
         const saved = localStorage.getItem('calendarEvents');
         let loaded = saved ? JSON.parse(saved) : [];
         loadArchive();
         loaded = loaded.filter(e => !archivedIds.has(e.id));
+        const needsCap = loaded.some(e => e.title && e.title !== capitalizeTitle(e.title));
+        if (needsCap) loaded = loaded.map(e => ({ ...e, title: capitalizeTitle(e.title || '') }));
         allEvents = loaded;
+        if (needsCap) saveEvents();
         if (!(err.name === 'AbortError')) showStatus('Using local storage', 'success');
       }
     }
@@ -2242,8 +2258,8 @@
       if (isWeekView) { currentDate.setDate(currentDate.getDate() + 7); renderWeekView(); }
       else nextMonth();
     }
-    function previousMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
-    function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
+    function previousMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); renderUpcomingEvents(); }
+    function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); renderUpcomingEvents(); }
 
     function toggleView() {
       if (selectedDate) { selectedDate = null; }
