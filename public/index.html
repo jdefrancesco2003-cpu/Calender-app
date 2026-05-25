@@ -1845,6 +1845,7 @@
             closeAddModal();
             renderCalendar();
             renderUpcomingEvents();
+            renderEventsPage();
             if (isWeekView) renderWeekView();
             scheduleNotifications();
             triggerHaptic([60, 20, 60]);
@@ -2464,54 +2465,93 @@
     function renderUpcomingEvents() {
       const container = document.getElementById('calendar-bottom');
       if (!container || selectedDate || isWeekView) return;
-      const today = new Date(); today.setHours(0,0,0,0);
-      const activeEvents = allEvents.filter(e => !archivedIds.has(e.id) && new Date(e.date + 'T00:00:00') >= today);
-      // Include recurring instances for the next 60 days
-      const todayForUpcoming = getESTDateString();
-      const sixtyDaysOut = (() => { const d = new Date(todayForUpcoming + 'T00:00:00'); d.setDate(d.getDate() + 60); return getLocalDateString(d); })();
-      const recurringInstances = getRecurringInstancesInRange(todayForUpcoming, sixtyDaysOut);
-      recurringInstances.forEach(ri => { if (!activeEvents.find(e => e.id === ri.id)) activeEvents.push(ri); });
-      const groups = { today: [], tomorrow: [], week: [], month: [], later: [] };
-      activeEvents.forEach(event => {
-        const g = getDateGroup(event.date);
-        groups[g.group].push({ ...event, groupLabel: g.label });
-      });
-      ['today','tomorrow','week','month','later'].forEach(key => {
-        groups[key].sort((a, b) => {
-          const dc = new Date(a.date) - new Date(b.date);
+
+      const todayStr = getESTDateString();
+      const todayDate = new Date(todayStr + 'T00:00:00');
+      const viewYear = currentDate.getFullYear();
+      const viewMonth = currentDate.getMonth();
+      const isCurrentMonth = viewYear === todayDate.getFullYear() && viewMonth === todayDate.getMonth();
+
+      // Build an event row renderer shared by both modes
+      function buildEventRow(event) {
+        const timeStr = formatEventTime(event.time, event.endTime);
+        const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
+        const dateObj = new Date(event.date + 'T00:00:00');
+        const dateLabel = event.endDate
+          ? `${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+          : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const color = getCategoryColor(event.category || 'work');
+        return `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
+          <div class="event-details">
+            <div class="event-title" style="display:flex;align-items:center;gap:6px;"><span class="cat-dot" style="background:${color};flex-shrink:0;"></span>${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
+            ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
+            ${event.endDate && !event.isAllDay ? '<div class="all-day-badge" style="background:rgba(10,132,255,0.15);color:var(--primary);">Multi-Day</div>' : ''}
+            <div class="event-day-label">${dateLabel}${timeStr ? ` · ${timeStr}${dur}` : ''}</div>
+            ${event.description ? `<div class="event-meta">${escHtml(event.description)}</div>` : ''}
+          </div>
+        </div>`;
+      }
+
+      if (isCurrentMonth) {
+        // Upcoming view: from today forward, grouped by relative time
+        const activeEvents = allEvents.filter(e => !archivedIds.has(e.id) && new Date(e.date + 'T00:00:00') >= todayDate);
+        const sixtyDaysOut = (() => { const d = new Date(todayStr + 'T00:00:00'); d.setDate(d.getDate() + 60); return getLocalDateString(d); })();
+        const recurringInstances = getRecurringInstancesInRange(todayStr, sixtyDaysOut);
+        recurringInstances.forEach(ri => { if (!activeEvents.find(e => e.id === ri.id)) activeEvents.push(ri); });
+        const groups = { today: [], tomorrow: [], week: [], month: [], later: [] };
+        activeEvents.forEach(event => {
+          const g = getDateGroup(event.date);
+          groups[g.group].push({ ...event, groupLabel: g.label });
+        });
+        ['today','tomorrow','week','month','later'].forEach(key => {
+          groups[key].sort((a, b) => {
+            const dc = new Date(a.date) - new Date(b.date);
+            if (dc !== 0) return dc;
+            if (a.isAllDay && !b.isAllDay) return -1;
+            if (!a.isAllDay && b.isAllDay) return 1;
+            return (a.time || '').localeCompare(b.time || '');
+          });
+        });
+        let html = '';
+        ['today','tomorrow','week','month','later'].forEach(section => {
+          const events = groups[section];
+          if (!events.length) return;
+          html += `<div class="upcoming-day-group"><div class="upcoming-day-header">${events[0].groupLabel}</div>`;
+          events.forEach(ev => { html += buildEventRow(ev); });
+          html += '</div>';
+        });
+        _setBottomPanel(html || '<div class="empty-state">Nothing coming up</div>');
+      } else {
+        // Month view: show all events in the viewed month
+        const monthStart = new Date(viewYear, viewMonth, 1);
+        const monthEnd = new Date(viewYear, viewMonth + 1, 0);
+        const monthStartStr = getLocalDateString(monthStart);
+        const monthEndStr = getLocalDateString(monthEnd);
+
+        const activeEvents = allEvents.filter(e => {
+          if (archivedIds.has(e.id)) return false;
+          const eDate = e.date;
+          const eEnd = e.endDate || eDate;
+          return eDate <= monthEndStr && eEnd >= monthStartStr;
+        });
+        const recurringInstances = getRecurringInstancesInRange(monthStartStr, monthEndStr);
+        recurringInstances.forEach(ri => { if (!activeEvents.find(e => e.id === ri.id)) activeEvents.push(ri); });
+        activeEvents.sort((a, b) => {
+          const dc = a.date.localeCompare(b.date);
           if (dc !== 0) return dc;
           if (a.isAllDay && !b.isAllDay) return -1;
           if (!a.isAllDay && b.isAllDay) return 1;
           return (a.time || '').localeCompare(b.time || '');
         });
-      });
-      let html = '';
-      ['today','tomorrow','week','month','later'].forEach(section => {
-        const events = groups[section];
-        if (events.length === 0) return;
-        let sHtml = `<div class="upcoming-day-group"><div class="upcoming-day-header">${events[0].groupLabel}</div>`;
-        events.forEach(event => {
-          const timeStr = formatEventTime(event.time, event.endTime);
-          const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
-          const dateObj = new Date(event.date + 'T00:00:00');
-          const dateLabel = event.endDate
-            ? `${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-            : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          const upcomingCatColor = getCategoryColor(event.category || 'work');
-          sHtml += `<div class="event-item" onclick="openEditModal('${event.id}'); triggerHaptic([40])">
-            <div class="event-details">
-              <div class="event-title" style="display:flex;align-items:center;gap:6px;"><span class="cat-dot" style="background:${upcomingCatColor};flex-shrink:0;"></span>${escHtml(event.title)}${event.isRecurring || event.isVirtual ? '<span class="recurrence-badge">↻</span>' : ''}</div>
-              ${event.isAllDay ? '<div class="all-day-badge">All Day</div>' : ''}
-              ${event.endDate && !event.isAllDay ? '<div class="all-day-badge" style="background:rgba(10,132,255,0.15);color:var(--primary);">Multi-Day</div>' : ''}
-              <div class="event-day-label">${dateLabel}${timeStr ? ` · ${timeStr}${dur}` : ''}</div>
-              ${event.description ? `<div class="event-meta">${escHtml(event.description)}</div>` : ''}
-            </div>
-          </div>`;
-        });
-        sHtml += '</div>';
-        html += sHtml;
-      });
-      _setBottomPanel(html || '<div class="empty-state">Nothing coming up</div>');
+        const monthLabel = monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        let html = '';
+        if (activeEvents.length) {
+          html = `<div class="upcoming-day-group"><div class="upcoming-day-header">${monthLabel}</div>`;
+          activeEvents.forEach(ev => { html += buildEventRow(ev); });
+          html += '</div>';
+        }
+        _setBottomPanel(html || `<div class="empty-state">No events in ${monthLabel}</div>`);
+      }
     }
 
     // ── HORIZONTAL WEEK VIEW ──
