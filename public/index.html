@@ -976,7 +976,7 @@
     function shareEvent(ev) {
       if (!ev) return;
 
-      const shareUrl = `${location.origin}/api/events/${ev.id}/share.ics`;
+      const shareUrl = `${location.origin}/api/events/${ev.id}/share`;
 
       // Human-readable body for the SMS/message preview
       const d = new Date(ev.date + 'T12:00:00');
@@ -986,7 +986,7 @@
         `📅 ${ev.title}`,
         `${dateLine}  •  ${timeLine}`,
         ev.description || '',
-        'Tap the link to add this event to your calendar.',
+        'Tap the link to add this to your calendar.',
       ].filter(Boolean).join('\n');
 
       if (navigator.share) {
