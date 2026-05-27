@@ -701,6 +701,217 @@ app.delete('/api/events/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ── Public ICS share endpoint (no auth — event ID is a UUID) ──
+function buildIcsLines(ev) {
+  const safeFold = str => str.replace(/(.{73})/g, '$1\r\n ');
+  const stamp = new Date().toISOString().replace(/[-:.]/g,'').slice(0,15) + 'Z';
+  const lines = [
+    'BEGIN:VCALENDAR','VERSION:2.0',
+    'PRODID:-//Marked//Marked Calendar//EN',
+    'CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${ev.id}@marked.app`,
+    `DTSTAMP:${stamp}`,
+    `SUMMARY:${safeFold(ev.title || 'Event')}`,
+    'STATUS:CONFIRMED',
+  ];
+  if (ev.isAllDay || !ev.time) {
+    lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`);
+    const d = new Date((ev.endDate || ev.date) + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    lines.push(`DTEND;VALUE=DATE:${d.toISOString().slice(0,10).replace(/-/g,'')}`);
+  } else {
+    lines.push(`DTSTART;TZID=America/New_York:${ev.date.replace(/-/g,'')}T${ev.time.replace(':','')}00`);
+    const endT = ev.endTime || ev.time, endD = ev.endDate || ev.date;
+    lines.push(`DTEND;TZID=America/New_York:${endD.replace(/-/g,'')}T${endT.replace(':','')}00`);
+  }
+  if (ev.description) lines.push(`DESCRIPTION:${safeFold(ev.description.replace(/\n/g,'\\n'))}`);
+  lines.push('END:VEVENT','END:VCALENDAR');
+  return lines;
+}
+
+function srvEsc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtTime12(t) {
+  if (!t) return '';
+  const [h,m] = t.split(':'); const hr = parseInt(h);
+  return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`;
+}
+
+async function getShareEvent(id, res) {
+  if (!eventsCollection) { res.status(503).send('Service unavailable'); return null; }
+  let ev;
+  try { ev = await eventsCollection.findOne({ id }); } catch { res.status(500).send('Error'); return null; }
+  if (!ev) { res.status(404).send('Event not found'); return null; }
+  if (ev.encryptedData) { res.status(403).send('This event is private'); return null; }
+  return ev;
+}
+
+// Raw .ics download (used by "Other / download" option on the landing page)
+app.get('/api/events/:id/share.ics', async (req, res) => {
+  const ev = await getShareEvent(req.params.id, res);
+  if (!ev) return;
+  const safeTitle = (ev.title||'event').replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-')||'event';
+  res.setHeader('Content-Type','text/calendar;charset=utf-8');
+  res.setHeader('Content-Disposition',`attachment; filename="${safeTitle}.ics"`);
+  res.setHeader('Cache-Control','no-store');
+  res.send(buildIcsLines(ev).join('\r\n')+'\r\n');
+});
+
+// Calendar picker landing page
+app.get('/api/events/:id/share', async (req, res) => {
+  const ev = await getShareEvent(req.params.id, res);
+  if (!ev) return;
+
+  const base = `${req.protocol}://${req.get('host')}`;
+  const icsUrl = `${base}/api/events/${ev.id}/share.ics`;
+
+  // Google Calendar URL
+  let gcDates;
+  if (ev.isAllDay || !ev.time) {
+    const s = ev.date.replace(/-/g,'');
+    const d = new Date((ev.endDate||ev.date)+'T00:00:00'); d.setDate(d.getDate()+1);
+    gcDates = `${s}/${d.toISOString().slice(0,10).replace(/-/g,'')}`;
+  } else {
+    const s = `${ev.date.replace(/-/g,'')}T${ev.time.replace(':','')}00`;
+    const e = `${(ev.endDate||ev.date).replace(/-/g,'')}T${(ev.endTime||ev.time).replace(':','')}00`;
+    gcDates = `${s}/${e}`;
+  }
+  const gcUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + `&text=${encodeURIComponent(ev.title)}`
+    + `&dates=${gcDates}&ctz=America%2FNew_York`
+    + (ev.description ? `&details=${encodeURIComponent(ev.description)}` : '');
+
+  // Outlook Web URL
+  const olStart = ev.isAllDay||!ev.time ? ev.date : `${ev.date}T${ev.time}:00`;
+  const olEnd   = ev.isAllDay||!ev.time ? (ev.endDate||ev.date) : `${ev.endDate||ev.date}T${ev.endTime||ev.time}:00`;
+  const olUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent'
+    + `&subject=${encodeURIComponent(ev.title)}`
+    + `&startdt=${encodeURIComponent(olStart)}&enddt=${encodeURIComponent(olEnd)}`
+    + (ev.isAllDay||!ev.time ? '&allday=true' : '')
+    + (ev.description ? `&body=${encodeURIComponent(ev.description)}` : '');
+
+  // Display helpers
+  const dateObj  = new Date(ev.date+'T12:00:00');
+  const dispDate = dateObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const dispTime = (ev.isAllDay||!ev.time) ? 'All day'
+    : (ev.endTime ? `${fmtTime12(ev.time)} – ${fmtTime12(ev.endTime)}` : fmtTime12(ev.time));
+
+  res.setHeader('Content-Type','text/html;charset=utf-8');
+  res.setHeader('Cache-Control','no-store');
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${srvEsc(ev.title)} — Add to Calendar</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       background:#0f0f14;color:#f0f0f5;min-height:100dvh;
+       display:flex;flex-direction:column;align-items:center;
+       justify-content:center;padding:24px 20px
+       padding-bottom:max(24px,env(safe-area-inset-bottom));}
+  .card{background:#1c1c26;border:1px solid #2a2a38;border-radius:20px;
+        padding:24px 20px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+  .logo{font-size:13px;font-weight:700;letter-spacing:.06em;color:#4a9d6f;
+        text-transform:uppercase;margin-bottom:20px;text-align:center}
+  .ev-title{font-size:22px;font-weight:700;line-height:1.2;margin-bottom:10px}
+  .ev-meta{font-size:14px;color:#9898b0;line-height:1.6}
+  .ev-desc{font-size:13px;color:#7878a0;margin-top:10px;line-height:1.5;
+           border-top:1px solid #2a2a38;padding-top:10px}
+  .divider{font-size:11px;font-weight:600;color:#5a5a78;text-transform:uppercase;
+           letter-spacing:.08em;text-align:center;margin:22px 0 14px}
+  .cal-btn{display:flex;align-items:center;gap:14px;width:100%;
+           background:#242432;border:1px solid #2e2e42;border-radius:14px;
+           padding:14px 16px;margin-bottom:10px;cursor:pointer;
+           text-decoration:none;color:inherit;transition:background .15s,transform .1s}
+  .cal-btn:active{background:#2e2e42;transform:scale(.98)}
+  .cal-icon{width:40px;height:40px;border-radius:10px;flex-shrink:0;
+            display:flex;align-items:center;justify-content:center;font-size:22px}
+  .cal-icon.apple {background:linear-gradient(145deg,#1c1c1e,#2c2c2e)}
+  .cal-icon.google{background:#fff}
+  .cal-icon.outlook{background:#0078d4}
+  .cal-label{display:flex;flex-direction:column}
+  .cal-name{font-size:15px;font-weight:600}
+  .cal-hint{font-size:12px;color:#7878a0;margin-top:1px}
+  .other{display:block;text-align:center;font-size:13px;color:#6868a0;
+         margin-top:6px;padding:10px;text-decoration:none}
+  .other:hover{color:#9898c0}
+  /* Google logo SVG colours */
+  .g-blue{fill:#4285F4}.g-red{fill:#EA4335}.g-yellow{fill:#FBBC05}.g-green{fill:#34A853}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Marked</div>
+  <div class="ev-title">${srvEsc(ev.title)}</div>
+  <div class="ev-meta">
+    📅 ${srvEsc(dispDate)}<br>
+    🕐 ${srvEsc(dispTime)}
+  </div>
+  ${ev.description ? `<div class="ev-desc">${srvEsc(ev.description)}</div>` : ''}
+
+  <div class="divider">Add to your calendar</div>
+
+  <!-- Apple Calendar -->
+  <a class="cal-btn" href="${srvEsc(icsUrl)}">
+    <div class="cal-icon apple">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <rect width="26" height="26" rx="6" fill="#1c1c1e"/>
+        <text x="13" y="9" text-anchor="middle" font-size="6" font-weight="700" fill="#ff453a" font-family="-apple-system,sans-serif">
+          ${dateObj.toLocaleDateString('en-US',{month:'short'}).toUpperCase()}
+        </text>
+        <text x="13" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="white" font-family="-apple-system,sans-serif">
+          ${dateObj.getDate()}
+        </text>
+      </svg>
+    </div>
+    <div class="cal-label">
+      <span class="cal-name">Apple Calendar</span>
+      <span class="cal-hint">iPhone, iPad, Mac</span>
+    </div>
+  </a>
+
+  <!-- Google Calendar -->
+  <a class="cal-btn" href="${srvEsc(gcUrl)}" target="_blank" rel="noopener">
+    <div class="cal-icon google">
+      <svg width="22" height="22" viewBox="0 0 48 48">
+        <path class="g-blue" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+        <path class="g-red" d="M6.3 14.7l7 5.1C15.1 16.1 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 7.4 6.3 14.7z"/>
+        <path class="g-yellow" d="M24 46c5.5 0 10.5-1.9 14.3-5.1l-6.6-5.6C29.7 36.8 27 37.8 24 37.8c-6 0-10.6-3.1-11.7-8.4l-7 5.4C8.7 41.7 15.8 46 24 46z"/>
+        <path class="g-green" d="M44.5 20H24v8.5h11.8c-.8 2.6-2.7 4.8-5.2 6.2l6.6 5.6C41.3 37.4 44.5 31.2 44.5 24c0-1.3-.2-2.7-.5-4z"/>
+      </svg>
+    </div>
+    <div class="cal-label">
+      <span class="cal-name">Google Calendar</span>
+      <span class="cal-hint">Opens in browser</span>
+    </div>
+  </a>
+
+  <!-- Outlook -->
+  <a class="cal-btn" href="${srvEsc(olUrl)}" target="_blank" rel="noopener">
+    <div class="cal-icon outlook">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+        <path d="M14 2v8h8l-8-8zm-2 0H5a1 1 0 00-1 1v18a1 1 0 001 1h14a1 1 0 001-1v-9h-8V2zm-2 15H6v-1.5h4V17zm4 0h-2.5v-1.5H14V17zm-8-4V11.5h4V13H6zm4 0V11.5h2.5V13H10z"/>
+      </svg>
+    </div>
+    <div class="cal-label">
+      <span class="cal-name">Outlook</span>
+      <span class="cal-hint">Outlook.com or Microsoft 365</span>
+    </div>
+  </a>
+
+  <a class="other" href="${srvEsc(icsUrl)}" download="${srvEsc((ev.title||'event').replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-')||'event')}.ics">
+    ↓ Download .ics (any other calendar)
+  </a>
+</div>
+</body>
+</html>`);
+});
+
 // ── Push notification routes ──
 app.get('/api/push/vapid-key', (req, res) => {
   if (!process.env.VAPID_PUBLIC_KEY) return res.status(503).json({ error: 'Push not configured' });

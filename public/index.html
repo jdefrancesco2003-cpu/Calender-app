@@ -245,8 +245,8 @@
     .ev-date-header { font-size: 12px; font-weight: 700; color: var(--text-secondary); padding: 16px 14px 6px; text-transform: uppercase; letter-spacing: 0.7px; }
     .ev-date-header.is-today { color: var(--primary); }
     .ev-card { overflow: hidden; border-radius: 12px; margin: 0 10px 8px; }
-    .ev-card-inner { display: flex; align-items: stretch; width: calc(100% + 112px); transition: transform 0.2s cubic-bezier(0.4,0,0.2,1); }
-    .ev-card-inner.swipe-left { transform: translateX(-112px); }
+    .ev-card-inner { display: flex; align-items: stretch; width: calc(100% + 168px); }
+    .ev-card-inner.swipe-left { transform: translateX(-168px); }
     .ev-card-body { flex: 1; display: flex; align-items: stretch; background: var(--bg-card); border-radius: 12px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.12); overflow: hidden; min-width: 0; }
     .ev-card-body:active { opacity: 0.82; }
     .ev-accent { width: 4px; flex-shrink: 0; }
@@ -255,10 +255,11 @@
     .ev-card-title.holiday { color: var(--warning); }
     .ev-card-time { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
     .ev-card-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ev-card-actions { flex: 0 0 112px; display: flex; background: var(--bg-card); }
+    .ev-card-actions { flex: 0 0 168px; display: flex; background: var(--bg-card); }
     .ev-action-btn { flex: 1; border: none; border-left: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; padding: 0; min-height: auto; }
     .ev-action-btn:active { opacity: 0.65; }
     .ev-action-btn.del { color: var(--error); }
+    .ev-action-btn.shr { color: #5ac8fa; border-left-color: #5ac8fa; }
     .empty-state { text-align: center; padding: 36px 16px; color: var(--text-secondary); font-size: 15px; line-height: 1.6; }
     .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
 
@@ -323,12 +324,63 @@
     .cat-btn.selected { border-color:white; }
 
     /* ── PULL-TO-REFRESH ── */
-    .ptr-spinner {
-      text-align:center; padding:12px; color:var(--text-secondary); font-size:13px;
-      display:none; transition: opacity 0.2s;
-      position: sticky; top: 0; z-index: 10; background: var(--bg-dark);
+    #ptr-container {
+      position: fixed;
+      top: 0; left: 50%; transform: translateX(-50%) translateY(-80px);
+      z-index: 200;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
     }
-    .ptr-spinner.visible { display:block; }
+    #ptr-container.ptr-visible { transform: translateX(-50%) translateY(12px); }
+    #ptr-container.ptr-loading { transform: translateX(-50%) translateY(12px); transition: none; }
+    #ptr-container.ptr-done { transform: translateX(-50%) translateY(-80px); transition: transform 0.4s cubic-bezier(0.55, 0, 1, 0.45); }
+
+    #ptr-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      padding: 7px 14px 7px 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    #ptr-arc-wrap {
+      width: 22px; height: 22px; position: relative; flex-shrink: 0;
+    }
+    #ptr-arc-svg { width: 22px; height: 22px; transform: rotate(-90deg); }
+    #ptr-arc-circle {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-dasharray: 56.5;   /* 2π × 9 */
+      stroke-dashoffset: 56.5;
+      transition: stroke-dashoffset 0.05s linear;
+    }
+    #ptr-arc-circle.ptr-spinning {
+      stroke-dashoffset: 0;
+      animation: ptr-spin-arc 0.7s linear infinite;
+      transition: none;
+    }
+    @keyframes ptr-spin-arc {
+      0%   { stroke-dashoffset: 56.5; transform: rotate(0deg);   }
+      50%  { stroke-dashoffset: 14;   transform: rotate(180deg); }
+      100% { stroke-dashoffset: 56.5; transform: rotate(360deg); }
+    }
+    #ptr-arc-svg.ptr-spinning { animation: ptr-rotate 0.7s linear infinite; transform: rotate(-90deg); }
+    @keyframes ptr-rotate { to { transform: rotate(270deg); } }
+
+    #ptr-check {
+      display: none; width: 22px; height: 22px;
+      color: var(--accent); stroke: var(--accent);
+    }
+    #ptr-check.visible { display: block; animation: ptr-pop 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+    @keyframes ptr-pop { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    #ptr-label {
+      font-size: 13px; font-weight: 600; color: var(--text-primary);
+      white-space: nowrap; letter-spacing: 0.01em;
+    }
 
     /* ── LIGHT MODE (Task 6) ── */
     body.light-mode {
@@ -391,7 +443,20 @@
     </div>
 
     <div class="main-content">
-      <div class="ptr-spinner" id="ptr-spinner">↻ Refreshing...</div>
+      <!-- Pull-to-refresh pill (fixed, outside scroll flow) -->
+      <div id="ptr-container">
+        <div id="ptr-pill">
+          <div id="ptr-arc-wrap">
+            <svg id="ptr-arc-svg" viewBox="0 0 22 22">
+              <circle id="ptr-arc-circle" cx="11" cy="11" r="9"/>
+            </svg>
+            <svg id="ptr-check" viewBox="0 0 22 22" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4,12 9,17 18,7"/>
+            </svg>
+          </div>
+          <span id="ptr-label">Pull to refresh</span>
+        </div>
+      </div>
 
       <!-- ── CALENDAR TAB ── -->
       <div id="calendar-tab" class="tab-content active">
@@ -907,52 +972,146 @@
       return { work:'#4a9d6f', personal:'#5b8dee', health:'#ff6b6b', social:'#ffb347', other:'#b39ddb' }[cat] || '#4a9d6f';
     }
 
-    // ── Task 4: Share event as .ics ──
+    // ── Share event — sends a one-tap ICS link that opens native calendar ──
     function shareEvent(ev) {
       if (!ev) return;
-      const lines = [
-        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Marked//Marked Calendar//EN',
-        'CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
-        `UID:${ev.id}@marked.app`,`SUMMARY:${ev.title}`
-      ];
-      if (ev.isAllDay || !ev.time) {
-        lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`);
-        const d = new Date((ev.endDate||ev.date)+'T00:00:00'); d.setDate(d.getDate()+1);
-        lines.push(`DTEND;VALUE=DATE:${d.toISOString().slice(0,10).replace(/-/g,'')}`);
-      } else {
-        lines.push(`DTSTART;TZID=America/New_York:${ev.date.replace(/-/g,'')}T${ev.time.replace(':','')}00`);
-        const endT=ev.endTime||ev.time,endD=ev.endDate||ev.date;
-        lines.push(`DTEND;TZID=America/New_York:${endD.replace(/-/g,'')}T${endT.replace(':','')}00`);
-      }
-      lines.push('END:VEVENT','END:VCALENDAR');
-      const blob = new Blob([lines.join('\r\n')+'\r\n'],{type:'text/calendar'});
+
+      const shareUrl = `${location.origin}/api/events/${ev.id}/share`;
+
+      // Human-readable body for the SMS/message preview
+      const d = new Date(ev.date + 'T12:00:00');
+      const dateLine = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+      const timeLine = (ev.isAllDay || !ev.time) ? 'All day' : formatEventTime(ev.time, ev.endTime);
+      const shareText = [
+        `📅 ${ev.title}`,
+        `${dateLine}  •  ${timeLine}`,
+        ev.description || '',
+        'Tap the link to add this to your calendar.',
+      ].filter(Boolean).join('\n');
+
       if (navigator.share) {
-        const file = new File([blob], `${ev.title.replace(/\s+/g,'-')}.ics`, {type:'text/calendar'});
-        navigator.share({ title: ev.title, files: [file] }).catch(() => {});
+        // On iOS/Android: opens native share sheet with the URL.
+        // Receiver taps the link → iOS/Android recognises text/calendar
+        // and shows "Add to Calendar" — one tap to import.
+        navigator.share({ title: ev.title, text: shareText, url: shareUrl }).catch(() => {});
       } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href=url; a.download=`${ev.title.replace(/\s+/g,'-')}.ics`; a.click();
-        URL.revokeObjectURL(url);
+        // Desktop fallback: open the ICS URL directly (triggers download / calendar import)
+        window.open(shareUrl, '_blank');
       }
     }
 
-    // ── Task 5: Pull-to-refresh ──
+    // ── Pull-to-refresh ──
     let ptrStartY = 0;
     let ptrActive = false;
+    let lastSaveTimestamp = 0;
+    let ptrTriggered = false;   // fired haptic at threshold?
 
-    document.addEventListener('touchstart', e => { ptrStartY = e.touches[0].clientY; }, { passive: true });
-    document.addEventListener('touchend', async e => {
-      const dy = e.changedTouches[0].clientY - ptrStartY;
-      if (dy > 80 && window.scrollY === 0 && !ptrActive) {
-        ptrActive = true;
-        document.getElementById('ptr-spinner').classList.add('visible');
-        await loadEvents();
-        renderCalendar();
-        renderUpcomingEvents();
-        document.getElementById('ptr-spinner').classList.remove('visible');
-        triggerHaptic([30, 20, 30]);
-        ptrActive = false;
+    const PTR_THRESHOLD = 72;   // px to trigger
+    const PTR_MAX      = 110;   // px beyond which pull is fully "filled"
+    // SVG arc circumference 2π×9 ≈ 56.5
+    const PTR_CIRC = 56.5;
+
+    const ptrContainer = document.getElementById('ptr-container');
+    const ptrArcCircle = document.getElementById('ptr-arc-circle');
+    const ptrArcSvg    = document.getElementById('ptr-arc-svg');
+    const ptrCheckSvg  = document.getElementById('ptr-check');
+    const ptrLabel     = document.getElementById('ptr-label');
+
+    function ptrReset() {
+      ptrArcCircle.style.strokeDashoffset = PTR_CIRC;
+      ptrArcCircle.classList.remove('ptr-spinning');
+      ptrArcSvg.classList.remove('ptr-spinning');
+      ptrArcSvg.style.display = '';
+      ptrCheckSvg.classList.remove('visible');
+      ptrCheckSvg.style.display = 'none';
+      ptrLabel.textContent = 'Pull to refresh';
+    }
+
+    document.addEventListener('touchstart', e => {
+      if (ptrActive) return;
+      ptrStartY  = e.touches[0].clientY;
+      ptrTriggered = false;
+      ptrReset();
+    }, { passive: true });
+
+    document.addEventListener('touchmove', e => {
+      if (ptrActive) return;
+      const dy = e.touches[0].clientY - ptrStartY;
+      if (dy <= 0) {
+        // scrolling up or not moving — hide pill
+        if (!ptrContainer.classList.contains('ptr-visible')) return;
+        ptrContainer.classList.remove('ptr-visible');
+        ptrReset();
+        return;
       }
+      // Rubber-band damping: feel increasingly resistant past threshold
+      const pull = dy < PTR_THRESHOLD
+        ? dy
+        : PTR_THRESHOLD + (dy - PTR_THRESHOLD) * 0.35;
+      const ratio = Math.min(pull / PTR_THRESHOLD, 1);
+
+      // Update arc (fill from empty → full as ratio 0→1)
+      const offset = PTR_CIRC * (1 - ratio);
+      ptrArcCircle.style.strokeDashoffset = offset;
+
+      // Show pill once user has pulled at least 16px
+      if (dy > 16 && !ptrContainer.classList.contains('ptr-visible')) {
+        ptrContainer.classList.add('ptr-visible');
+      }
+
+      // Threshold crossed — fire haptic once and update label
+      if (dy >= PTR_THRESHOLD && !ptrTriggered && (Date.now() - lastSaveTimestamp > 2000)) {
+        ptrTriggered = true;
+        ptrLabel.textContent = 'Release to refresh';
+        triggerHaptic([30, 10, 40]);
+      } else if (dy < PTR_THRESHOLD && ptrTriggered) {
+        ptrTriggered = false;
+        ptrLabel.textContent = 'Pull to refresh';
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', async e => {
+      if (ptrActive) return;
+      const dy = e.changedTouches[0].clientY - ptrStartY;
+
+      if (!ptrTriggered || dy < PTR_THRESHOLD || (Date.now() - lastSaveTimestamp <= 2000)) {
+        // Not triggered — snap pill back
+        ptrContainer.classList.remove('ptr-visible');
+        ptrReset();
+        return;
+      }
+
+      // ── Triggered ──
+      ptrActive = true;
+      ptrLabel.textContent = 'Refreshing…';
+      // Switch arc to spinning animation
+      ptrArcCircle.classList.add('ptr-spinning');
+      ptrArcSvg.classList.add('ptr-spinning');
+      ptrContainer.classList.add('ptr-loading');
+
+      await loadEvents();
+      renderCalendar();
+      renderUpcomingEvents();
+      renderWeekView();
+
+      // Show check mark
+      ptrArcSvg.style.display = 'none';
+      ptrArcCircle.classList.remove('ptr-spinning');
+      ptrArcSvg.classList.remove('ptr-spinning');
+      ptrCheckSvg.style.display = 'block';
+      ptrCheckSvg.classList.add('visible');
+      ptrLabel.textContent = 'Updated!';
+      triggerHaptic([20, 10, 60]);
+
+      // Hold "done" state briefly, then retract
+      await new Promise(r => setTimeout(r, 700));
+      ptrContainer.classList.remove('ptr-loading');
+      ptrContainer.classList.add('ptr-done');
+      await new Promise(r => setTimeout(r, 420));
+      ptrContainer.classList.remove('ptr-visible', 'ptr-done');
+      ptrReset();
+      ptrActive    = false;
+      ptrTriggered = false;
     }, { passive: true });
 
     // ── Task 6: Theme ──
@@ -1581,6 +1740,7 @@
     // ── Local storage ──
     function saveEvents() {
       localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
+      lastSaveTimestamp = Date.now();
     }
 
     // ── Load events (with fetch timeout + auth + decryption) ──
@@ -1594,10 +1754,16 @@
         });
         clearTimeout(tid);
         if (response.status === 401) {
-          // Token expired or invalid — show login
           authToken = null;
           localStorage.removeItem('calpal_token');
-          if (authEnabled) showAuthModal('login');
+          if (guestMode) {
+            const saved = localStorage.getItem('calendarEvents');
+            let loaded = saved ? JSON.parse(saved) : [];
+            loadArchive();
+            allEvents = loaded.filter(e => !archivedIds.has(e.id));
+          } else if (authEnabled) {
+            showAuthModal('login');
+          }
           return;
         }
         let loaded = await response.json();
@@ -1613,15 +1779,23 @@
         }
         loadArchive();
         loaded = loaded.filter(e => !archivedIds.has(e.id));
+        // One-time migration: capitalize all titles
+        const needsCap = loaded.some(e => e.title && e.title !== capitalizeTitle(e.title));
+        if (needsCap) {
+          loaded = loaded.map(e => ({ ...e, title: capitalizeTitle(e.title || '') }));
+        }
         allEvents = loaded;
-        saveEvents();
+        if (needsCap) saveEvents();
       } catch (err) {
         clearTimeout(tid);
         const saved = localStorage.getItem('calendarEvents');
         let loaded = saved ? JSON.parse(saved) : [];
         loadArchive();
         loaded = loaded.filter(e => !archivedIds.has(e.id));
+        const needsCap = loaded.some(e => e.title && e.title !== capitalizeTitle(e.title));
+        if (needsCap) loaded = loaded.map(e => ({ ...e, title: capitalizeTitle(e.title || '') }));
         allEvents = loaded;
+        if (needsCap) saveEvents();
         if (!(err.name === 'AbortError')) showStatus('Using local storage', 'success');
       }
     }
@@ -2242,8 +2416,8 @@
       if (isWeekView) { currentDate.setDate(currentDate.getDate() + 7); renderWeekView(); }
       else nextMonth();
     }
-    function previousMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
-    function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
+    function previousMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); renderUpcomingEvents(); }
+    function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); renderUpcomingEvents(); }
 
     function toggleView() {
       if (selectedDate) { selectedDate = null; }
@@ -2919,6 +3093,7 @@
                 </div>
               </div>
               <div class="ev-card-actions">
+                <button class="ev-action-btn shr" onclick="event.stopPropagation(); shareEvent(allEvents.find(e=>e.id==='${ev.id}')); triggerHaptic([20])">Share</button>
                 <button class="ev-action-btn" style="color:${color};" onclick="event.stopPropagation(); openEditModal('${ev.id}'); triggerHaptic([40])">Edit</button>
                 <button class="ev-action-btn del" onclick="event.stopPropagation(); deleteEvent('${ev.id}'); triggerHaptic([100,50,100])">Delete</button>
               </div>
@@ -2977,20 +3152,106 @@
       closeMenuOnTab();
     }
 
-    // ── Swipe to reveal actions ──
-    let swipeStartX = 0, swipeCurrX = 0;
-    function _swipeTouchStart(e) { swipeStartX = e.touches[0].clientX; swipeCurrX = swipeStartX; }
+    // ── Swipe to reveal actions (smooth v2) ──
+    const SWIPE_OPEN  = 168;   // px — fully open
+    const SWIPE_SNAP  = 72;    // px — position threshold to snap open on slow release
+    const SWIPE_VEL   = 0.3;   // px/ms — flick velocity to force snap
+
+    let _swipeState    = null;  // active gesture state
+    let _swipeOpenCard = null;  // currently open inner element
+
+    function _swipeSpring(inner, toOpen) {
+      if (toOpen) {
+        inner.style.transition = 'transform 0.32s cubic-bezier(0.34,1.15,0.64,1)';
+        inner.style.transform  = `translateX(-${SWIPE_OPEN}px)`;
+        inner.classList.add('swipe-left');
+        _swipeOpenCard = inner;
+        triggerHaptic(20);
+      } else {
+        inner.style.transition = 'transform 0.26s cubic-bezier(0.4,0,0.2,1)';
+        inner.style.transform  = 'translateX(0)';
+        inner.classList.remove('swipe-left');
+        if (_swipeOpenCard === inner) _swipeOpenCard = null;
+      }
+      // Clean up inline transition once animation ends
+      const cleanup = () => { inner.style.transition = ''; inner.removeEventListener('transitionend', cleanup); };
+      inner.addEventListener('transitionend', cleanup);
+    }
+
+    function _swipeTouchStart(e) {
+      const inner  = this;
+      const isOpen = inner.classList.contains('swipe-left');
+      _swipeState  = {
+        inner,
+        startX:     e.touches[0].clientX,
+        startY:     e.touches[0].clientY,
+        lastX:      e.touches[0].clientX,
+        lastT:      Date.now(),
+        baseOffset: isOpen ? -SWIPE_OPEN : 0,
+        isOpen,
+        locked:     false,   // direction confirmed
+        cancelled:  false,   // vertical scroll — abort
+      };
+    }
+
     function _swipeTouchMove(e) {
-      swipeCurrX = e.touches[0].clientX;
-      const diff = swipeStartX - swipeCurrX;
-      if (diff > 0) { e.preventDefault(); this.style.transform = `translateX(-${Math.min(diff, 112)}px)`; }
+      if (!_swipeState || _swipeState.cancelled) return;
+      const s  = _swipeState;
+      const dx = e.touches[0].clientX - s.startX;
+      const dy = e.touches[0].clientY - s.startY;
+
+      // Directional lock: wait for 8px then decide axis
+      if (!s.locked) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        if (Math.abs(dy) > Math.abs(dx)) { s.cancelled = true; return; }  // vertical → pass through
+        s.locked = true;
+        // Close any other open card instantly
+        if (_swipeOpenCard && _swipeOpenCard !== s.inner) _swipeSpring(_swipeOpenCard, false);
+        s.inner.style.transition = 'none';
+      }
+
+      e.preventDefault();
+      s.lastX = e.touches[0].clientX;
+      s.lastT = Date.now();
+
+      let offset = s.baseOffset + dx;
+      if (offset > 0) offset = 0;                                           // can't swipe right past closed
+      if (offset < -SWIPE_OPEN) {
+        const over = (-offset) - SWIPE_OPEN;
+        offset = -(SWIPE_OPEN + over * 0.18);                               // rubber-band past full-open
+      }
+      s.inner.style.transform = `translateX(${offset}px)`;
     }
+
     function _swipeTouchEnd() {
-      const diff = swipeStartX - swipeCurrX;
-      this.style.transform = '';
-      if (diff > 40) { this.classList.add('swipe-left'); triggerHaptic(20); }
-      else { this.classList.remove('swipe-left'); }
+      if (!_swipeState) return;
+      const s = _swipeState;
+      _swipeState = null;
+
+      if (s.cancelled || !s.locked) {
+        // Wasn't a horizontal swipe — restore without transition
+        s.inner.style.transform  = s.isOpen ? `translateX(-${SWIPE_OPEN}px)` : 'translateX(0)';
+        return;
+      }
+
+      const dx  = s.lastX - s.startX;
+      const vel = Math.abs(dx) / Math.max(Date.now() - s.lastT, 1);  // px/ms
+
+      let shouldOpen;
+      if (vel > SWIPE_VEL) {
+        shouldOpen = dx < 0;                                                 // flick direction wins
+      } else {
+        const finalOffset = s.baseOffset + dx;
+        shouldOpen = finalOffset < -SWIPE_SNAP;                             // position threshold
+      }
+      _swipeSpring(s.inner, shouldOpen);
     }
+
+    // Tap outside an open card → close it
+    document.addEventListener('touchstart', e => {
+      if (!_swipeOpenCard) return;
+      if (!_swipeOpenCard.parentElement?.contains(e.target)) _swipeSpring(_swipeOpenCard, false);
+    }, { passive: true });
 
     // ── iCal Export ──
     function exportIcal() {
