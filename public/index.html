@@ -245,8 +245,8 @@
     .ev-date-header { font-size: 12px; font-weight: 700; color: var(--text-secondary); padding: 16px 14px 6px; text-transform: uppercase; letter-spacing: 0.7px; }
     .ev-date-header.is-today { color: var(--primary); }
     .ev-card { overflow: hidden; border-radius: 12px; margin: 0 10px 8px; }
-    .ev-card-inner { display: flex; align-items: stretch; width: calc(100% + 112px); transition: transform 0.2s cubic-bezier(0.4,0,0.2,1); }
-    .ev-card-inner.swipe-left { transform: translateX(-112px); }
+    .ev-card-inner { display: flex; align-items: stretch; width: calc(100% + 168px); transition: transform 0.2s cubic-bezier(0.4,0,0.2,1); }
+    .ev-card-inner.swipe-left { transform: translateX(-168px); }
     .ev-card-body { flex: 1; display: flex; align-items: stretch; background: var(--bg-card); border-radius: 12px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.12); overflow: hidden; min-width: 0; }
     .ev-card-body:active { opacity: 0.82; }
     .ev-accent { width: 4px; flex-shrink: 0; }
@@ -255,10 +255,11 @@
     .ev-card-title.holiday { color: var(--warning); }
     .ev-card-time { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
     .ev-card-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ev-card-actions { flex: 0 0 112px; display: flex; background: var(--bg-card); }
+    .ev-card-actions { flex: 0 0 168px; display: flex; background: var(--bg-card); }
     .ev-action-btn { flex: 1; border: none; border-left: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; padding: 0; min-height: auto; }
     .ev-action-btn:active { opacity: 0.65; }
     .ev-action-btn.del { color: var(--error); }
+    .ev-action-btn.shr { color: #5ac8fa; border-left-color: #5ac8fa; }
     .empty-state { text-align: center; padding: 36px 16px; color: var(--text-secondary); font-size: 15px; line-height: 1.6; }
     .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
 
@@ -3093,6 +3094,7 @@
                 </div>
               </div>
               <div class="ev-card-actions">
+                <button class="ev-action-btn shr" onclick="event.stopPropagation(); shareEvent(allEvents.find(e=>e.id==='${ev.id}')); triggerHaptic([20])">Share</button>
                 <button class="ev-action-btn" style="color:${color};" onclick="event.stopPropagation(); openEditModal('${ev.id}'); triggerHaptic([40])">Edit</button>
                 <button class="ev-action-btn del" onclick="event.stopPropagation(); deleteEvent('${ev.id}'); triggerHaptic([100,50,100])">Delete</button>
               </div>
