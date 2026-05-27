@@ -245,7 +245,7 @@
     .ev-date-header { font-size: 12px; font-weight: 700; color: var(--text-secondary); padding: 16px 14px 6px; text-transform: uppercase; letter-spacing: 0.7px; }
     .ev-date-header.is-today { color: var(--primary); }
     .ev-card { overflow: hidden; border-radius: 12px; margin: 0 10px 8px; }
-    .ev-card-inner { display: flex; align-items: stretch; width: calc(100% + 168px); transition: transform 0.2s cubic-bezier(0.4,0,0.2,1); }
+    .ev-card-inner { display: flex; align-items: stretch; width: calc(100% + 168px); }
     .ev-card-inner.swipe-left { transform: translateX(-168px); }
     .ev-card-body { flex: 1; display: flex; align-items: stretch; background: var(--bg-card); border-radius: 12px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.12); overflow: hidden; min-width: 0; }
     .ev-card-body:active { opacity: 0.82; }
@@ -3153,20 +3153,106 @@
       closeMenuOnTab();
     }
 
-    // ── Swipe to reveal actions ──
-    let swipeStartX = 0, swipeCurrX = 0;
-    function _swipeTouchStart(e) { swipeStartX = e.touches[0].clientX; swipeCurrX = swipeStartX; }
+    // ── Swipe to reveal actions (smooth v2) ──
+    const SWIPE_OPEN  = 168;   // px — fully open
+    const SWIPE_SNAP  = 72;    // px — position threshold to snap open on slow release
+    const SWIPE_VEL   = 0.3;   // px/ms — flick velocity to force snap
+
+    let _swipeState    = null;  // active gesture state
+    let _swipeOpenCard = null;  // currently open inner element
+
+    function _swipeSpring(inner, toOpen) {
+      if (toOpen) {
+        inner.style.transition = 'transform 0.32s cubic-bezier(0.34,1.15,0.64,1)';
+        inner.style.transform  = `translateX(-${SWIPE_OPEN}px)`;
+        inner.classList.add('swipe-left');
+        _swipeOpenCard = inner;
+        triggerHaptic(20);
+      } else {
+        inner.style.transition = 'transform 0.26s cubic-bezier(0.4,0,0.2,1)';
+        inner.style.transform  = 'translateX(0)';
+        inner.classList.remove('swipe-left');
+        if (_swipeOpenCard === inner) _swipeOpenCard = null;
+      }
+      // Clean up inline transition once animation ends
+      const cleanup = () => { inner.style.transition = ''; inner.removeEventListener('transitionend', cleanup); };
+      inner.addEventListener('transitionend', cleanup);
+    }
+
+    function _swipeTouchStart(e) {
+      const inner  = this;
+      const isOpen = inner.classList.contains('swipe-left');
+      _swipeState  = {
+        inner,
+        startX:     e.touches[0].clientX,
+        startY:     e.touches[0].clientY,
+        lastX:      e.touches[0].clientX,
+        lastT:      Date.now(),
+        baseOffset: isOpen ? -SWIPE_OPEN : 0,
+        isOpen,
+        locked:     false,   // direction confirmed
+        cancelled:  false,   // vertical scroll — abort
+      };
+    }
+
     function _swipeTouchMove(e) {
-      swipeCurrX = e.touches[0].clientX;
-      const diff = swipeStartX - swipeCurrX;
-      if (diff > 0) { e.preventDefault(); this.style.transform = `translateX(-${Math.min(diff, 112)}px)`; }
+      if (!_swipeState || _swipeState.cancelled) return;
+      const s  = _swipeState;
+      const dx = e.touches[0].clientX - s.startX;
+      const dy = e.touches[0].clientY - s.startY;
+
+      // Directional lock: wait for 8px then decide axis
+      if (!s.locked) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        if (Math.abs(dy) > Math.abs(dx)) { s.cancelled = true; return; }  // vertical → pass through
+        s.locked = true;
+        // Close any other open card instantly
+        if (_swipeOpenCard && _swipeOpenCard !== s.inner) _swipeSpring(_swipeOpenCard, false);
+        s.inner.style.transition = 'none';
+      }
+
+      e.preventDefault();
+      s.lastX = e.touches[0].clientX;
+      s.lastT = Date.now();
+
+      let offset = s.baseOffset + dx;
+      if (offset > 0) offset = 0;                                           // can't swipe right past closed
+      if (offset < -SWIPE_OPEN) {
+        const over = (-offset) - SWIPE_OPEN;
+        offset = -(SWIPE_OPEN + over * 0.18);                               // rubber-band past full-open
+      }
+      s.inner.style.transform = `translateX(${offset}px)`;
     }
+
     function _swipeTouchEnd() {
-      const diff = swipeStartX - swipeCurrX;
-      this.style.transform = '';
-      if (diff > 40) { this.classList.add('swipe-left'); triggerHaptic(20); }
-      else { this.classList.remove('swipe-left'); }
+      if (!_swipeState) return;
+      const s = _swipeState;
+      _swipeState = null;
+
+      if (s.cancelled || !s.locked) {
+        // Wasn't a horizontal swipe — restore without transition
+        s.inner.style.transform  = s.isOpen ? `translateX(-${SWIPE_OPEN}px)` : 'translateX(0)';
+        return;
+      }
+
+      const dx  = s.lastX - s.startX;
+      const vel = Math.abs(dx) / Math.max(Date.now() - s.lastT, 1);  // px/ms
+
+      let shouldOpen;
+      if (vel > SWIPE_VEL) {
+        shouldOpen = dx < 0;                                                 // flick direction wins
+      } else {
+        const finalOffset = s.baseOffset + dx;
+        shouldOpen = finalOffset < -SWIPE_SNAP;                             // position threshold
+      }
+      _swipeSpring(s.inner, shouldOpen);
     }
+
+    // Tap outside an open card → close it
+    document.addEventListener('touchstart', e => {
+      if (!_swipeOpenCard) return;
+      if (!_swipeOpenCard.parentElement?.contains(e.target)) _swipeSpring(_swipeOpenCard, false);
+    }, { passive: true });
 
     // ── iCal Export ──
     function exportIcal() {
