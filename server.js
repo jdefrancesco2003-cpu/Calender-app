@@ -701,6 +701,59 @@ app.delete('/api/events/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ── Public ICS share endpoint (no auth — event ID is a UUID) ──
+app.get('/api/events/:id/share.ics', async (req, res) => {
+  const { id } = req.params;
+  if (!eventsCollection) return res.status(503).send('Service unavailable');
+
+  let ev;
+  try {
+    ev = await eventsCollection.findOne({ id });
+  } catch (err) {
+    return res.status(500).send('Error');
+  }
+  if (!ev) return res.status(404).send('Event not found');
+
+  // Skip encrypted events — they can't be shared meaningfully
+  if (ev.encryptedData) return res.status(403).send('This event is encrypted and cannot be shared');
+
+  const safeFold = str => str.replace(/(.{73})/g, '$1\r\n ');
+  const stamp = new Date().toISOString().replace(/[-:.]/g,'').slice(0,15) + 'Z';
+
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Marked//Marked Calendar//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${ev.id}@marked.app`,
+    `DTSTAMP:${stamp}`,
+    `SUMMARY:${safeFold(ev.title || 'Event')}`,
+    'STATUS:CONFIRMED',
+  ];
+
+  if (ev.isAllDay || !ev.time) {
+    lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`);
+    const d = new Date((ev.endDate || ev.date) + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    lines.push(`DTEND;VALUE=DATE:${d.toISOString().slice(0,10).replace(/-/g,'')}`);
+  } else {
+    lines.push(`DTSTART;TZID=America/New_York:${ev.date.replace(/-/g,'')}T${ev.time.replace(':','')}00`);
+    const endT = ev.endTime || ev.time, endD = ev.endDate || ev.date;
+    lines.push(`DTEND;TZID=America/New_York:${endD.replace(/-/g,'')}T${endT.replace(':','')}00`);
+  }
+
+  if (ev.description) lines.push(`DESCRIPTION:${safeFold(ev.description.replace(/\n/g,'\\n'))}`);
+  lines.push('END:VEVENT', 'END:VCALENDAR');
+
+  const safeTitle = (ev.title || 'event').replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-') || 'event';
+  res.setHeader('Content-Type', 'text/calendar;charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}.ics"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(lines.join('\r\n') + '\r\n');
+});
+
 // ── Push notification routes ──
 app.get('/api/push/vapid-key', (req, res) => {
   if (!process.env.VAPID_PUBLIC_KEY) return res.status(503).json({ error: 'Push not configured' });
