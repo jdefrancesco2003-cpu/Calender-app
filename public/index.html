@@ -972,33 +972,74 @@
       return { work:'#4a9d6f', personal:'#5b8dee', health:'#ff6b6b', social:'#ffb347', other:'#b39ddb' }[cat] || '#4a9d6f';
     }
 
-    // ── Task 4: Share event as .ics ──
+    // ── Share event as .ics (imports into any native calendar) ──
     function shareEvent(ev) {
       if (!ev) return;
+
+      // ── Build ICS ──
+      const stamp = new Date().toISOString().replace(/[-:.]/g,'').slice(0,15) + 'Z';
+      const safeFold = str => str.replace(/(.{73})/g, '$1\r\n ');  // RFC 5545 line folding
+
       const lines = [
-        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Marked//Marked Calendar//EN',
-        'CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
-        `UID:${ev.id}@marked.app`,`SUMMARY:${ev.title}`
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Marked//Marked Calendar//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        `UID:${ev.id}@marked.app`,
+        `DTSTAMP:${stamp}`,
+        `SUMMARY:${safeFold(ev.title)}`,
+        'STATUS:CONFIRMED',
       ];
+
       if (ev.isAllDay || !ev.time) {
         lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`);
-        const d = new Date((ev.endDate||ev.date)+'T00:00:00'); d.setDate(d.getDate()+1);
+        const d = new Date((ev.endDate || ev.date) + 'T00:00:00');
+        d.setDate(d.getDate() + 1);
         lines.push(`DTEND;VALUE=DATE:${d.toISOString().slice(0,10).replace(/-/g,'')}`);
       } else {
         lines.push(`DTSTART;TZID=America/New_York:${ev.date.replace(/-/g,'')}T${ev.time.replace(':','')}00`);
-        const endT=ev.endTime||ev.time,endD=ev.endDate||ev.date;
+        const endT = ev.endTime || ev.time, endD = ev.endDate || ev.date;
         lines.push(`DTEND;TZID=America/New_York:${endD.replace(/-/g,'')}T${endT.replace(':','')}00`);
       }
-      lines.push('END:VEVENT','END:VCALENDAR');
-      const blob = new Blob([lines.join('\r\n')+'\r\n'],{type:'text/calendar'});
-      if (navigator.share) {
-        const file = new File([blob], `${ev.title.replace(/\s+/g,'-')}.ics`, {type:'text/calendar'});
-        navigator.share({ title: ev.title, files: [file] }).catch(() => {});
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href=url; a.download=`${ev.title.replace(/\s+/g,'-')}.ics`; a.click();
-        URL.revokeObjectURL(url);
+
+      if (ev.description) {
+        lines.push(`DESCRIPTION:${safeFold(ev.description.replace(/\n/g, '\\n'))}`);
       }
+
+      lines.push('END:VEVENT', 'END:VCALENDAR');
+
+      const icsText = lines.join('\r\n') + '\r\n';
+      const blob    = new Blob([icsText], { type: 'text/calendar;charset=utf-8' });
+      const safeTitle = ev.title.replace(/[^a-zA-Z0-9 _-]/g, '').trim().replace(/\s+/g, '-') || 'event';
+      const fileName  = `${safeTitle}.ics`;
+
+      // ── Human-readable text for the SMS/message body ──
+      const d = new Date(ev.date + 'T12:00:00');
+      const dateLine = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+      const timeLine = (ev.isAllDay || !ev.time) ? 'All day' : formatEventTime(ev.time, ev.endTime);
+      const shareText = [
+        ev.title,
+        `📅 ${dateLine}`,
+        `🕐 ${timeLine}`,
+        ev.description ? `\n${ev.description}` : '',
+        '\nOpen the attached .ics file to add this to your calendar.',
+      ].filter(Boolean).join('\n');
+
+      // ── Share or download ──
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], fileName, { type: 'text/calendar' });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ title: ev.title, text: shareText, files: [file] }).catch(() => {});
+          return;
+        }
+      }
+      // Fallback: direct download (desktop / unsupported browsers)
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url; a.download = fileName; a.click();
+      URL.revokeObjectURL(url);
     }
 
     // ── Pull-to-refresh ──
