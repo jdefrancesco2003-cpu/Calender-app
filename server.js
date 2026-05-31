@@ -4,7 +4,7 @@ const cors = require('cors');
 const { MongoClient } = require('mongodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { randomBytes } = require('crypto');
+const { randomBytes, randomInt } = require('crypto');
 const webpush = require('web-push');
 const nodemailer = require('nodemailer');
 
@@ -58,7 +58,7 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   console.log('  VAPID_PRIVATE_KEY=' + keys.privateKey);
 }
 function generateSalt() { return randomBytes(16).toString('hex'); }
-function generateOTP() { return String(Math.floor(100000 + Math.random() * 900000)); }
+function generateOTP() { return String(randomInt(100000, 1000000)); }
 
 // ── Email (Nodemailer) ──
 const emailTransport = (process.env.SMTP_USER && process.env.SMTP_PASS)
@@ -138,6 +138,7 @@ function makeRateLimiter(max, windowMs) {
 }
 const checkParseRateLimit = makeRateLimiter(20, 60000);   // 20/min for parse
 const checkAuthRateLimit  = makeRateLimiter(5,  900000);  // 5 attempts/15 min for auth
+const checkShareRateLimit = makeRateLimiter(120, 60000);  // 120/min for public share endpoints
 
 // ── Auth middleware ──
 function requireAuth(req, res, next) {
@@ -702,7 +703,14 @@ app.delete('/api/events/:id', requireAuth, async (req, res) => {
 });
 
 // ── Public ICS share endpoint (no auth — event ID is a UUID) ──
+function addDaysStr(dateStr, days) {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
 function buildIcsLines(ev) {
+  const escIcs = str => String(str || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
   const safeFold = str => str.replace(/(.{73})/g, '$1\r\n ');
   const stamp = new Date().toISOString().replace(/[-:.]/g,'').slice(0,15) + 'Z';
   const lines = [
@@ -712,20 +720,18 @@ function buildIcsLines(ev) {
     'BEGIN:VEVENT',
     `UID:${ev.id}@marked.app`,
     `DTSTAMP:${stamp}`,
-    `SUMMARY:${safeFold(ev.title || 'Event')}`,
+    `SUMMARY:${safeFold(escIcs(ev.title || 'Event'))}`,
     'STATUS:CONFIRMED',
   ];
   if (ev.isAllDay || !ev.time) {
     lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`);
-    const d = new Date((ev.endDate || ev.date) + 'T00:00:00');
-    d.setDate(d.getDate() + 1);
-    lines.push(`DTEND;VALUE=DATE:${d.toISOString().slice(0,10).replace(/-/g,'')}`);
+    lines.push(`DTEND;VALUE=DATE:${addDaysStr(ev.endDate || ev.date, 1).replace(/-/g,'')}`);
   } else {
     lines.push(`DTSTART;TZID=America/New_York:${ev.date.replace(/-/g,'')}T${ev.time.replace(':','')}00`);
     const endT = ev.endTime || ev.time, endD = ev.endDate || ev.date;
     lines.push(`DTEND;TZID=America/New_York:${endD.replace(/-/g,'')}T${endT.replace(':','')}00`);
   }
-  if (ev.description) lines.push(`DESCRIPTION:${safeFold(ev.description.replace(/\n/g,'\\n'))}`);
+  if (ev.description) lines.push(`DESCRIPTION:${safeFold(escIcs(ev.description))}`);
   lines.push('END:VEVENT','END:VCALENDAR');
   return lines;
 }
@@ -744,14 +750,14 @@ async function getShareEvent(id, res) {
   if (!eventsCollection) { res.status(503).send('Service unavailable'); return null; }
   let ev;
   try { ev = await eventsCollection.findOne({ id }); } catch { res.status(500).send('Error'); return null; }
-  if (!ev) { res.status(404).send('Event not found'); return null; }
-  if (ev.encryptedData) { res.status(403).send('This event is private'); return null; }
+  if (!ev || ev.encryptedData || !ev.date) { res.status(404).send('Event not found'); return null; }
   return ev;
 }
 
 // Raw .ics download (used by "Other / download" option on the landing page)
 app.get('/api/events/:id/share.ics', async (req, res) => {
-  const ev = await getShareEvent(req.params.id, res);
+  if (!checkShareRateLimit(req.ip || 'unknown')) return res.status(429).send('Too many requests');
+  const ev = await getShareEvent(String(req.params.id), res);
   if (!ev) return;
   const safeTitle = (ev.title||'event').replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-')||'event';
   res.setHeader('Content-Type','text/calendar;charset=utf-8');
@@ -762,7 +768,8 @@ app.get('/api/events/:id/share.ics', async (req, res) => {
 
 // Calendar picker landing page
 app.get('/api/events/:id/share', async (req, res) => {
-  const ev = await getShareEvent(req.params.id, res);
+  if (!checkShareRateLimit(req.ip || 'unknown')) return res.status(429).send('Too many requests');
+  const ev = await getShareEvent(String(req.params.id), res);
   if (!ev) return;
 
   const base = `${req.protocol}://${req.get('host')}`;
@@ -772,8 +779,7 @@ app.get('/api/events/:id/share', async (req, res) => {
   let gcDates;
   if (ev.isAllDay || !ev.time) {
     const s = ev.date.replace(/-/g,'');
-    const d = new Date((ev.endDate||ev.date)+'T00:00:00'); d.setDate(d.getDate()+1);
-    gcDates = `${s}/${d.toISOString().slice(0,10).replace(/-/g,'')}`;
+    gcDates = `${s}/${addDaysStr(ev.endDate||ev.date, 1).replace(/-/g,'')}`;
   } else {
     const s = `${ev.date.replace(/-/g,'')}T${ev.time.replace(':','')}00`;
     const e = `${(ev.endDate||ev.date).replace(/-/g,'')}T${(ev.endTime||ev.time).replace(':','')}00`;
@@ -812,7 +818,7 @@ app.get('/api/events/:id/share', async (req, res) => {
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
        background:#0f0f14;color:#f0f0f5;min-height:100dvh;
        display:flex;flex-direction:column;align-items:center;
-       justify-content:center;padding:24px 20px
+       justify-content:center;padding:24px 20px;
        padding-bottom:max(24px,env(safe-area-inset-bottom));}
   .card{background:#1c1c26;border:1px solid #2a2a38;border-radius:20px;
         padding:24px 20px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.5)}
