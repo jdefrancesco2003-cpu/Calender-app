@@ -12,6 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+app.set('trust proxy', 1); // Railway / reverse proxy: use X-Forwarded-For for real client IP
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -567,7 +568,7 @@ app.post('/api/migrate/claim-legacy-events', requireAuth, async (req, res) => {
 
 // ── Parse endpoint (parse only — client saves after confirmation) ──
 app.post('/api/events/parse', requireAuth, async (req, res) => {
-  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const ip = req.ip || 'unknown';
   if (!checkParseRateLimit(ip)) {
     return res.status(429).json({ error: 'Too many parse requests. Please wait a minute.' });
   }
@@ -942,31 +943,6 @@ app.delete('/api/push/unsubscribe', requireAuth, async (req, res) => {
   if (endpoint) await pushSubsCollection.deleteOne({ 'subscription.endpoint': endpoint });
   else await pushSubsCollection.deleteMany({ userId: req.user.userId });
   res.json({ ok: true });
-});
-
-// ── Static legal pages ──
-app.get('/privacy', (req, res) => {
-  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy — Marked</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
-<h1>Marked Privacy Policy</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
-<h2>What We Collect</h2><p>Marked collects your email address and calendar event data (titles, dates, times). All event data is end-to-end encrypted before leaving your device — we cannot read your events.</p>
-<h2>How We Use It</h2><p>Your email is used solely for account authentication. Your encrypted event data is stored on our servers to enable sync across devices.</p>
-<h2>Data Storage</h2><p>Data is stored in MongoDB Atlas (cloud). Encryption keys are derived from your password on-device using PBKDF2 and are never transmitted to our servers.</p>
-<h2>Third Parties</h2><p>We use the Anthropic Claude API to parse natural-language event descriptions. Text you type in the event input is sent to Anthropic for parsing. No personal identifying information is included.</p>
-<h2>Data Deletion</h2><p>You can permanently delete your account and all associated data at any time from Settings → Delete Account.</p>
-<h2>Contact</h2><p>Questions? Email us at <a href="mailto:jdefrancesco2003@gmail.com">jdefrancesco2003@gmail.com</a></p>
-</body></html>`);
-});
-
-app.get('/terms', (req, res) => {
-  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Service — Marked</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
-<h1>Marked Terms of Service</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
-<h2>Acceptance</h2><p>By using Marked you agree to these terms. Marked is provided as-is for personal productivity use.</p>
-<h2>Account Responsibility</h2><p>You are responsible for keeping your password and recovery codes safe. We cannot recover encrypted data if you lose your password and recovery codes.</p>
-<h2>Prohibited Use</h2><p>Do not use Marked to store illegal content or to abuse the AI parsing service.</p>
-<h2>Service Availability</h2><p>We aim for high availability but do not guarantee 100% uptime. Always export your calendar (.ics) as a backup.</p>
-<h2>Termination</h2><p>You may delete your account at any time. We may suspend accounts that violate these terms.</p>
-<h2>Contact</h2><p>Questions? Email <a href="mailto:jdefrancesco2003@gmail.com">jdefrancesco2003@gmail.com</a></p>
-</body></html>`);
 });
 
 // ── Static legal pages ──
