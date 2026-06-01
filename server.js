@@ -248,13 +248,14 @@ async function deleteEvent(id, userId) {
 }
 
 // ── Natural-language parser (parse only — does NOT save) ──
-async function parseEvent(text, currentESTDate, currentESTTime) {
+async function parseEvent(text, currentESTDate, currentESTTime, contextDate) {
   if (!text || text.trim().length === 0) throw new Error('Event text cannot be empty');
 
   const today = currentESTDate || getESTDateString();
+  const defaultDate = contextDate || today;
   const modelName = 'claude-haiku-4-5-20251001';
 
-  console.log(`📝 Parsing: "${text}" (EST: ${today} ${currentESTTime || ''})`);
+  console.log(`📝 Parsing: "${text}" (EST: ${today} ${currentESTTime || ''}${contextDate ? `, context: ${contextDate}` : ''})`);
 
   const response = await client.messages.create({
     model: modelName,
@@ -265,6 +266,7 @@ async function parseEvent(text, currentESTDate, currentESTTime) {
 
 Current EST date: ${today}
 Current EST time: ${currentESTTime || 'unknown'}
+${contextDate ? `Selected calendar date: ${contextDate} (use this as the date if no date is mentioned in the event text)` : ''}
 
 Parse this event: "${text}"
 
@@ -278,7 +280,8 @@ Extract:
 5. endTime: End time in HH:mm format, or null
 6. isAllDay: true if no specific times mentioned, false otherwise
 
-Date rules (TODAY = ${today}):
+Date rules (TODAY = ${today}, DEFAULT DATE = ${defaultDate}):
+- If no date is mentioned → use ${defaultDate}
 - "today" → ${today}
 - "tomorrow" → next day from ${today}
 - "next week" → 7 days from ${today}
@@ -573,11 +576,11 @@ app.post('/api/events/parse', requireAuth, async (req, res) => {
     return res.status(429).json({ error: 'Too many parse requests. Please wait a minute.' });
   }
 
-  const { text, currentESTDate, currentESTTime } = req.body;
+  const { text, currentESTDate, currentESTTime, contextDate } = req.body;
   if (!text) return res.status(400).json({ error: 'Event text is required' });
 
   try {
-    const parsed = await parseEvent(text, currentESTDate, currentESTTime);
+    const parsed = await parseEvent(text, currentESTDate, currentESTTime, contextDate);
     // Return parsed data only — client is responsible for encrypting and saving
     res.json(parsed);
   } catch (err) {

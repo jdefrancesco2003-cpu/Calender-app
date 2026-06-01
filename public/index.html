@@ -1406,21 +1406,25 @@
         }, { passive: true });
       });
 
-      // Day sheet swipe-to-dismiss
-      const dsHandle = document.getElementById('day-sheet-handle');
+      // Day sheet swipe-to-dismiss — activates from top 70px or when content is at scroll top
       const ds = document.getElementById('day-sheet');
-      if (dsHandle && ds) {
+      const dsContent = document.getElementById('day-sheet-content');
+      if (ds && dsContent) {
         let sy = 0, active = false;
-        dsHandle.addEventListener('touchstart', e => {
-          sy = e.touches[0].clientY; active = true;
+        ds.addEventListener('touchstart', e => {
+          const rect = ds.getBoundingClientRect();
+          const inTopZone = (e.touches[0].clientY - rect.top) < 70;
+          if (!inTopZone && dsContent.scrollTop > 2) return;
+          sy = e.touches[0].clientY;
+          active = true;
           ds.style.transition = 'none';
         }, { passive: true });
-        dsHandle.addEventListener('touchmove', e => {
+        ds.addEventListener('touchmove', e => {
           if (!active) return;
           const dy = Math.max(0, e.touches[0].clientY - sy);
           ds.style.transform = `translateY(${dy}px)`;
         }, { passive: true });
-        dsHandle.addEventListener('touchend', e => {
+        ds.addEventListener('touchend', e => {
           if (!active) return; active = false;
           const dy = e.changedTouches[0].clientY - sy;
           ds.style.transition = '';
@@ -1656,6 +1660,13 @@
       clearAddForm();
       const dateEl = document.getElementById('date-input');
       if (dateEl && !dateEl.value) dateEl.value = selectedDate || getLocalDateString(new Date());
+      document.getElementById('add-event-overlay').classList.add('active');
+      setTimeout(() => document.getElementById('event-input').focus(), 150);
+    }
+    function openAddModalForDate(dateStr) {
+      clearAddForm();
+      document.getElementById('date-input').value = dateStr;
+      selectedDate = dateStr; // parse request picks this up as contextDate
       document.getElementById('add-event-overlay').classList.add('active');
       setTimeout(() => document.getElementById('event-input').focus(), 150);
     }
@@ -2142,7 +2153,7 @@
         const response = await fetch('/api/events/parse', {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ text: input, currentESTDate: estInfo.date, currentESTTime: estInfo.time, timezone: estInfo.timezone }),
+          body: JSON.stringify({ text: input, currentESTDate: estInfo.date, currentESTTime: estInfo.time, timezone: estInfo.timezone, contextDate: selectedDate || undefined }),
           signal: controller.signal
         });
         clearTimeout(tid);
@@ -2744,7 +2755,10 @@
       document.getElementById('day-sheet-content').innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;border-bottom:1px solid var(--border-color);margin-bottom:10px;">
           <span style="font-size:17px;font-weight:700;color:var(--text-primary);">${label}</span>
-          <button onclick="closeDayModal();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:20px;padding:4px 8px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button onclick="closeDayModal();openAddModalForDate('${dateStr}');triggerHaptic([40]);" style="background:var(--primary);border:none;color:white;font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;cursor:pointer;line-height:1.4;min-height:auto;">+ Add</button>
+            <button onclick="closeDayModal();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:20px;padding:4px 8px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
+          </div>
         </div>
         ${eventsHtml}
       `;
