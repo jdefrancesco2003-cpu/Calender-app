@@ -137,14 +137,14 @@
     .day-cell.today { background: var(--primary); border-color: var(--primary); }
     .day-cell.selected { background: transparent; border-color: var(--primary); border-width: 2px; }
     .day-cell.today.selected { background: var(--primary-dark); border-color: var(--primary-dark); }
-    .day-number { font-size: 15px; font-weight: 700; color: var(--text-primary); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-bottom: 3px; }
+    .day-number { font-size: 15px; font-weight: 700; color: var(--text-primary); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .day-cell.today .day-number { background: transparent; color: white; }
     .day-cell.selected .day-number { background: var(--primary); color: white; }
     .day-cell.today.selected .day-number { background: transparent; color: white; }
-    .day-dots { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+    .day-dots { position: absolute; bottom: 5px; left: 5px; right: 5px; display: flex; flex-direction: column; gap: 2px; }
     .day-dot { width: 80%; height: 3px; border-radius: 2px; opacity: 0.9; flex-shrink: 0; }
     .day-cell.today .day-dot { background: rgba(255,255,255,0.65) !important; }
-    .day-cell.selected .day-dot { opacity: 0.75; }
+    .day-cell.selected .day-dot { opacity: 0.85; }
     .day-dot.more { background: var(--text-secondary) !important; width: 40%; }
     .day-dot.holiday { background: var(--warning); }
     /* ── AUTH MODAL ── */
