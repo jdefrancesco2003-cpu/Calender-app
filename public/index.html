@@ -192,6 +192,14 @@
     .upcoming-day-group { margin-bottom: 16px; }
     .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.7; }
 
+    /* ── EVENT PEEK BOTTOM SHEET ── */
+    #event-peek-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 450; }
+    #event-peek-backdrop.open { display: block; animation: fadeIn 0.22s ease; }
+    #event-peek { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-radius: 22px 22px 0 0; z-index: 451; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1); box-shadow: 0 -4px 30px rgba(0,0,0,0.35); }
+    #event-peek.open { transform: translateY(0); }
+    #event-peek-handle { width: 38px; height: 5px; background: rgba(255,255,255,0.13); border-radius: 3px; margin: 10px auto 4px; flex-shrink: 0; }
+    #event-peek-content { padding: 8px 16px 32px; }
+
     /* ── VIEW SLIDE CONTAINER ── */
     #cal-view-container { flex-shrink: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; }
     body.week-mode #cal-view-container { flex: 1; min-height: 0; flex-shrink: 1; }
@@ -277,6 +285,10 @@
       from { transform: translateY(100%); opacity: 0; }
       to   { transform: translateY(0);    opacity: 1; }
     }
+    .modal-overlay.closing { pointer-events: none; animation: fadeOut 0.22s ease forwards; }
+    .modal-overlay.closing .modal { animation: slideDown 0.22s cubic-bezier(0.4,0,1,1) forwards; }
+    @keyframes fadeOut { to { opacity: 0; } }
+    @keyframes slideDown { to { transform: translateY(100%); } }
     .modal { background: var(--bg-card); border-radius: 24px 24px 0 0; padding: 16px 18px 24px; width: 100%; max-width: 500px; max-height: 88vh; overflow-y: auto; box-shadow: 0 -4px 32px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 12px; }
     .modal h3 { font-size: 17px; font-weight: 700; color: var(--text-primary); }
     .modal-handle { width: 40px; height: 4px; background: rgba(128,128,128,0.35); border-radius: 2px; margin: 0 auto 18px; }
@@ -837,7 +849,7 @@
       </div>
       <button class="btn-primary" style="width:100%;margin-top:12px;" id="verify-submit-btn" onclick="submitVerifyEmail()">Verify Email</button>
       <button class="btn-secondary" style="width:100%;margin-top:8px;" onclick="resendVerificationCode()">Resend Code</button>
-      <div style="margin-top:12px;text-align:center;"><span onclick="document.getElementById('verify-email-overlay').classList.remove('active')" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.7;">Verify later</span></div>
+      <div style="margin-top:12px;text-align:center;"><span onclick="_closeModal('verify-email-overlay')" style="font-size:13px;color:var(--text-secondary);cursor:pointer;opacity:0.7;">Verify later</span></div>
     </div>
   </div>
 
@@ -910,10 +922,17 @@
       <div class="modal-handle"></div>
       <p style="font-size:15px;text-align:center;margin:8px 0 20px;" id="delete-confirm-msg">Delete this event?</p>
       <div style="display:flex;gap:8px;">
-        <button class="btn-secondary" style="flex:1;" onclick="document.getElementById('delete-confirm-overlay').classList.remove('active'); window._deleteConfirmReject&&window._deleteConfirmReject()">Cancel</button>
-        <button class="btn-danger" style="flex:1;" onclick="document.getElementById('delete-confirm-overlay').classList.remove('active'); window._deleteConfirmResolve&&window._deleteConfirmResolve()">Delete</button>
+        <button class="btn-secondary" style="flex:1;" onclick="_closeModal('delete-confirm-overlay'); window._deleteConfirmReject&&window._deleteConfirmReject()">Cancel</button>
+        <button class="btn-danger" style="flex:1;" onclick="_closeModal('delete-confirm-overlay'); window._deleteConfirmResolve&&window._deleteConfirmResolve()">Delete</button>
       </div>
     </div>
+  </div>
+
+  <!-- Event peek bottom sheet (week view) -->
+  <div id="event-peek-backdrop" onclick="closeEventPeek();triggerHaptic(20)"></div>
+  <div id="event-peek" role="dialog" aria-modal="true">
+    <div id="event-peek-handle"></div>
+    <div id="event-peek-content"></div>
   </div>
 
   <!-- ── UNDO TOAST ── -->
@@ -1345,7 +1364,99 @@
       viewArchived();
     }
     function closeArchiveModal() {
-      document.getElementById('archive-modal-overlay').classList.remove('active');
+      _closeModal('archive-modal-overlay');
+    }
+
+    // ── Modal close helper (animated) ──
+    function _closeModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('closing');
+      setTimeout(() => { el.classList.remove('active', 'closing'); }, 220);
+    }
+
+    // ── Universal swipe-to-dismiss ──
+    function _initSwipeDismiss() {
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        const modal = overlay.querySelector('.modal');
+        const handle = overlay.querySelector('.modal-handle');
+        if (!handle || !modal) return;
+        let sy = 0, active = false;
+        handle.addEventListener('touchstart', e => {
+          if (e.touches.length !== 1) return;
+          sy = e.touches[0].clientY; active = true;
+          modal.style.transition = 'none';
+        }, { passive: true });
+        handle.addEventListener('touchmove', e => {
+          if (!active) return;
+          const dy = Math.max(0, e.touches[0].clientY - sy);
+          modal.style.transform = `translateY(${dy}px)`;
+        }, { passive: true });
+        handle.addEventListener('touchend', e => {
+          if (!active) return; active = false;
+          const dy = e.changedTouches[0].clientY - sy;
+          modal.style.transition = '';
+          if (dy > 90) {
+            triggerHaptic(20);
+            modal.style.transform = `translateY(110%)`;
+            setTimeout(() => { modal.style.transform = ''; overlay.classList.remove('active', 'closing'); }, 220);
+          } else {
+            modal.style.transform = '';
+          }
+        }, { passive: true });
+      });
+
+      // Day sheet swipe-to-dismiss
+      const dsHandle = document.getElementById('day-sheet-handle');
+      const ds = document.getElementById('day-sheet');
+      if (dsHandle && ds) {
+        let sy = 0, active = false;
+        dsHandle.addEventListener('touchstart', e => {
+          sy = e.touches[0].clientY; active = true;
+          ds.style.transition = 'none';
+        }, { passive: true });
+        dsHandle.addEventListener('touchmove', e => {
+          if (!active) return;
+          const dy = Math.max(0, e.touches[0].clientY - sy);
+          ds.style.transform = `translateY(${dy}px)`;
+        }, { passive: true });
+        dsHandle.addEventListener('touchend', e => {
+          if (!active) return; active = false;
+          const dy = e.changedTouches[0].clientY - sy;
+          ds.style.transition = '';
+          if (dy > 90) {
+            triggerHaptic(20);
+            ds.style.transform = `translateY(110%)`;
+            setTimeout(() => { ds.style.transform = ''; closeDayModal(); }, 220);
+          } else { ds.style.transform = ''; }
+        }, { passive: true });
+      }
+
+      // Event peek swipe-to-dismiss
+      const epHandle = document.getElementById('event-peek-handle');
+      const ep = document.getElementById('event-peek');
+      if (epHandle && ep) {
+        let sy = 0, active = false;
+        epHandle.addEventListener('touchstart', e => {
+          sy = e.touches[0].clientY; active = true;
+          ep.style.transition = 'none';
+        }, { passive: true });
+        epHandle.addEventListener('touchmove', e => {
+          if (!active) return;
+          const dy = Math.max(0, e.touches[0].clientY - sy);
+          ep.style.transform = `translateY(${dy}px)`;
+        }, { passive: true });
+        epHandle.addEventListener('touchend', e => {
+          if (!active) return; active = false;
+          const dy = e.changedTouches[0].clientY - sy;
+          ep.style.transition = '';
+          if (dy > 90) {
+            triggerHaptic(20);
+            ep.style.transform = `translateY(110%)`;
+            setTimeout(() => { ep.style.transform = ''; closeEventPeek(); }, 220);
+          } else { ep.style.transform = ''; }
+        }, { passive: true });
+      }
     }
 
     // ── Utilities ──
@@ -1549,7 +1660,7 @@
       setTimeout(() => document.getElementById('event-input').focus(), 150);
     }
     function closeAddModal() {
-      document.getElementById('add-event-overlay').classList.remove('active');
+      _closeModal('add-event-overlay');
     }
     function openAddEventTab() { openAddModal(); }
 
@@ -1862,7 +1973,7 @@
       updateSettingsUI();
     }
     function closeSettings() {
-      document.getElementById('settings-overlay').classList.remove('active');
+      _closeModal('settings-overlay');
     }
     function toggleNotifications() {
       notificationsEnabled = document.getElementById('notif-toggle').checked;
@@ -1930,6 +2041,7 @@
       updateUserChip();
       setInterval(fetchWeather, 600000);
       setInterval(() => { if (isWeekView) updateCurrentTimeLine(); }, 60000);
+      _initSwipeDismiss();
     }
 
     // ── Weather ──
@@ -1986,7 +2098,7 @@
       modal.classList.add('active');
     }
     function closeDuplicateModal() {
-      document.getElementById('duplicate-overlay').classList.remove('active');
+      _closeModal('duplicate-overlay');
     }
     function showOverlapConfirmation(eventTitle, callback) {
       pendingOverlapConfirmation = callback;
@@ -2010,11 +2122,11 @@
     }
     function confirmOverlapSave() {
       if (pendingOverlapConfirmation) { pendingOverlapConfirmation(); pendingOverlapConfirmation = null; }
-      document.getElementById('overlap-modal-overlay').classList.remove('active');
+      _closeModal('overlap-modal-overlay');
     }
     function cancelOverlapSave() {
       pendingOverlapConfirmation = null;
-      document.getElementById('overlap-modal-overlay').classList.remove('active');
+      _closeModal('overlap-modal-overlay');
     }
 
     // ── Parse event (AI) with fetch timeout ──
@@ -2125,7 +2237,7 @@
     }
 
     function closeConfirmation() {
-      document.getElementById('confirmation-overlay').classList.remove('active');
+      _closeModal('confirmation-overlay');
       pendingParsedEvent = null;
     }
 
@@ -2303,7 +2415,7 @@
       document.getElementById('modal-overlay').classList.add('active');
     }
     function closeModal() {
-      document.getElementById('modal-overlay').classList.remove('active');
+      _closeModal('modal-overlay');
       editingEventId = null;
       lastEditedEvent = null;
     }
@@ -2646,6 +2758,46 @@
       renderCalendar();
     }
 
+    function openEventPeek(eventId) {
+      const ev = allEvents.find(e => e.id === eventId);
+      if (!ev) return;
+      const color = getCategoryColor(ev.category || 'work');
+      const timeStr = ev.isAllDay ? 'All day' : [
+        ev.time ? formatTimeEastern(ev.time) : '',
+        ev.endTime ? formatTimeEastern(ev.endTime) : ''
+      ].filter(Boolean).join(' – ');
+      const dateObj = new Date(ev.date + 'T00:00:00');
+      const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      document.getElementById('event-peek-content').innerHTML = `
+        <div style="height:4px;background:${color};border-radius:2px;margin-bottom:16px;"></div>
+        <div style="font-size:20px;font-weight:700;color:var(--text-primary);margin-bottom:6px;line-height:1.2;">${escHtml(ev.title)}</div>
+        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:${ev.description ? '10px' : '20px'};">${dateLabel}${timeStr ? ' · ' + timeStr : ''}</div>
+        ${ev.description ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.5;">${escHtml(ev.description)}</div>` : ''}
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <button class="btn-secondary" style="flex-direction:column;gap:4px;padding:14px 8px;align-items:center;" onclick="closeEventPeek();openEditModal('${eventId}');triggerHaptic([40])">
+            <span style="font-size:19px;line-height:1;">✎</span>
+            <span style="font-size:12px;font-weight:700;">Edit</span>
+          </button>
+          <button class="btn-secondary" style="flex-direction:column;gap:4px;padding:14px 8px;align-items:center;" onclick="closeEventPeek();shareEvent(allEvents.find(e=>e.id==='${eventId}'));triggerHaptic([20])">
+            <span style="font-size:19px;line-height:1;">↗</span>
+            <span style="font-size:12px;font-weight:700;">Share</span>
+          </button>
+          <button class="btn-danger" style="flex-direction:column;gap:4px;padding:14px 8px;align-items:center;" onclick="closeEventPeek();deleteEvent('${eventId}');triggerHaptic([100,50,100])">
+            <span style="font-size:19px;line-height:1;">✕</span>
+            <span style="font-size:12px;font-weight:700;">Delete</span>
+          </button>
+        </div>
+      `;
+      document.getElementById('event-peek').classList.add('open');
+      document.getElementById('event-peek-backdrop').classList.add('open');
+      triggerHaptic([40]);
+    }
+
+    function closeEventPeek() {
+      document.getElementById('event-peek').classList.remove('open');
+      document.getElementById('event-peek-backdrop').classList.remove('open');
+    }
+
     // ── Upcoming events (calendar tab) ──
     function getDateGroup(dateStr) {
       const today = new Date(); today.setHours(0,0,0,0);
@@ -2841,7 +2993,7 @@
               data-event-id="${ev.id}"
               onmousedown="startBarDrag(event,'${ev.id}',${startMins},${endMins - startMins})"
               ontouchstart="startBarDrag(event,'${ev.id}',${startMins},${endMins - startMins})"
-              onclick="if(!barDragJustEnded){openEditModal('${ev.id}');triggerHaptic([40]);}"
+              onclick="if(!barDragJustEnded){openEventPeek('${ev.id}');}"
               title="${escHtml(ev.title)} (${timeLabel})"
             >${escHtml(ev.title)}</div>`;
           });
@@ -3415,7 +3567,7 @@
         if (!res.ok) { errEl.textContent = data.error || 'Verification failed'; return; }
         emailVerified = true;
         localStorage.setItem('calpal_email_verified', '1');
-        document.getElementById('verify-email-overlay').classList.remove('active');
+        _closeModal('verify-email-overlay');
         updateUserChip();
         showStatus('Email verified ✓', 'success');
       } catch { errEl.textContent = 'Connection error'; }
@@ -3453,7 +3605,7 @@
     }
     function closeRecoveryModal() {
       if (document.getElementById('recovery-done-btn')?.disabled) return;
-      document.getElementById('recovery-overlay').classList.remove('active');
+      _closeModal('recovery-overlay');
       window._recoveryCodes = null;
       // Prompt email verification immediately after saving recovery codes
       if (!emailVerified && currentUserEmail) setTimeout(() => openVerifyEmailOverlay(), 300);
@@ -3465,7 +3617,7 @@
 
     // ── Change password modal ──
     function openChangePassword() { closeSettings(); document.getElementById('change-pw-overlay').classList.add('active'); document.getElementById('cp-current').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-error').textContent=''; }
-    function closeChangePw() { document.getElementById('change-pw-overlay').classList.remove('active'); }
+    function closeChangePw() { _closeModal('change-pw-overlay'); }
     async function submitChangePassword() {
       const cur=document.getElementById('cp-current').value, nw=document.getElementById('cp-new').value;
       const errEl=document.getElementById('cp-error'), btn=document.getElementById('cp-submit');
@@ -3487,7 +3639,7 @@
 
     // ── Delete account modal ──
     function openDeleteAccount() { closeSettings(); document.getElementById('delete-account-overlay').classList.add('active'); document.getElementById('da-password').value=''; document.getElementById('da-error').textContent=''; }
-    function closeDeleteAccount() { document.getElementById('delete-account-overlay').classList.remove('active'); }
+    function closeDeleteAccount() { _closeModal('delete-account-overlay'); }
     async function submitDeleteAccount() {
       const pw=document.getElementById('da-password').value;
       const errEl=document.getElementById('da-error'), btn=document.getElementById('da-submit');
