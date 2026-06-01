@@ -1349,6 +1349,7 @@
       if (!str) return '';
       return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     }
+    let _hapticCtx = null;
     function triggerHaptic(pattern = 20) {
       const dur = Array.isArray(pattern) ? pattern[0] : pattern;
       // Capacitor Haptics (iOS native app)
@@ -1358,8 +1359,31 @@
         haptics.impact({ style }).catch(() => {});
         return;
       }
-      // Web Vibration API (Android Chrome)
-      if (navigator.vibrate) navigator.vibrate(Array.isArray(pattern) ? pattern : [pattern]);
+      // Android: Web Vibration API — boost short pulses so the motor fires
+      if (navigator.vibrate) {
+        const boosted = Array.isArray(pattern)
+          ? pattern.map((v, i) => i % 2 === 0 ? Math.max(v, 40) : v)
+          : Math.max(pattern, 40);
+        navigator.vibrate(boosted);
+        return;
+      }
+      // iOS Safari PWA: AudioContext transient — speaker diaphragm twitch
+      try {
+        if (!_hapticCtx || _hapticCtx.state === 'closed')
+          _hapticCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (_hapticCtx.state === 'suspended') _hapticCtx.resume();
+        const osc = _hapticCtx.createOscillator();
+        const g = _hapticCtx.createGain();
+        osc.connect(g); g.connect(_hapticCtx.destination);
+        const vol = dur >= 80 ? 0.09 : dur >= 40 ? 0.055 : 0.025;
+        const t = _hapticCtx.currentTime;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol, t + 0.003);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.028);
+        osc.type = 'sine';
+        osc.frequency.value = dur >= 80 ? 140 : dur >= 40 ? 185 : 260;
+        osc.start(t); osc.stop(t + 0.03);
+      } catch(e) {}
     }
     function generateId() {
       return 'evt-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
