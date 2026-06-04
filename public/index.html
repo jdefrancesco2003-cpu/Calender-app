@@ -333,7 +333,7 @@
     .cat-work    { background:#5b8dee; }
     .cat-personal{ background:#4a9d6f; }
     .cat-health  { background:#ff6b6b; }
-    .cat-social  { background:#4a9d6f; }
+    .cat-social  { background:#ff9500; }
     .cat-other   { background:#b39ddb; }
     .cat-select { display:flex;gap:10px;align-items:center;margin:8px 0; }
     .cat-btn { width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:border 0.15s; }
@@ -585,8 +585,8 @@
       <div style="margin-top:8px;">
         <label style="font-size:13px;color:var(--text-secondary);">Category</label>
         <div class="cat-select" id="edit-cat-select">
-          <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('edit','work')" title="Work"></button>
           <button type="button" class="cat-btn cat-personal" data-cat="personal" onclick="selectCategory('edit','personal')" title="Personal"></button>
+          <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('edit','work')" title="Work"></button>
           <button type="button" class="cat-btn cat-health" data-cat="health" onclick="selectCategory('edit','health')" title="Health"></button>
           <button type="button" class="cat-btn cat-social" data-cat="social" onclick="selectCategory('edit','social')" title="Social"></button>
           <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('edit','other')" title="Other"></button>
@@ -610,13 +610,15 @@
                 <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ends On (optional)</label>
                 <input type="date" id="modal-recurrence-end-input" class="form-select" style="padding:10px 12px;">
               </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn-secondary" style="flex:1;" onclick="saveEditedEvent(); triggerHaptic([60,20,60])">Save</button>
-        <button class="btn-secondary" style="flex:1;border-color:var(--warning);color:var(--warning);" onclick="undoEditedEvent(); triggerHaptic([50,30,50])">↶ Undo</button>
-        <button class="btn-danger" style="flex:1;" onclick="deleteEditingEvent(); triggerHaptic([100,50,100])">Delete</button>
-        <button class="btn-secondary" style="flex:1;" onclick="closeModal(); triggerHaptic(20)">Cancel</button>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:16px;">
+        <button style="padding:13px;border-radius:12px;border:none;background:var(--primary);color:white;font-size:15px;font-weight:600;cursor:pointer;" onclick="saveEditedEvent();triggerHaptic([60,20,60])">Save</button>
+        <button class="btn-danger" style="padding:13px;font-size:14px;" onclick="deleteEditingEvent();triggerHaptic([100,50,100])">Delete</button>
+        <button class="btn-secondary" style="padding:13px;font-size:14px;" onclick="closeModal();triggerHaptic(20)">Cancel</button>
       </div>
-      <button class="btn-secondary" style="width:100%;margin-top:8px;" onclick="shareEvent(allEvents.find(e=>e.id===editingEventId)); triggerHaptic(20)">Share Event</button>
+      <button onclick="shareEvent(allEvents.find(e=>e.id===editingEventId));triggerHaptic(20)" style="width:100%;margin-top:10px;padding:13px;border-radius:12px;border:1.5px solid var(--border-color);background:transparent;color:var(--text-secondary);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-sizing:border-box;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Share Event
+      </button>
     </div>
   </div>
 
@@ -815,8 +817,8 @@
         <div>
           <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:6px;">Category</label>
           <div class="cat-select" id="add-cat-select">
-            <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('add','work')" title="Work"></button>
             <button type="button" class="cat-btn cat-personal" data-cat="personal" onclick="selectCategory('add','personal')" title="Personal"></button>
+            <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('add','work')" title="Work"></button>
             <button type="button" class="cat-btn cat-health" data-cat="health" onclick="selectCategory('add','health')" title="Health"></button>
             <button type="button" class="cat-btn cat-social" data-cat="social" onclick="selectCategory('add','social')" title="Social"></button>
             <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('add','other')" title="Other"></button>
@@ -1049,7 +1051,7 @@
     }
 
     let catColorPrefs = JSON.parse(localStorage.getItem('catColorPrefs') || '{}');
-    const CAT_DEFAULTS = { work:'#5b8dee', health:'#ff6b6b', social:'#4a9d6f', personal:'#4a9d6f', other:'#b39ddb' };
+    const CAT_DEFAULTS = { work:'#5b8dee', health:'#ff6b6b', social:'#ff9500', personal:'#4a9d6f', other:'#b39ddb' };
     function getCategoryColor(cat) {
       return catColorPrefs[cat] || CAT_DEFAULTS[cat] || '#4a9d6f';
     }
