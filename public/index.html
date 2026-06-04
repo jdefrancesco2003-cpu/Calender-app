@@ -438,11 +438,11 @@
       </div>
       <div class="dropdown-menu" id="dropdown-menu">
         <div id="user-chip-wrap" style="padding:10px 14px 6px;display:none;"><div class="user-chip" id="user-chip"></div></div>
-        <button class="dropdown-item" id="restore-btn" onclick="restoreLegacyEvents(); triggerHaptic(20)" style="color:var(--primary);">Restore My Events</button>
-        <button class="dropdown-item" onclick="openArchiveModal(); triggerHaptic(20)">Archive Past Events</button>
-        <button class="dropdown-item" onclick="viewArchived(); triggerHaptic(20)">View Archive</button>
-        <button class="dropdown-item" onclick="openSettings(); triggerHaptic(20)">Settings</button>
-        <button class="dropdown-item" id="logout-btn" onclick="logout(); triggerHaptic(20)" style="display:none;color:#ff6b6b;">↩ Sign Out</button>
+        <button class="dropdown-item" id="restore-btn" onclick="closeDropdown();restoreLegacyEvents();triggerHaptic(20)" style="color:var(--primary);">Restore My Events</button>
+        <button class="dropdown-item" onclick="closeDropdown();openArchiveModal();triggerHaptic(20)">Archive Past Events</button>
+        <button class="dropdown-item" onclick="closeDropdown();viewArchived();triggerHaptic(20)">View Archive</button>
+        <button class="dropdown-item" onclick="closeDropdown();openSettings();triggerHaptic(20)">Settings</button>
+        <button class="dropdown-item" id="logout-btn" onclick="closeDropdown();logout();triggerHaptic(20)" style="display:none;color:#ff6b6b;">↩ Sign Out</button>
       </div>
     </header>
 
@@ -1650,8 +1650,11 @@
     function toggleMenu() {
       document.getElementById('dropdown-menu').classList.toggle('active');
     }
-    function closeMenuOnTab() {
+    function closeDropdown() {
       document.getElementById('dropdown-menu').classList.remove('active');
+    }
+    function closeMenuOnTab() {
+      closeDropdown();
     }
     function openAddModal() {
       clearAddForm();
