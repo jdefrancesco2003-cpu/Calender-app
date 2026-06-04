@@ -119,6 +119,7 @@ const mongoUri = process.env.MONGODB_URI;
 let eventsCollection;
 let usersCollection;
 let pushSubsCollection;
+let calTokensCollection;
 let mongoClient;
 
 // ── Rate limiters ──
@@ -188,10 +189,13 @@ async function connectMongoDB() {
     eventsCollection = db.collection('events');
     usersCollection = db.collection('users');
     pushSubsCollection = db.collection('push_subscriptions');
+    calTokensCollection = db.collection('calendar_tokens');
     await usersCollection.createIndex({ email: 1 }, { unique: true });
     await eventsCollection.createIndex({ userId: 1 });
     await pushSubsCollection.createIndex({ userId: 1 });
     await pushSubsCollection.createIndex({ 'subscription.endpoint': 1 }, { unique: true });
+    await calTokensCollection.createIndex({ token: 1 }, { unique: true });
+    await calTokensCollection.createIndex({ userId: 1 }, { unique: true });
     console.log('✓ Connected to MongoDB');
   } catch (err) {
     console.error('✗ MongoDB connection failed:', err.message);
@@ -1001,10 +1005,96 @@ function fmt12(timeStr) {
   return `${h12}:${String(m).padStart(2,'0')} ${suffix}`;
 }
 
+// ── Full-calendar ICS builder (for subscription feed) ──
+function buildSubscriptionIcs(events) {
+  const escIcs = str => String(str||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+  const safeFold = str => str.replace(/(.{73})/g,'$1\r\n ');
+  const stamp = new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  const lines = [
+    'BEGIN:VCALENDAR','VERSION:2.0',
+    'PRODID:-//Marked//Marked Calendar//EN',
+    'CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'X-WR-CALNAME:Marked','X-WR-TIMEZONE:America/New_York',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
+    'BEGIN:VTIMEZONE','TZID:America/New_York',
+    'BEGIN:DAYLIGHT','TZOFFSETFROM:-0500','TZOFFSETTO:-0400','TZNAME:EDT',
+    'DTSTART:19700308T020000','RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU','END:DAYLIGHT',
+    'BEGIN:STANDARD','TZOFFSETFROM:-0400','TZOFFSETTO:-0500','TZNAME:EST',
+    'DTSTART:19701101T020000','RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU','END:STANDARD',
+    'END:VTIMEZONE',
+  ];
+  for (const ev of events) {
+    if (!ev.date || ev.encryptedData) continue;
+    lines.push('BEGIN:VEVENT',
+      `UID:${ev.id}@marked.app`,`DTSTAMP:${stamp}`,
+      `SUMMARY:${safeFold(escIcs(ev.title||'Event'))}`,
+      'STATUS:CONFIRMED'
+    );
+    if (ev.isAllDay || !ev.time) {
+      lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`,
+        `DTEND;VALUE=DATE:${addDaysStr(ev.endDate||ev.date,1).replace(/-/g,'')}`);
+    } else {
+      const endD = ev.endDate || ev.date;
+      let endT = ev.endTime;
+      if (!endT) {
+        const [eh,em] = ev.time.split(':').map(Number), em2 = eh*60+em+30;
+        endT = `${String(Math.floor(em2/60)).padStart(2,'0')}:${String(em2%60).padStart(2,'0')}`;
+      }
+      lines.push(
+        `DTSTART;TZID=America/New_York:${ev.date.replace(/-/g,'')}T${ev.time.replace(':','')}00`,
+        `DTEND;TZID=America/New_York:${endD.replace(/-/g,'')}T${endT.replace(':','')}00`
+      );
+    }
+    if (ev.description) lines.push(`DESCRIPTION:${safeFold(escIcs(ev.description))}`);
+    if (ev.recurrence && ev.recurrence !== 'none') {
+      const freqMap = { daily:'DAILY', weekly:'WEEKLY', biweekly:'WEEKLY;INTERVAL=2', monthly:'MONTHLY', yearly:'YEARLY' };
+      const freq = freqMap[ev.recurrence];
+      if (freq) {
+        const parts = freq.split(';');
+        let rrule = `RRULE:FREQ=${parts[0]}`;
+        if (parts[1]) rrule += `;${parts[1]}`;
+        if (ev.recurrenceEnd) rrule += `;UNTIL=${ev.recurrenceEnd.replace(/-/g,'')}T235959Z`;
+        lines.push(rrule);
+      }
+    }
+    lines.push('END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n')+'\r\n';
+}
+
+// ── Calendar subscription token (used for CarPlay / iOS Calendar) ──
+app.get('/api/cal/token', requireAuth, async (req, res) => {
+  if (!calTokensCollection) return res.status(503).json({ error: 'Not available without MongoDB' });
+  const userId = req.user.userId;
+  let doc = await calTokensCollection.findOne({ userId });
+  if (!doc) {
+    const { randomBytes } = require('crypto');
+    const token = randomBytes(24).toString('hex');
+    await calTokensCollection.insertOne({ userId, token, createdAt: new Date() });
+    doc = { token };
+  }
+  res.json({ token: doc.token });
+});
+
+app.get('/api/cal/:token/events.ics', async (req, res) => {
+  if (!calTokensCollection || !eventsCollection) return res.status(503).send('Not available');
+  const doc = await calTokensCollection.findOne({ token: req.params.token });
+  if (!doc) return res.status(404).send('Calendar not found');
+  const events = await eventsCollection.find({ userId: doc.userId }).toArray();
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', 'inline; filename="marked.ics"');
+  res.setHeader('Cache-Control', 'max-age=3600');
+  res.send(buildSubscriptionIcs(events));
+});
+
 async function startServer() {
   await connectMongoDB();
 
   // ── Push notification scheduler (runs every minute) ──
+  // sentNotifKeys deduplicates within a day — cleared at midnight EST each day
+  const sentNotifKeys = new Set();
+
   setInterval(async () => {
     if (!pushSubsCollection || !eventsCollection || !process.env.VAPID_PUBLIC_KEY) return;
     const now = new Date();
@@ -1014,25 +1104,47 @@ async function startServer() {
     const estHour = parseInt(p.hour, 10);
     const estMin = parseInt(p.minute, 10);
     const estMins = estHour * 60 + estMin;
+
+    // Reset dedup set at midnight so next day's notifications fire
+    if (estHour === 0 && estMin === 0) sentNotifKeys.clear();
+
     try {
       const subs = await pushSubsCollection.find({}).toArray();
       for (const sub of subs) {
-        const prefs = sub.preferences || { dayOf: true, hourBefore: false };
+        const prefs = sub.preferences || { dayOf: true, hourBefore: true };
         const events = await eventsCollection.find({ userId: sub.userId, date: estDateStr }).toArray();
         for (const event of events) {
-          if (event.encryptedData) continue; // can't read encrypted titles
-          let body = null;
+          if (event.encryptedData) continue;
+          let body = null, tag = null;
           if (event.time) {
             const [eh, em] = event.time.split(':').map(Number);
             const evMins = eh * 60 + em;
-            if (prefs.dayOf && estMins === 8 * 60) body = `${event.title} at ${fmt12(event.time)} today`;
-            else if (prefs.hourBefore && Math.abs(estMins - (evMins - 60)) <= 1) body = `${event.title} in 1 hour`;
-          } else if (event.isAllDay && prefs.dayOf && estMins === 8 * 60) {
-            body = `All day: ${event.title}`;
+            if (prefs.dayOf && estMins === 6 * 60) {
+              // Morning reminder at 6 AM
+              body = `${event.title} today at ${fmt12(event.time)}`;
+              tag = `${event.id}-morning-${estDateStr}`;
+            } else if (prefs.hourBefore && Math.abs(estMins - (evMins - 60)) <= 1) {
+              // 1-hour-before reminder (±1 min window handles scheduler drift)
+              body = `${event.title} starts in 1 hour — ${fmt12(event.time)}`;
+              tag = `${event.id}-1hr-${estDateStr}`;
+            }
+          } else if (event.isAllDay && prefs.dayOf && estMins === 6 * 60) {
+            body = `All day today: ${event.title}`;
+            tag = `${event.id}-morning-${estDateStr}`;
           }
-          if (!body) continue;
+          if (!body || !tag) continue;
+
+          // Dedup: only send each tag once per day (survives multiple scheduler ticks)
+          const dedupeKey = `${sub.userId}-${tag}`;
+          if (sentNotifKeys.has(dedupeKey)) continue;
+
           try {
-            await webpush.sendNotification(sub.subscription, JSON.stringify({ title: 'Marked', body, tag: `${event.id}-${estMins}` }));
+            await webpush.sendNotification(sub.subscription, JSON.stringify({
+              title: 'Marked', body, tag,
+              icon: '/icons/icon-192.png',
+              badge: '/icons/icon-192.png',
+            }));
+            sentNotifKeys.add(dedupeKey);
           } catch (e) {
             if (e.statusCode === 410 || e.statusCode === 404) await pushSubsCollection.deleteOne({ _id: sub._id });
           }

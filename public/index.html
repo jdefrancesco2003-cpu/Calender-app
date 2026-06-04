@@ -702,13 +702,23 @@
       </div>
       <div id="notif-subopts" style="display:none;margin:8px 0 0 4px;padding-left:14px;border-left:2px solid var(--border-color);">
         <div class="toggle-switch" style="margin-bottom:6px;">
-          <label style="margin:0;font-size:13px;color:var(--text-secondary);">Day of event (8 AM)</label>
+          <label style="margin:0;font-size:13px;color:var(--text-secondary);">Day of event (6 AM)</label>
           <label class="switch"><input type="checkbox" id="notif-dayof" onchange="toggleNotifOption()"><span class="slider"></span></label>
         </div>
         <div class="toggle-switch">
           <label style="margin:0;font-size:13px;color:var(--text-secondary);">1 hour before</label>
           <label class="switch"><input type="checkbox" id="notif-hourbefore" onchange="toggleNotifOption()"><span class="slider"></span></label>
         </div>
+      </div>
+
+      <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
+      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">CarPlay &amp; Calendar Apps</p>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;line-height:1.4;">Subscribe so your events appear in iOS Calendar and on CarPlay.</div>
+      <button class="btn-secondary" style="width:100%;" onclick="getCalendarSubURL(); triggerHaptic(20)">Get Subscription Link</button>
+      <div id="cal-sub-url-row" style="display:none;margin-top:8px;background:var(--bg-dark);border-radius:10px;padding:10px 12px;">
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;">Copy this URL → iOS Settings → Calendar → Add Subscription:</div>
+        <div id="cal-sub-url" style="font-size:11px;font-family:monospace;color:var(--primary);word-break:break-all;margin-bottom:8px;"></div>
+        <button class="btn-secondary" style="width:100%;font-size:12px;padding:8px;" onclick="copyCalURL(); triggerHaptic([30,20,30])">Copy Link</button>
       </div>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
@@ -960,7 +970,7 @@
     let pendingParsedEvent = null;
     let notificationsEnabled = false;
     let notifDayOf = true;
-    let notifHourBefore = false;
+    let notifHourBefore = true;
     let pushSubscription = null;
     let lastDeletedEvent = null;
     let lastDeletedEventIndex = -1;
@@ -1969,8 +1979,8 @@
       if (saved) {
         const s = JSON.parse(saved);
         notificationsEnabled = s.enabled || false;
-        notifDayOf = s.dayOf !== false; // default true
-        notifHourBefore = s.hourBefore || false;
+        notifDayOf = s.dayOf !== false;      // default true
+        notifHourBefore = s.hourBefore !== false; // default true
       }
       updateSettingsUI();
     }
@@ -2504,7 +2514,7 @@
         eventDate.setHours(h, m, 0, 0);
         const schedule = [];
         if (notifDayOf) {
-          const dayOf = new Date(event.date + 'T08:00:00');
+          const dayOf = new Date(event.date + 'T06:00:00');
           schedule.push({ time: dayOf, body: `${event.title} at ${formatTimeEastern(event.time)} today` });
         }
         if (notifHourBefore) {
@@ -2569,6 +2579,25 @@
         await pushSubscription.unsubscribe();
         pushSubscription = null;
       } catch (e) {}
+    }
+
+    async function getCalendarSubURL() {
+      if (!authToken) { showStatus('Sign in to get your calendar link', 'error'); return; }
+      try {
+        const r = await fetch('/api/cal/token', { headers: getAuthHeaders() });
+        if (!r.ok) { showStatus('Calendar subscription not available', 'error'); return; }
+        const { token } = await r.json();
+        const url = `${location.origin}/api/cal/${token}/events.ics`;
+        document.getElementById('cal-sub-url').textContent = url;
+        document.getElementById('cal-sub-url-row').style.display = '';
+      } catch { showStatus('Error generating calendar link', 'error'); }
+    }
+    function copyCalURL() {
+      const url = document.getElementById('cal-sub-url').textContent;
+      if (!url) return;
+      navigator.clipboard.writeText(url)
+        .then(() => showStatus('Link copied! Add it in iOS Settings → Calendar → Add Subscription', 'success'))
+        .catch(() => showStatus('Copy manually: ' + url, 'info'));
     }
 
     // ── Calendar navigation ──
