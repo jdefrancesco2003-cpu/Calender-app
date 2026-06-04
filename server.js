@@ -7,11 +7,13 @@ const jwt = require('jsonwebtoken');
 const { randomBytes, randomInt } = require('crypto');
 const webpush = require('web-push');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+app.set('trust proxy', 1); // Railway / reverse proxy: use X-Forwarded-For for real client IP
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -60,8 +62,9 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 function generateSalt() { return randomBytes(16).toString('hex'); }
 function generateOTP() { return String(randomInt(100000, 1000000)); }
 
-// ── Email (Nodemailer) ──
-const emailTransport = (process.env.SMTP_USER && process.env.SMTP_PASS)
+// ── Email — Resend (preferred, HTTPS) or nodemailer SMTP fallback ──
+const resendClient = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const smtpTransport = (process.env.SMTP_USER && process.env.SMTP_PASS)
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587', 10),
@@ -69,11 +72,19 @@ const emailTransport = (process.env.SMTP_USER && process.env.SMTP_PASS)
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
     })
   : null;
-const EMAIL_FROM = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `Marked <${process.env.SMTP_USER}>` : null);
+const EMAIL_FROM = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `Marked <${process.env.SMTP_USER}>` : 'Marked <onboarding@resend.dev>');
 
 async function sendEmail(to, subject, html) {
-  if (!emailTransport) { console.log(`[DEV EMAIL] To:${to} | ${subject}`); return; }
-  await emailTransport.sendMail({ from: EMAIL_FROM, to, subject, html });
+  if (resendClient) {
+    const { error } = await resendClient.emails.send({ from: EMAIL_FROM, to, subject, html });
+    if (error) throw new Error(error.message);
+    return;
+  }
+  if (smtpTransport) {
+    await smtpTransport.sendMail({ from: EMAIL_FROM, to, subject, html });
+    return;
+  }
+  console.log(`[DEV EMAIL] To:${to} | ${subject}`);
 }
 
 function emailBase(content) {
@@ -118,6 +129,7 @@ const mongoUri = process.env.MONGODB_URI;
 let eventsCollection;
 let usersCollection;
 let pushSubsCollection;
+let calTokensCollection;
 let mongoClient;
 
 // ── Rate limiters ──
@@ -187,10 +199,13 @@ async function connectMongoDB() {
     eventsCollection = db.collection('events');
     usersCollection = db.collection('users');
     pushSubsCollection = db.collection('push_subscriptions');
+    calTokensCollection = db.collection('calendar_tokens');
     await usersCollection.createIndex({ email: 1 }, { unique: true });
     await eventsCollection.createIndex({ userId: 1 });
     await pushSubsCollection.createIndex({ userId: 1 });
     await pushSubsCollection.createIndex({ 'subscription.endpoint': 1 }, { unique: true });
+    await calTokensCollection.createIndex({ token: 1 }, { unique: true });
+    await calTokensCollection.createIndex({ userId: 1 }, { unique: true });
     console.log('✓ Connected to MongoDB');
   } catch (err) {
     console.error('✗ MongoDB connection failed:', err.message);
@@ -247,13 +262,14 @@ async function deleteEvent(id, userId) {
 }
 
 // ── Natural-language parser (parse only — does NOT save) ──
-async function parseEvent(text, currentESTDate, currentESTTime) {
+async function parseEvent(text, currentESTDate, currentESTTime, contextDate) {
   if (!text || text.trim().length === 0) throw new Error('Event text cannot be empty');
 
   const today = currentESTDate || getESTDateString();
+  const defaultDate = contextDate || today;
   const modelName = 'claude-haiku-4-5-20251001';
 
-  console.log(`📝 Parsing: "${text}" (EST: ${today} ${currentESTTime || ''})`);
+  console.log(`📝 Parsing: "${text}" (EST: ${today} ${currentESTTime || ''}${contextDate ? `, context: ${contextDate}` : ''})`);
 
   const response = await client.messages.create({
     model: modelName,
@@ -264,6 +280,7 @@ async function parseEvent(text, currentESTDate, currentESTTime) {
 
 Current EST date: ${today}
 Current EST time: ${currentESTTime || 'unknown'}
+${contextDate ? `Selected calendar date: ${contextDate} (use this as the date if no date is mentioned in the event text)` : ''}
 
 Parse this event: "${text}"
 
@@ -277,7 +294,8 @@ Extract:
 5. endTime: End time in HH:mm format, or null
 6. isAllDay: true if no specific times mentioned, false otherwise
 
-Date rules (TODAY = ${today}):
+Date rules (TODAY = ${today}, DEFAULT DATE = ${defaultDate}):
+- If no date is mentioned → use ${defaultDate}
 - "today" → ${today}
 - "tomorrow" → next day from ${today}
 - "next week" → 7 days from ${today}
@@ -567,16 +585,16 @@ app.post('/api/migrate/claim-legacy-events', requireAuth, async (req, res) => {
 
 // ── Parse endpoint (parse only — client saves after confirmation) ──
 app.post('/api/events/parse', requireAuth, async (req, res) => {
-  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const ip = req.ip || 'unknown';
   if (!checkParseRateLimit(ip)) {
     return res.status(429).json({ error: 'Too many parse requests. Please wait a minute.' });
   }
 
-  const { text, currentESTDate, currentESTTime } = req.body;
+  const { text, currentESTDate, currentESTTime, contextDate } = req.body;
   if (!text) return res.status(400).json({ error: 'Event text is required' });
 
   try {
-    const parsed = await parseEvent(text, currentESTDate, currentESTTime);
+    const parsed = await parseEvent(text, currentESTDate, currentESTTime, contextDate);
     // Return parsed data only — client is responsible for encrypting and saving
     res.json(parsed);
   } catch (err) {
@@ -969,31 +987,6 @@ app.get('/terms', (req, res) => {
 </body></html>`);
 });
 
-// ── Static legal pages ──
-app.get('/privacy', (req, res) => {
-  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy — Marked</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
-<h1>Marked Privacy Policy</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
-<h2>What We Collect</h2><p>Marked collects your email address and calendar event data (titles, dates, times). All event data is end-to-end encrypted before leaving your device — we cannot read your events.</p>
-<h2>How We Use It</h2><p>Your email is used solely for account authentication. Your encrypted event data is stored on our servers to enable sync across devices.</p>
-<h2>Data Storage</h2><p>Data is stored in MongoDB Atlas (cloud). Encryption keys are derived from your password on-device using PBKDF2 and are never transmitted to our servers.</p>
-<h2>Third Parties</h2><p>We use the Anthropic Claude API to parse natural-language event descriptions. Text you type in the event input is sent to Anthropic for parsing. No personal identifying information is included.</p>
-<h2>Data Deletion</h2><p>You can permanently delete your account and all associated data at any time from Settings → Delete Account.</p>
-<h2>Contact</h2><p>Questions? Email us at <a href="mailto:jdefrancesco2003@gmail.com">jdefrancesco2003@gmail.com</a></p>
-</body></html>`);
-});
-
-app.get('/terms', (req, res) => {
-  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Service — Marked</title><style>body{font-family:-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7}h1{color:#4a9d6f}h2{margin-top:32px}a{color:#4a9d6f}</style></head><body>
-<h1>Marked Terms of Service</h1><p><em>Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</em></p>
-<h2>Acceptance</h2><p>By using Marked you agree to these terms. Marked is provided as-is for personal productivity use.</p>
-<h2>Account Responsibility</h2><p>You are responsible for keeping your password and recovery codes safe. We cannot recover encrypted data if you lose your password and recovery codes.</p>
-<h2>Prohibited Use</h2><p>Do not use Marked to store illegal content or to abuse the AI parsing service.</p>
-<h2>Service Availability</h2><p>We aim for high availability but do not guarantee 100% uptime. Always export your calendar (.ics) as a backup.</p>
-<h2>Termination</h2><p>You may delete your account at any time. We may suspend accounts that violate these terms.</p>
-<h2>Contact</h2><p>Questions? Email <a href="mailto:jdefrancesco2003@gmail.com">jdefrancesco2003@gmail.com</a></p>
-</body></html>`);
-});
-
 // ── Health ──
 app.get('/api/health', (req, res) => {
   res.json({
@@ -1022,10 +1015,96 @@ function fmt12(timeStr) {
   return `${h12}:${String(m).padStart(2,'0')} ${suffix}`;
 }
 
+// ── Full-calendar ICS builder (for subscription feed) ──
+function buildSubscriptionIcs(events) {
+  const escIcs = str => String(str||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+  const safeFold = str => str.replace(/(.{73})/g,'$1\r\n ');
+  const stamp = new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  const lines = [
+    'BEGIN:VCALENDAR','VERSION:2.0',
+    'PRODID:-//Marked//Marked Calendar//EN',
+    'CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'X-WR-CALNAME:Marked','X-WR-TIMEZONE:America/New_York',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
+    'BEGIN:VTIMEZONE','TZID:America/New_York',
+    'BEGIN:DAYLIGHT','TZOFFSETFROM:-0500','TZOFFSETTO:-0400','TZNAME:EDT',
+    'DTSTART:19700308T020000','RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU','END:DAYLIGHT',
+    'BEGIN:STANDARD','TZOFFSETFROM:-0400','TZOFFSETTO:-0500','TZNAME:EST',
+    'DTSTART:19701101T020000','RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU','END:STANDARD',
+    'END:VTIMEZONE',
+  ];
+  for (const ev of events) {
+    if (!ev.date || ev.encryptedData) continue;
+    lines.push('BEGIN:VEVENT',
+      `UID:${ev.id}@marked.app`,`DTSTAMP:${stamp}`,
+      `SUMMARY:${safeFold(escIcs(ev.title||'Event'))}`,
+      'STATUS:CONFIRMED'
+    );
+    if (ev.isAllDay || !ev.time) {
+      lines.push(`DTSTART;VALUE=DATE:${ev.date.replace(/-/g,'')}`,
+        `DTEND;VALUE=DATE:${addDaysStr(ev.endDate||ev.date,1).replace(/-/g,'')}`);
+    } else {
+      const endD = ev.endDate || ev.date;
+      let endT = ev.endTime;
+      if (!endT) {
+        const [eh,em] = ev.time.split(':').map(Number), em2 = eh*60+em+30;
+        endT = `${String(Math.floor(em2/60)).padStart(2,'0')}:${String(em2%60).padStart(2,'0')}`;
+      }
+      lines.push(
+        `DTSTART;TZID=America/New_York:${ev.date.replace(/-/g,'')}T${ev.time.replace(':','')}00`,
+        `DTEND;TZID=America/New_York:${endD.replace(/-/g,'')}T${endT.replace(':','')}00`
+      );
+    }
+    if (ev.description) lines.push(`DESCRIPTION:${safeFold(escIcs(ev.description))}`);
+    if (ev.recurrence && ev.recurrence !== 'none') {
+      const freqMap = { daily:'DAILY', weekly:'WEEKLY', biweekly:'WEEKLY;INTERVAL=2', monthly:'MONTHLY', yearly:'YEARLY' };
+      const freq = freqMap[ev.recurrence];
+      if (freq) {
+        const parts = freq.split(';');
+        let rrule = `RRULE:FREQ=${parts[0]}`;
+        if (parts[1]) rrule += `;${parts[1]}`;
+        if (ev.recurrenceEnd) rrule += `;UNTIL=${ev.recurrenceEnd.replace(/-/g,'')}T235959Z`;
+        lines.push(rrule);
+      }
+    }
+    lines.push('END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n')+'\r\n';
+}
+
+// ── Calendar subscription token (used for CarPlay / iOS Calendar) ──
+app.get('/api/cal/token', requireAuth, async (req, res) => {
+  if (!calTokensCollection) return res.status(503).json({ error: 'Not available without MongoDB' });
+  const userId = req.user.userId;
+  let doc = await calTokensCollection.findOne({ userId });
+  if (!doc) {
+    const { randomBytes } = require('crypto');
+    const token = randomBytes(24).toString('hex');
+    await calTokensCollection.insertOne({ userId, token, createdAt: new Date() });
+    doc = { token };
+  }
+  res.json({ token: doc.token });
+});
+
+app.get('/api/cal/:token/events.ics', async (req, res) => {
+  if (!calTokensCollection || !eventsCollection) return res.status(503).send('Not available');
+  const doc = await calTokensCollection.findOne({ token: req.params.token });
+  if (!doc) return res.status(404).send('Calendar not found');
+  const events = await eventsCollection.find({ userId: doc.userId }).toArray();
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', 'inline; filename="marked.ics"');
+  res.setHeader('Cache-Control', 'max-age=3600');
+  res.send(buildSubscriptionIcs(events));
+});
+
 async function startServer() {
   await connectMongoDB();
 
   // ── Push notification scheduler (runs every minute) ──
+  // sentNotifKeys deduplicates within a day — cleared at midnight EST each day
+  const sentNotifKeys = new Set();
+
   setInterval(async () => {
     if (!pushSubsCollection || !eventsCollection || !process.env.VAPID_PUBLIC_KEY) return;
     const now = new Date();
@@ -1035,25 +1114,47 @@ async function startServer() {
     const estHour = parseInt(p.hour, 10);
     const estMin = parseInt(p.minute, 10);
     const estMins = estHour * 60 + estMin;
+
+    // Reset dedup set at midnight so next day's notifications fire
+    if (estHour === 0 && estMin === 0) sentNotifKeys.clear();
+
     try {
       const subs = await pushSubsCollection.find({}).toArray();
       for (const sub of subs) {
-        const prefs = sub.preferences || { dayOf: true, hourBefore: false };
+        const prefs = sub.preferences || { dayOf: true, hourBefore: true };
         const events = await eventsCollection.find({ userId: sub.userId, date: estDateStr }).toArray();
         for (const event of events) {
-          if (event.encryptedData) continue; // can't read encrypted titles
-          let body = null;
+          if (event.encryptedData) continue;
+          let body = null, tag = null;
           if (event.time) {
             const [eh, em] = event.time.split(':').map(Number);
             const evMins = eh * 60 + em;
-            if (prefs.dayOf && estMins === 8 * 60) body = `${event.title} at ${fmt12(event.time)} today`;
-            else if (prefs.hourBefore && Math.abs(estMins - (evMins - 60)) <= 1) body = `${event.title} in 1 hour`;
-          } else if (event.isAllDay && prefs.dayOf && estMins === 8 * 60) {
-            body = `All day: ${event.title}`;
+            if (prefs.dayOf && estMins === 6 * 60) {
+              // Morning reminder at 6 AM
+              body = `${event.title} today at ${fmt12(event.time)}`;
+              tag = `${event.id}-morning-${estDateStr}`;
+            } else if (prefs.hourBefore && Math.abs(estMins - (evMins - 60)) <= 1) {
+              // 1-hour-before reminder (±1 min window handles scheduler drift)
+              body = `${event.title} starts in 1 hour — ${fmt12(event.time)}`;
+              tag = `${event.id}-1hr-${estDateStr}`;
+            }
+          } else if (event.isAllDay && prefs.dayOf && estMins === 6 * 60) {
+            body = `All day today: ${event.title}`;
+            tag = `${event.id}-morning-${estDateStr}`;
           }
-          if (!body) continue;
+          if (!body || !tag) continue;
+
+          // Dedup: only send each tag once per day (survives multiple scheduler ticks)
+          const dedupeKey = `${sub.userId}-${tag}`;
+          if (sentNotifKeys.has(dedupeKey)) continue;
+
           try {
-            await webpush.sendNotification(sub.subscription, JSON.stringify({ title: 'Marked', body, tag: `${event.id}-${estMins}` }));
+            await webpush.sendNotification(sub.subscription, JSON.stringify({
+              title: 'Marked', body, tag,
+              icon: '/icons/icon-192.png',
+              badge: '/icons/icon-192.png',
+            }));
+            sentNotifKeys.add(dedupeKey);
           } catch (e) {
             if (e.statusCode === 410 || e.statusCode === 404) await pushSubsCollection.deleteOne({ _id: sub._id });
           }

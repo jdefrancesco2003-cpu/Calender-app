@@ -342,14 +342,14 @@
     /* ── PULL-TO-REFRESH ── */
     #ptr-container {
       position: fixed;
-      top: 0; left: 50%; transform: translateX(-50%) translateY(-80px);
+      top: env(safe-area-inset-top, 0px); left: 50%; transform: translateX(-50%) translateY(-100px);
       z-index: 200;
       transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
       pointer-events: none;
     }
-    #ptr-container.ptr-visible { transform: translateX(-50%) translateY(12px); }
-    #ptr-container.ptr-loading { transform: translateX(-50%) translateY(12px); transition: none; }
-    #ptr-container.ptr-done { transform: translateX(-50%) translateY(-80px); transition: transform 0.4s cubic-bezier(0.55, 0, 1, 0.45); }
+    #ptr-container.ptr-visible { transform: translateX(-50%) translateY(8px); }
+    #ptr-container.ptr-loading { transform: translateX(-50%) translateY(8px); transition: none; }
+    #ptr-container.ptr-done { transform: translateX(-50%) translateY(-100px); transition: transform 0.4s cubic-bezier(0.55, 0, 1, 0.45); }
 
     #ptr-pill {
       display: flex; align-items: center; gap: 8px;
@@ -702,13 +702,23 @@
       </div>
       <div id="notif-subopts" style="display:none;margin:8px 0 0 4px;padding-left:14px;border-left:2px solid var(--border-color);">
         <div class="toggle-switch" style="margin-bottom:6px;">
-          <label style="margin:0;font-size:13px;color:var(--text-secondary);">Day of event (8 AM)</label>
+          <label style="margin:0;font-size:13px;color:var(--text-secondary);">Day of event (6 AM)</label>
           <label class="switch"><input type="checkbox" id="notif-dayof" onchange="toggleNotifOption()"><span class="slider"></span></label>
         </div>
         <div class="toggle-switch">
           <label style="margin:0;font-size:13px;color:var(--text-secondary);">1 hour before</label>
           <label class="switch"><input type="checkbox" id="notif-hourbefore" onchange="toggleNotifOption()"><span class="slider"></span></label>
         </div>
+      </div>
+
+      <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
+      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">CarPlay &amp; Calendar Apps</p>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;line-height:1.4;">Subscribe so your events appear in iOS Calendar and on CarPlay.</div>
+      <button class="btn-secondary" style="width:100%;" onclick="getCalendarSubURL(); triggerHaptic(20)">Get Subscription Link</button>
+      <div id="cal-sub-url-row" style="display:none;margin-top:8px;background:var(--bg-dark);border-radius:10px;padding:10px 12px;">
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;">Copy this URL → iOS Settings → Calendar → Add Subscription:</div>
+        <div id="cal-sub-url" style="font-size:11px;font-family:monospace;color:var(--primary);word-break:break-all;margin-bottom:8px;"></div>
+        <button class="btn-secondary" style="width:100%;font-size:12px;padding:8px;" onclick="copyCalURL(); triggerHaptic([30,20,30])">Copy Link</button>
       </div>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
@@ -960,7 +970,7 @@
     let pendingParsedEvent = null;
     let notificationsEnabled = false;
     let notifDayOf = true;
-    let notifHourBefore = false;
+    let notifHourBefore = true;
     let pushSubscription = null;
     let lastDeletedEvent = null;
     let lastDeletedEventIndex = -1;
@@ -1379,21 +1389,30 @@
     function _initSwipeDismiss() {
       document.querySelectorAll('.modal-overlay').forEach(overlay => {
         const modal = overlay.querySelector('.modal');
-        const handle = overlay.querySelector('.modal-handle');
-        if (!handle || !modal) return;
-        let sy = 0, active = false;
-        handle.addEventListener('touchstart', e => {
+        if (!modal) return;
+        let sy = 0, active = false, pendingDir = false;
+        // Attach to the whole modal — activate only on initial downward swipe while at scroll top
+        modal.addEventListener('touchstart', e => {
           if (e.touches.length !== 1) return;
-          sy = e.touches[0].clientY; active = true;
+          sy = e.touches[0].clientY;
+          active = false; pendingDir = true;
           modal.style.transition = 'none';
         }, { passive: true });
-        handle.addEventListener('touchmove', e => {
+        modal.addEventListener('touchmove', e => {
+          if (pendingDir) {
+            pendingDir = false;
+            const dy = e.touches[0].clientY - sy;
+            if (dy > 4 && modal.scrollTop <= 2) { active = true; }
+            else { modal.style.transition = ''; return; }
+          }
           if (!active) return;
           const dy = Math.max(0, e.touches[0].clientY - sy);
           modal.style.transform = `translateY(${dy}px)`;
         }, { passive: true });
-        handle.addEventListener('touchend', e => {
-          if (!active) return; active = false;
+        modal.addEventListener('touchend', e => {
+          pendingDir = false;
+          if (!active) { modal.style.transition = ''; return; }
+          active = false;
           const dy = e.changedTouches[0].clientY - sy;
           modal.style.transition = '';
           if (dy > 90) {
@@ -1406,21 +1425,25 @@
         }, { passive: true });
       });
 
-      // Day sheet swipe-to-dismiss
-      const dsHandle = document.getElementById('day-sheet-handle');
+      // Day sheet swipe-to-dismiss — activates from top 70px or when content is at scroll top
       const ds = document.getElementById('day-sheet');
-      if (dsHandle && ds) {
+      const dsContent = document.getElementById('day-sheet-content');
+      if (ds && dsContent) {
         let sy = 0, active = false;
-        dsHandle.addEventListener('touchstart', e => {
-          sy = e.touches[0].clientY; active = true;
+        ds.addEventListener('touchstart', e => {
+          const rect = ds.getBoundingClientRect();
+          const inTopZone = (e.touches[0].clientY - rect.top) < 70;
+          if (!inTopZone && dsContent.scrollTop > 2) return;
+          sy = e.touches[0].clientY;
+          active = true;
           ds.style.transition = 'none';
         }, { passive: true });
-        dsHandle.addEventListener('touchmove', e => {
+        ds.addEventListener('touchmove', e => {
           if (!active) return;
           const dy = Math.max(0, e.touches[0].clientY - sy);
           ds.style.transform = `translateY(${dy}px)`;
         }, { passive: true });
-        dsHandle.addEventListener('touchend', e => {
+        ds.addEventListener('touchend', e => {
           if (!active) return; active = false;
           const dy = e.changedTouches[0].clientY - sy;
           ds.style.transition = '';
@@ -1432,21 +1455,20 @@
         }, { passive: true });
       }
 
-      // Event peek swipe-to-dismiss
-      const epHandle = document.getElementById('event-peek-handle');
+      // Event peek swipe-to-dismiss — whole element (no scrollable content inside)
       const ep = document.getElementById('event-peek');
-      if (epHandle && ep) {
+      if (ep) {
         let sy = 0, active = false;
-        epHandle.addEventListener('touchstart', e => {
+        ep.addEventListener('touchstart', e => {
           sy = e.touches[0].clientY; active = true;
           ep.style.transition = 'none';
         }, { passive: true });
-        epHandle.addEventListener('touchmove', e => {
+        ep.addEventListener('touchmove', e => {
           if (!active) return;
           const dy = Math.max(0, e.touches[0].clientY - sy);
           ep.style.transform = `translateY(${dy}px)`;
         }, { passive: true });
-        epHandle.addEventListener('touchend', e => {
+        ep.addEventListener('touchend', e => {
           if (!active) return; active = false;
           const dy = e.changedTouches[0].clientY - sy;
           ep.style.transition = '';
@@ -1656,6 +1678,13 @@
       clearAddForm();
       const dateEl = document.getElementById('date-input');
       if (dateEl && !dateEl.value) dateEl.value = selectedDate || getLocalDateString(new Date());
+      document.getElementById('add-event-overlay').classList.add('active');
+      setTimeout(() => document.getElementById('event-input').focus(), 150);
+    }
+    function openAddModalForDate(dateStr) {
+      clearAddForm();
+      document.getElementById('date-input').value = dateStr;
+      selectedDate = dateStr; // parse request picks this up as contextDate
       document.getElementById('add-event-overlay').classList.add('active');
       setTimeout(() => document.getElementById('event-input').focus(), 150);
     }
@@ -1950,8 +1979,8 @@
       if (saved) {
         const s = JSON.parse(saved);
         notificationsEnabled = s.enabled || false;
-        notifDayOf = s.dayOf !== false; // default true
-        notifHourBefore = s.hourBefore || false;
+        notifDayOf = s.dayOf !== false;      // default true
+        notifHourBefore = s.hourBefore !== false; // default true
       }
       updateSettingsUI();
     }
@@ -2142,7 +2171,7 @@
         const response = await fetch('/api/events/parse', {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ text: input, currentESTDate: estInfo.date, currentESTTime: estInfo.time, timezone: estInfo.timezone }),
+          body: JSON.stringify({ text: input, currentESTDate: estInfo.date, currentESTTime: estInfo.time, timezone: estInfo.timezone, contextDate: selectedDate || undefined }),
           signal: controller.signal
         });
         clearTimeout(tid);
@@ -2485,7 +2514,7 @@
         eventDate.setHours(h, m, 0, 0);
         const schedule = [];
         if (notifDayOf) {
-          const dayOf = new Date(event.date + 'T08:00:00');
+          const dayOf = new Date(event.date + 'T06:00:00');
           schedule.push({ time: dayOf, body: `${event.title} at ${formatTimeEastern(event.time)} today` });
         }
         if (notifHourBefore) {
@@ -2550,6 +2579,25 @@
         await pushSubscription.unsubscribe();
         pushSubscription = null;
       } catch (e) {}
+    }
+
+    async function getCalendarSubURL() {
+      if (!authToken) { showStatus('Sign in to get your calendar link', 'error'); return; }
+      try {
+        const r = await fetch('/api/cal/token', { headers: getAuthHeaders() });
+        if (!r.ok) { showStatus('Calendar subscription not available', 'error'); return; }
+        const { token } = await r.json();
+        const url = `${location.origin}/api/cal/${token}/events.ics`;
+        document.getElementById('cal-sub-url').textContent = url;
+        document.getElementById('cal-sub-url-row').style.display = '';
+      } catch { showStatus('Error generating calendar link', 'error'); }
+    }
+    function copyCalURL() {
+      const url = document.getElementById('cal-sub-url').textContent;
+      if (!url) return;
+      navigator.clipboard.writeText(url)
+        .then(() => showStatus('Link copied! Add it in iOS Settings → Calendar → Add Subscription', 'success'))
+        .catch(() => showStatus('Copy manually: ' + url, 'info'));
     }
 
     // ── Calendar navigation ──
@@ -2744,7 +2792,10 @@
       document.getElementById('day-sheet-content').innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;border-bottom:1px solid var(--border-color);margin-bottom:10px;">
           <span style="font-size:17px;font-weight:700;color:var(--text-primary);">${label}</span>
-          <button onclick="closeDayModal();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:20px;padding:4px 8px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button onclick="closeDayModal();openAddModalForDate('${dateStr}');triggerHaptic([40]);" style="background:var(--primary);border:none;color:white;font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;cursor:pointer;line-height:1.4;min-height:auto;">+ Add</button>
+            <button onclick="closeDayModal();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:20px;padding:4px 8px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
+          </div>
         </div>
         ${eventsHtml}
       `;
