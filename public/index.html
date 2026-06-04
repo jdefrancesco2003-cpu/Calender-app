@@ -1721,7 +1721,7 @@
       if (guestMode) return;
       if (!navigator.onLine) { offlineQueue.push({type:'save',data:eventObj}); showStatus('Saved locally — will sync when online','success'); return; }
       const encrypted = encryptEvent(eventObj);
-      const body = encrypted ? {id:eventObj.id,encryptedData:encrypted.encryptedData,nonce:encrypted.nonce} : {...eventObj};
+      const body = encrypted ? {id:eventObj.id,encryptedData:encrypted.encryptedData,nonce:encrypted.nonce,category:eventObj.category||'work',date:eventObj.date} : {...eventObj};
       try {
         const res = await fetch('/api/events', {method:'POST',headers:getAuthHeaders(),body:JSON.stringify(body)});
         if (res.status === 401) { showStatus('Session expired — please sign in again','error'); return; }
@@ -1733,7 +1733,7 @@
       if (guestMode) return;
       if (!navigator.onLine) { offlineQueue.push({type:'update',id:eventId,data:eventObj}); return; }
       const encrypted = encryptEvent(eventObj);
-      const body = encrypted ? {encryptedData:encrypted.encryptedData,nonce:encrypted.nonce} : {...eventObj};
+      const body = encrypted ? {encryptedData:encrypted.encryptedData,nonce:encrypted.nonce,category:eventObj.category||'work',date:eventObj.date} : {...eventObj};
       try {
         const res = await fetch(`/api/events/${eventId}`,{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify(body)});
         if (res.status === 401) showStatus('Session expired — please sign in again','error');
