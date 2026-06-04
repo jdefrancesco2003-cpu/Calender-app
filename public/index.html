@@ -1387,97 +1387,74 @@
 
     // ── Universal swipe-to-dismiss ──
     function _initSwipeDismiss() {
-      document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        const modal = overlay.querySelector('.modal');
-        if (!modal) return;
+      // Shared factory — non-passive touchmove so preventDefault stops scroll fighting drag
+      function makeSwipeHandler(el, onDismiss, opts = {}) {
+        const scrollEl = opts.scrollEl || null; // element to check scrollTop against
         let sy = 0, active = false, pendingDir = false;
-        // Attach to the whole modal — activate only on initial downward swipe while at scroll top
-        modal.addEventListener('touchstart', e => {
+
+        el.addEventListener('touchstart', e => {
           if (e.touches.length !== 1) return;
           sy = e.touches[0].clientY;
           active = false; pendingDir = true;
-          modal.style.transition = 'none';
+          el.style.transition = 'none';
         }, { passive: true });
-        modal.addEventListener('touchmove', e => {
+
+        el.addEventListener('touchmove', e => {
           if (pendingDir) {
             pendingDir = false;
             const dy = e.touches[0].clientY - sy;
-            if (dy > 4 && modal.scrollTop <= 2) { active = true; }
-            else { modal.style.transition = ''; return; }
+            const atTop = !scrollEl || scrollEl.scrollTop <= 2;
+            const inTopZone = opts.topZone
+              ? (e.touches[0].clientY - el.getBoundingClientRect().top) < opts.topZone
+              : false;
+            if (dy > 6 && (atTop || inTopZone)) {
+              active = true;
+            } else {
+              el.style.transition = '';
+              return;
+            }
           }
           if (!active) return;
+          e.preventDefault(); // stop scroll conflicting with drag
           const dy = Math.max(0, e.touches[0].clientY - sy);
-          modal.style.transform = `translateY(${dy}px)`;
-        }, { passive: true });
-        modal.addEventListener('touchend', e => {
+          el.style.transform = `translateY(${dy}px)`;
+        }, { passive: false }); // must be non-passive to call preventDefault
+
+        el.addEventListener('touchend', e => {
           pendingDir = false;
-          if (!active) { modal.style.transition = ''; return; }
+          if (!active) { el.style.transition = ''; return; }
           active = false;
           const dy = e.changedTouches[0].clientY - sy;
-          modal.style.transition = '';
+          el.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
           if (dy > 90) {
             triggerHaptic(20);
-            modal.style.transform = `translateY(110%)`;
-            setTimeout(() => { modal.style.transform = ''; overlay.classList.remove('active', 'closing'); }, 220);
+            el.style.transform = `translateY(110%)`;
+            setTimeout(() => { el.style.transition = ''; el.style.transform = ''; onDismiss(); }, 280);
           } else {
-            modal.style.transform = '';
+            el.style.transform = '';
+            setTimeout(() => { el.style.transition = ''; }, 300);
           }
-        }, { passive: true });
-      });
-
-      // Day sheet swipe-to-dismiss — activates from top 70px or when content is at scroll top
-      const ds = document.getElementById('day-sheet');
-      const dsContent = document.getElementById('day-sheet-content');
-      if (ds && dsContent) {
-        let sy = 0, active = false;
-        ds.addEventListener('touchstart', e => {
-          const rect = ds.getBoundingClientRect();
-          const inTopZone = (e.touches[0].clientY - rect.top) < 70;
-          if (!inTopZone && dsContent.scrollTop > 2) return;
-          sy = e.touches[0].clientY;
-          active = true;
-          ds.style.transition = 'none';
-        }, { passive: true });
-        ds.addEventListener('touchmove', e => {
-          if (!active) return;
-          const dy = Math.max(0, e.touches[0].clientY - sy);
-          ds.style.transform = `translateY(${dy}px)`;
-        }, { passive: true });
-        ds.addEventListener('touchend', e => {
-          if (!active) return; active = false;
-          const dy = e.changedTouches[0].clientY - sy;
-          ds.style.transition = '';
-          if (dy > 90) {
-            triggerHaptic(20);
-            ds.style.transform = `translateY(110%)`;
-            setTimeout(() => { ds.style.transform = ''; closeDayModal(); }, 220);
-          } else { ds.style.transform = ''; }
         }, { passive: true });
       }
 
-      // Event peek swipe-to-dismiss — whole element (no scrollable content inside)
+      // All .modal-overlay modals
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        const modal = overlay.querySelector('.modal');
+        if (!modal) return;
+        makeSwipeHandler(modal, () => overlay.classList.remove('active', 'closing'), { scrollEl: modal });
+      });
+
+      // Day sheet (top-zone + scroll-top detection)
+      const ds = document.getElementById('day-sheet');
+      const dsContent = document.getElementById('day-sheet-content');
+      if (ds && dsContent) {
+        makeSwipeHandler(ds, closeDayModal, { scrollEl: dsContent, topZone: 72 });
+      }
+
+      // Event peek (no scroll inside — whole surface triggers)
       const ep = document.getElementById('event-peek');
       if (ep) {
-        let sy = 0, active = false;
-        ep.addEventListener('touchstart', e => {
-          sy = e.touches[0].clientY; active = true;
-          ep.style.transition = 'none';
-        }, { passive: true });
-        ep.addEventListener('touchmove', e => {
-          if (!active) return;
-          const dy = Math.max(0, e.touches[0].clientY - sy);
-          ep.style.transform = `translateY(${dy}px)`;
-        }, { passive: true });
-        ep.addEventListener('touchend', e => {
-          if (!active) return; active = false;
-          const dy = e.changedTouches[0].clientY - sy;
-          ep.style.transition = '';
-          if (dy > 90) {
-            triggerHaptic(20);
-            ep.style.transform = `translateY(110%)`;
-            setTimeout(() => { ep.style.transform = ''; closeEventPeek(); }, 220);
-          } else { ep.style.transform = ''; }
-        }, { passive: true });
+        makeSwipeHandler(ep, closeEventPeek);
       }
     }
 
