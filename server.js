@@ -15,7 +15,14 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.set('trust proxy', 1); // Railway / reverse proxy: use X-Forwarded-For for real client IP
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('public', {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    }
+  }
+}));
 
 const EST_TIMEZONE = 'America/New_York';
 
@@ -76,8 +83,12 @@ const EMAIL_FROM = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `Marked <$
 
 async function sendEmail(to, subject, html) {
   if (resendClient) {
-    const { error } = await resendClient.emails.send({ from: EMAIL_FROM, to, subject, html });
-    if (error) throw new Error(error.message);
+    const { data, error } = await resendClient.emails.send({ from: EMAIL_FROM, to, subject, html });
+    if (error) {
+      console.error('[Resend] Send failed — from:', EMAIL_FROM, '| to:', to, '| error:', JSON.stringify(error));
+      throw new Error(error.message || JSON.stringify(error));
+    }
+    console.log('[Resend] Sent OK — id:', data?.id, '| to:', to);
     return;
   }
   if (smtpTransport) {
