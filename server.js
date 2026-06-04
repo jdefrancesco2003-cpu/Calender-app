@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const { randomBytes, randomInt } = require('crypto');
 const webpush = require('web-push');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -61,8 +62,9 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 function generateSalt() { return randomBytes(16).toString('hex'); }
 function generateOTP() { return String(randomInt(100000, 1000000)); }
 
-// ── Email (Nodemailer) ──
-const emailTransport = (process.env.SMTP_USER && process.env.SMTP_PASS)
+// ── Email — Resend (preferred, HTTPS) or nodemailer SMTP fallback ──
+const resendClient = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const smtpTransport = (process.env.SMTP_USER && process.env.SMTP_PASS)
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587', 10),
@@ -70,11 +72,19 @@ const emailTransport = (process.env.SMTP_USER && process.env.SMTP_PASS)
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
     })
   : null;
-const EMAIL_FROM = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `Marked <${process.env.SMTP_USER}>` : null);
+const EMAIL_FROM = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `Marked <${process.env.SMTP_USER}>` : 'Marked <onboarding@resend.dev>');
 
 async function sendEmail(to, subject, html) {
-  if (!emailTransport) { console.log(`[DEV EMAIL] To:${to} | ${subject}`); return; }
-  await emailTransport.sendMail({ from: EMAIL_FROM, to, subject, html });
+  if (resendClient) {
+    const { error } = await resendClient.emails.send({ from: EMAIL_FROM, to, subject, html });
+    if (error) throw new Error(error.message);
+    return;
+  }
+  if (smtpTransport) {
+    await smtpTransport.sendMail({ from: EMAIL_FROM, to, subject, html });
+    return;
+  }
+  console.log(`[DEV EMAIL] To:${to} | ${subject}`);
 }
 
 function emailBase(content) {
