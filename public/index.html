@@ -131,7 +131,7 @@
     .view-toggle-btn:active, .view-toggle-btn.active { background: var(--primary); color: white; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 6px 10px 2px; background: var(--bg-card); flex-shrink: 0; }
     .day-header { text-align: center; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; font-size: 11px; letter-spacing: 0.5px; }
-    .day-cell { aspect-ratio: 1; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px 5px 4px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; min-height: 40px; position: relative; overflow: hidden; transition: background 0.15s, transform 0.1s, border-color 0.15s; }
+    .day-cell { aspect-ratio: 2/3; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px 5px 4px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; min-height: 0; position: relative; overflow: hidden; transition: background 0.15s, transform 0.1s, border-color 0.15s; }
     .day-cell:active { transform: scale(0.94); border-color: var(--primary); }
     .day-cell.other-month { background: transparent; border-color: transparent; opacity: 0.25; }
     .day-cell.today { background: var(--primary); border-color: var(--primary); }
@@ -347,8 +347,8 @@
       transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
       pointer-events: none;
     }
-    #ptr-container.ptr-visible { transform: translateX(-50%) translateY(8px); }
-    #ptr-container.ptr-loading { transform: translateX(-50%) translateY(8px); transition: none; }
+    #ptr-container.ptr-visible { transform: translateX(-50%) translateY(20px); }
+    #ptr-container.ptr-loading { transform: translateX(-50%) translateY(20px); transition: none; }
     #ptr-container.ptr-done { transform: translateX(-50%) translateY(-100px); transition: transform 0.4s cubic-bezier(0.55, 0, 1, 0.45); }
 
     #ptr-pill {
@@ -3251,6 +3251,11 @@
       document.getElementById('search-input').value = '';
       document.getElementById('search-from').value = '';
       document.getElementById('search-to').value = '';
+      const row = document.getElementById('search-filters-row');
+      const btn = document.getElementById('filter-toggle-btn');
+      row.style.display = 'none';
+      btn.style.background = 'var(--bg-light)';
+      btn.style.borderColor = 'var(--border-color)';
       renderEventsPage();
     }
 
