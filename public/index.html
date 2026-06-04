@@ -1067,6 +1067,7 @@
 
     document.addEventListener('touchstart', e => {
       if (ptrActive) return;
+      if (document.querySelector('.modal-overlay.active, #day-sheet.open, #event-peek.open')) return;
       ptrStartY  = e.touches[0].clientY;
       ptrTriggered = false;
       ptrReset();
@@ -1074,6 +1075,7 @@
 
     document.addEventListener('touchmove', e => {
       if (ptrActive) return;
+      if (document.querySelector('.modal-overlay.active, #day-sheet.open, #event-peek.open')) return;
       const dy = e.touches[0].clientY - ptrStartY;
       if (dy <= 0) {
         // scrolling up or not moving — hide pill
