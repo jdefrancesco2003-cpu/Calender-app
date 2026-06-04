@@ -129,9 +129,9 @@
     .month-nav button:not(.view-toggle-btn):active { background: var(--primary); color: white; transform: scale(0.9); }
     .view-toggle-btn { padding: 0 14px; height: 34px; font-size: 13px; min-height: auto; border-radius: 10px; background: var(--bg-light); color: var(--text-secondary); border: none; font-weight: 700; cursor: pointer; transition: all 0.15s; letter-spacing: 0.2px; white-space: nowrap; }
     .view-toggle-btn:active, .view-toggle-btn.active { background: var(--primary); color: white; }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 1fr); gap: 1px; padding: 6px 10px 2px; background: var(--bg-card); flex: 1; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 6px 10px 2px; background: var(--bg-card); flex-shrink: 0; }
     .day-header { text-align: center; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; font-size: 11px; letter-spacing: 0.5px; }
-    .day-cell { border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px 5px 4px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; min-height: 0; position: relative; overflow: hidden; transition: background 0.15s, transform 0.1s, border-color 0.15s; }
+    .day-cell { aspect-ratio: 2/3; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 5px 5px 4px; background: var(--bg-light); cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; min-height: 0; position: relative; overflow: hidden; transition: background 0.15s, transform 0.1s, border-color 0.15s; }
     .day-cell:active { transform: scale(0.94); border-color: var(--primary); }
     .day-cell.other-month { background: transparent; border-color: transparent; opacity: 0.25; }
     .day-cell.today { background: var(--primary); border-color: var(--primary); }
@@ -193,8 +193,8 @@
     .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.7; }
 
     /* ── VIEW SLIDE CONTAINER ── */
-    #cal-view-container { flex: 1; min-height: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; }
-    #month-view { flex: 1; display: flex; flex-direction: column; }
+    #cal-view-container { flex-shrink: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+    body.week-mode #cal-view-container { flex: 1; min-height: 0; flex-shrink: 1; }
 
     /* ── HORIZONTAL WEEK VIEW ── */
     #week-spacer { display: none; flex-shrink: 0; height: 0; }
