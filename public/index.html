@@ -727,43 +727,22 @@
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
       <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 10px;">Event Colors</p>
-      <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:14px;color:var(--text-primary);">Work</span>
-          <input type="color" id="color-pick-work" value="#5b8dee" onchange="saveCatColor('work',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+          <div id="swatches-work" style="display:flex;gap:7px;"></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:14px;color:var(--text-primary);">Medical / Appointment</span>
-          <input type="color" id="color-pick-health" value="#ff6b6b" onchange="saveCatColor('health',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+          <span style="font-size:14px;color:var(--text-primary);">Medical / Appt</span>
+          <div id="swatches-health" style="display:flex;gap:7px;"></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:14px;color:var(--text-primary);">Personal / Social</span>
-          <input type="color" id="color-pick-social" value="#4a9d6f" onchange="saveCatColor('social',this.value);saveCatColor('personal',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+          <div id="swatches-social" style="display:flex;gap:7px;"></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:14px;color:var(--text-primary);">Misc</span>
-          <input type="color" id="color-pick-other" value="#b39ddb" onchange="saveCatColor('other',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
-        </div>
-      </div>
-
-      <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
-      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 10px;">Event Colors</p>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:14px;color:var(--text-primary);">Work</span>
-          <input type="color" id="color-pick-work" value="#5b8dee" onchange="saveCatColor('work',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:14px;color:var(--text-primary);">Medical / Appointment</span>
-          <input type="color" id="color-pick-health" value="#ff6b6b" onchange="saveCatColor('health',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:14px;color:var(--text-primary);">Personal / Social</span>
-          <input type="color" id="color-pick-social" value="#4a9d6f" onchange="saveCatColor('social',this.value);saveCatColor('personal',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:14px;color:var(--text-primary);">Misc</span>
-          <input type="color" id="color-pick-other" value="#b39ddb" onchange="saveCatColor('other',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+          <div id="swatches-other" style="display:flex;gap:7px;"></div>
         </div>
       </div>
 
@@ -1082,11 +1061,26 @@
       renderEventsPage();
       renderUpcomingEvents();
     }
+    const SWATCH_COLORS = ['#5b8dee','#ff6b6b','#4a9d6f','#b39ddb','#ff9500'];
     function syncCatColorPickers() {
       ['work','health','social','other'].forEach(cat => {
-        const el = document.getElementById(`color-pick-${cat}`);
-        if (el) el.value = catColorPrefs[cat] || CAT_DEFAULTS[cat];
+        const container = document.getElementById(`swatches-${cat}`);
+        if (!container) return;
+        const current = (catColorPrefs[cat] || CAT_DEFAULTS[cat] || '').toLowerCase();
+        container.innerHTML = SWATCH_COLORS.map(c => {
+          const sel = c.toLowerCase() === current;
+          return `<button onclick="saveCatColorSwatch('${cat}','${c}');triggerHaptic(12)"
+            style="width:28px;height:28px;border-radius:50%;background:${c};border:${sel?'3px solid var(--text-primary)':'2px solid transparent'};outline:${sel?'2px solid var(--bg-card)':'none'};cursor:pointer;padding:0;flex-shrink:0;"></button>`;
+        }).join('');
       });
+    }
+    function saveCatColorSwatch(cat, color) {
+      saveCatColor(cat, color);
+      if (cat === 'social') {
+        catColorPrefs['personal'] = color;
+        localStorage.setItem('catColorPrefs', JSON.stringify(catColorPrefs));
+      }
+      syncCatColorPickers();
     }
 
     // ── Share event — sends a one-tap ICS link that opens native calendar ──
