@@ -1,7 +1,5 @@
-const CACHE_NAME = 'calpal-v11';
+const CACHE_NAME = 'calpal-v12';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/nacl.min.js',
   '/nacl-util.min.js',
@@ -42,7 +40,21 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Static assets: cache-first
+  // HTML navigation: network-first so updates are always picked up
+  if (e.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Other static assets (icons, JS libs): cache-first
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
       if (res.ok) {

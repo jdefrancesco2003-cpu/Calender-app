@@ -638,6 +638,8 @@ app.post('/api/events', requireAuth, async (req, res) => {
       userId: req.user.userId,
       encryptedData: body.encryptedData,
       nonce: body.nonce,
+      category: body.category || 'work',
+      date: body.date || null,
       createdAt: new Date()
     };
   } else {
@@ -685,6 +687,8 @@ app.put('/api/events/:id', requireAuth, async (req, res) => {
     updates = {
       encryptedData: body.encryptedData,
       nonce: body.nonce,
+      category: body.category || 'work',
+      date: body.date || null,
       updatedAt: new Date()
     };
   } else {
