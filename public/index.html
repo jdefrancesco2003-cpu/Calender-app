@@ -330,10 +330,10 @@
 
     /* ── CATEGORY COLORS (Task 2) ── */
     .cat-dot { width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0; }
-    .cat-work    { background:#4a9d6f; }
-    .cat-personal{ background:#5b8dee; }
+    .cat-work    { background:#5b8dee; }
+    .cat-personal{ background:#4a9d6f; }
     .cat-health  { background:#ff6b6b; }
-    .cat-social  { background:#ffb347; }
+    .cat-social  { background:#4a9d6f; }
     .cat-other   { background:#b39ddb; }
     .cat-select { display:flex;gap:10px;align-items:center;margin:8px 0; }
     .cat-btn { width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:border 0.15s; }
@@ -712,6 +712,27 @@
       </div>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
+      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 10px;">Event Colors</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Work</span>
+          <input type="color" id="color-pick-work" value="#5b8dee" onchange="saveCatColor('work',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Medical / Appointment</span>
+          <input type="color" id="color-pick-health" value="#ff6b6b" onchange="saveCatColor('health',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Personal / Social</span>
+          <input type="color" id="color-pick-social" value="#4a9d6f" onchange="saveCatColor('social',this.value);saveCatColor('personal',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Misc</span>
+          <input type="color" id="color-pick-other" value="#b39ddb" onchange="saveCatColor('other',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
       <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">CarPlay &amp; Calendar Apps</p>
       <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;line-height:1.4;">Subscribe so your events appear in iOS Calendar and on CarPlay.</div>
       <button class="btn-secondary" style="width:100%;" onclick="getCalendarSubURL(); triggerHaptic(20)">Get Subscription Link</button>
@@ -1006,8 +1027,22 @@
       triggerHaptic(12);
     }
 
+    let catColorPrefs = JSON.parse(localStorage.getItem('catColorPrefs') || '{}');
+    const CAT_DEFAULTS = { work:'#5b8dee', health:'#ff6b6b', social:'#4a9d6f', personal:'#4a9d6f', other:'#b39ddb' };
     function getCategoryColor(cat) {
-      return { work:'#4a9d6f', personal:'#5b8dee', health:'#ff6b6b', social:'#ffb347', other:'#b39ddb' }[cat] || '#4a9d6f';
+      return catColorPrefs[cat] || CAT_DEFAULTS[cat] || '#4a9d6f';
+    }
+    function saveCatColor(cat, color) {
+      catColorPrefs[cat] = color;
+      localStorage.setItem('catColorPrefs', JSON.stringify(catColorPrefs));
+      renderCalendar();
+      if (isWeekView) renderWeekView();
+    }
+    function syncCatColorPickers() {
+      ['work','health','social','other'].forEach(cat => {
+        const el = document.getElementById(`color-pick-${cat}`);
+        if (el) el.value = catColorPrefs[cat] || CAT_DEFAULTS[cat];
+      });
     }
 
     // ── Share event — sends a one-tap ICS link that opens native calendar ──
@@ -1076,6 +1111,7 @@
     document.addEventListener('touchmove', e => {
       if (ptrActive) return;
       if (document.querySelector('.modal-overlay.active, #day-sheet.open, #event-peek.open')) return;
+      if (ptrStartY > window.innerHeight * 0.22) return; // only activate from top 22% of screen
       const dy = e.touches[0].clientY - ptrStartY;
       if (dy <= 0) {
         // scrolling up or not moving — hide pill
@@ -1971,6 +2007,7 @@
       localStorage.setItem('notificationSettings', JSON.stringify({ enabled: notificationsEnabled, dayOf: notifDayOf, hourBefore: notifHourBefore }));
     }
     function updateSettingsUI() {
+      syncCatColorPickers();
       const toggle = document.getElementById('notif-toggle');
       if (toggle) toggle.checked = notificationsEnabled;
       const subopts = document.getElementById('notif-subopts');
@@ -2163,9 +2200,10 @@
           showStatus(data.error || 'Try: "work on friday 7-3pm"', 'error');
         } else {
           data.title = capitalizeTitle(data.title);
+          if (data.category) selectCategory('add', data.category);
           if (checkDuplicateEvent(data)) { showDuplicateModal(data.title); return; }
           const doSave = () => {
-            const newEvent = { id: generateId(), ...data, category: addEventCategory };
+            const newEvent = { id: generateId(), ...data, category: data.category || addEventCategory };
             allEvents.push(newEvent);
             saveEvents();
             apiSaveEvent(newEvent);
@@ -2232,7 +2270,7 @@
         showOverlapConfirmation(pendingParsedEvent.title, confirmParsedEvent);
         return;
       }
-      const newEvent = { id: generateId(), ...pendingParsedEvent, category: addEventCategory };
+      const newEvent = { id: generateId(), ...pendingParsedEvent, category: pendingParsedEvent.category || addEventCategory };
       allEvents.push(newEvent);
       saveEvents();
       apiSaveEvent(newEvent);
