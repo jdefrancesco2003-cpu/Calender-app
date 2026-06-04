@@ -304,6 +304,10 @@ Extract:
 4. time: Start time in HH:mm 24-hour format, or null
 5. endTime: End time in HH:mm format, or null
 6. isAllDay: true if no specific times mentioned, false otherwise
+7. category: one of "work", "health", or "social"
+   - "work": meetings, calls, deadlines, tasks, office, business, job, interview, conference
+   - "health": doctor, dentist, medical, appointment, therapy, gym, workout, pharmacy, hospital, checkup
+   - "social": dinner, lunch, breakfast, hangout, party, travel, trip, vacation, friend, family, date, concert, anything else
 
 Date rules (TODAY = ${today}, DEFAULT DATE = ${defaultDate}):
 - If no date is mentioned → use ${defaultDate}
@@ -329,7 +333,8 @@ Return ONLY this JSON:
   "endDate": "YYYY-MM-DD" or null,
   "time": "HH:mm" or null,
   "endTime": "HH:mm" or null,
-  "isAllDay": true/false
+  "isAllDay": true/false,
+  "category": "work" | "health" | "social"
 }`
     }]
   });
@@ -347,6 +352,7 @@ Return ONLY this JSON:
   }
 
   if (!parsed.title || !parsed.date) throw new Error('Missing title or date');
+  if (!['work','health','social'].includes(parsed.category)) parsed.category = 'social';
   parsed.title = toTitleCase(parsed.title.trim());
   if (!DATE_RE.test(parsed.date)) throw new Error(`Invalid date format: ${parsed.date}`);
   if (parsed.endDate && !DATE_RE.test(parsed.endDate)) parsed.endDate = null;
