@@ -102,13 +102,17 @@
     input::placeholder, textarea::placeholder { color: var(--text-secondary); }
     input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,157,111,0.12); transition: border-color 0.15s, box-shadow 0.15s; }
     textarea { resize: none; min-height: 90px; font-size: 15px; }
-    button { padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px; appearance: none; }
-    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 12px rgba(74,157,111,0.25); }
+    button { padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.18s ease; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px; appearance: none; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 12px rgba(74,157,111,0.25); border-radius: 12px; }
     .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
-    .btn-secondary { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); font-weight: 600; }
-    .btn-secondary:active { background: var(--primary); color: white; transform: scale(0.98); }
-    .btn-danger { background: transparent; color: var(--error); border: 1.5px solid var(--error); font-size: 14px; padding: 10px 14px; min-height: auto; }
-    .btn-danger:active { background: var(--error); color: white; transform: scale(0.96); }
+    .btn-secondary { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); font-weight: 600; border-radius: 12px; }
+    .btn-secondary:active { background: var(--primary); color: white; transform: scale(0.97); }
+    .btn-share { background: transparent; color: #5ac8fa; border: 1.5px solid #5ac8fa; font-weight: 600; border-radius: 12px; }
+    .btn-share:active { background: #5ac8fa; color: white; transform: scale(0.97); }
+    .btn-cancel { background: transparent; color: var(--text-secondary); border: 1.5px solid var(--border-color); font-weight: 600; border-radius: 12px; }
+    .btn-cancel:active { background: var(--bg-light); transform: scale(0.97); }
+    .btn-danger { background: transparent; color: var(--error); border: 1.5px solid var(--error); font-weight: 600; border-radius: 12px; }
+    .btn-danger:active { background: var(--error); color: white; transform: scale(0.97); }
     button:disabled { opacity: 0.45; pointer-events: none; }
     .divider { height: 1px; background: var(--border-color); margin: 4px 0; }
     .time-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -183,8 +187,8 @@
 
     /* ── UPCOMING EVENTS (calendar tab sidebar) ── */
     .events-container { padding: 12px 14px 16px; background: var(--bg-dark); border-top: 1px solid var(--border-color); overflow-y: auto; min-height: 0; }
-    #day-sheet-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 450; }
-    #day-sheet-backdrop.open { display: block; animation: fadeIn 0.22s ease; }
+    #day-sheet-backdrop { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 450; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    #day-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
     #day-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-radius: 22px 22px 0 0; z-index: 451; max-height: 78vh; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1); box-shadow: 0 -4px 30px rgba(0,0,0,0.35); }
     #day-sheet.open { transform: translateY(0); }
     #day-sheet-handle { width: 38px; height: 5px; background: rgba(255,255,255,0.13); border-radius: 3px; margin: 10px auto 4px; flex-shrink: 0; }
@@ -193,8 +197,8 @@
     .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.7; }
 
     /* ── EVENT PEEK BOTTOM SHEET ── */
-    #event-peek-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 450; }
-    #event-peek-backdrop.open { display: block; animation: fadeIn 0.22s ease; }
+    #event-peek-backdrop { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 450; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    #event-peek-backdrop.open { opacity: 1; pointer-events: auto; }
     #event-peek { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-radius: 22px 22px 0 0; z-index: 451; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1); box-shadow: 0 -4px 30px rgba(0,0,0,0.35); }
     #event-peek.open { transform: translateY(0); }
     #event-peek-handle { width: 38px; height: 5px; background: rgba(255,255,255,0.13); border-radius: 3px; margin: 10px auto 4px; flex-shrink: 0; }
@@ -270,9 +274,9 @@
     .ev-card-time { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
     .ev-card-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ev-card-actions { flex: 0 0 168px; display: flex; background: var(--bg-card); }
-    .ev-action-btn { flex: 1; border: none; border-left: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; padding: 0; min-height: auto; }
+    .ev-action-btn { flex: 1; border: none; border-left: 1.5px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; padding: 0; min-height: auto; color: var(--primary); }
     .ev-action-btn:active { opacity: 0.65; }
-    .ev-action-btn.del { color: var(--error); }
+    .ev-action-btn.del { color: var(--error); border-left-color: var(--error); }
     .ev-action-btn.shr { color: #5ac8fa; border-left-color: #5ac8fa; }
     .empty-state { text-align: center; padding: 36px 16px; color: var(--text-secondary); font-size: 15px; line-height: 1.6; }
     .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
@@ -336,8 +340,8 @@
     .cat-social  { background:#ff9500; }
     .cat-other   { background:#b39ddb; }
     .cat-select { display:flex;gap:10px;align-items:center;margin:8px 0; }
-    .cat-btn { width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:border 0.15s; }
-    .cat-btn.selected { border-color:white; }
+    .cat-btn { width:32px;height:32px;border-radius:8px;border:3px solid transparent;cursor:pointer;transition:border 0.15s,transform 0.12s; }
+    .cat-btn.selected { border-color:white;transform:scale(1.1); }
 
     /* ── PULL-TO-REFRESH ── */
     #ptr-container {
@@ -610,12 +614,13 @@
                 <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ends On (optional)</label>
                 <input type="date" id="modal-recurrence-end-input" class="form-select" style="padding:10px 12px;">
               </div>
-      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:16px;">
-        <button style="padding:13px;border-radius:12px;border:none;background:var(--primary);color:white;font-size:15px;font-weight:600;cursor:pointer;" onclick="saveEditedEvent();triggerHaptic([60,20,60])">Save</button>
-        <button class="btn-danger" style="padding:13px;font-size:14px;" onclick="deleteEditingEvent();triggerHaptic([100,50,100])">Delete</button>
-        <button class="btn-secondary" style="padding:13px;font-size:14px;" onclick="closeModal();triggerHaptic(20)">Cancel</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" style="flex:1;" onclick="saveEditedEvent(); triggerHaptic([60,20,60])">Save</button>
+        <button class="btn-secondary" style="flex:1;border-color:var(--warning);color:var(--warning);" onclick="undoEditedEvent(); triggerHaptic([50,30,50])">↶ Undo</button>
+        <button class="btn-danger" style="flex:1;" onclick="deleteEditingEvent(); triggerHaptic([100,50,100])">Delete</button>
+        <button class="btn-cancel" style="padding:13px;font-size:14px;" onclick="closeModal();triggerHaptic(20)">Cancel</button>
       </div>
-      <button onclick="shareEvent(allEvents.find(e=>e.id===editingEventId));triggerHaptic(20)" style="width:100%;margin-top:10px;padding:13px;border-radius:12px;border:1.5px solid var(--border-color);background:transparent;color:var(--text-secondary);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-sizing:border-box;">
+      <button class="btn-share" onclick="shareEvent(allEvents.find(e=>e.id===editingEventId));triggerHaptic(20)" style="width:100%;margin-top:8px;padding:13px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:7px;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
         Share Event
       </button>
@@ -728,24 +733,40 @@
       </div>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
-      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 10px;">Event Colors</p>
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
+      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 2px;">Event Colors</p>
+      <div style="display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-color);">
           <span style="font-size:14px;color:var(--text-primary);">Work</span>
-          <div id="swatches-work" style="display:flex;gap:7px;"></div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div id="color-preview-work" style="width:24px;height:24px;border-radius:7px;flex-shrink:0;"></div>
+            <button onclick="toggleColorPicker('work');triggerHaptic(12)" style="font-size:12px;font-weight:600;color:var(--text-secondary);background:var(--bg-light);border:1px solid var(--border-color);padding:5px 12px;border-radius:8px;min-height:auto;cursor:pointer;">Change</button>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div id="swatch-row-work" style="display:none;padding:10px 0;gap:10px;flex-wrap:nowrap;border-bottom:1px solid var(--border-color);"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-color);">
           <span style="font-size:14px;color:var(--text-primary);">Medical / Appt</span>
-          <div id="swatches-health" style="display:flex;gap:7px;"></div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div id="color-preview-health" style="width:24px;height:24px;border-radius:7px;flex-shrink:0;"></div>
+            <button onclick="toggleColorPicker('health');triggerHaptic(12)" style="font-size:12px;font-weight:600;color:var(--text-secondary);background:var(--bg-light);border:1px solid var(--border-color);padding:5px 12px;border-radius:8px;min-height:auto;cursor:pointer;">Change</button>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div id="swatch-row-health" style="display:none;padding:10px 0;gap:10px;flex-wrap:nowrap;border-bottom:1px solid var(--border-color);"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-color);">
           <span style="font-size:14px;color:var(--text-primary);">Personal / Social</span>
-          <div id="swatches-social" style="display:flex;gap:7px;"></div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div id="color-preview-social" style="width:24px;height:24px;border-radius:7px;flex-shrink:0;"></div>
+            <button onclick="toggleColorPicker('social');triggerHaptic(12)" style="font-size:12px;font-weight:600;color:var(--text-secondary);background:var(--bg-light);border:1px solid var(--border-color);padding:5px 12px;border-radius:8px;min-height:auto;cursor:pointer;">Change</button>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div id="swatch-row-social" style="display:none;padding:10px 0;gap:10px;flex-wrap:nowrap;border-bottom:1px solid var(--border-color);"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;">
           <span style="font-size:14px;color:var(--text-primary);">Misc</span>
-          <div id="swatches-other" style="display:flex;gap:7px;"></div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div id="color-preview-other" style="width:24px;height:24px;border-radius:7px;flex-shrink:0;"></div>
+            <button onclick="toggleColorPicker('other');triggerHaptic(12)" style="font-size:12px;font-weight:600;color:var(--text-secondary);background:var(--bg-light);border:1px solid var(--border-color);padding:5px 12px;border-radius:8px;min-height:auto;cursor:pointer;">Change</button>
+          </div>
         </div>
+        <div id="swatch-row-other" style="display:none;padding:10px 0;gap:10px;flex-wrap:nowrap;"></div>
       </div>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
@@ -763,12 +784,14 @@
         <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0;">Data</p>
         <span class="data-chevron" style="font-size:12px;color:var(--text-secondary);transition:transform 0.2s;display:inline-block;">&#x25BE;</span>
       </button>
-      <div id="data-section-body" style="display:none;margin-top:8px;">
-        <button class="btn-secondary" style="width:100%;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">Export .ics</button>
-        <label style="width:100%;margin-top:8px;display:block;">
-          <input type="file" id="ical-import-input" accept=".ics" style="display:none;" onchange="importIcalFile(event); closeSettings()">
-          <span class="btn-secondary" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box;" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">Import .ics</span>
-        </label>
+      <div id="data-section-body" style="display:none;margin-top:10px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="btn-secondary" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">Export .ics</button>
+          <label style="display:contents;">
+            <input type="file" id="ical-import-input" accept=".ics" style="display:none;" onchange="importIcalFile(event); closeSettings()">
+            <button class="btn-secondary" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">Import .ics</button>
+          </label>
+        </div>
       </div>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;" id="account-settings-divider"></div>
@@ -1066,15 +1089,36 @@
     const SWATCH_COLORS = ['#5b8dee','#ff6b6b','#4a9d6f','#b39ddb','#ff9500'];
     function syncCatColorPickers() {
       ['work','health','social','other'].forEach(cat => {
-        const container = document.getElementById(`swatches-${cat}`);
-        if (!container) return;
         const current = (catColorPrefs[cat] || CAT_DEFAULTS[cat] || '').toLowerCase();
+        const preview = document.getElementById(`color-preview-${cat}`);
+        if (preview) preview.style.background = current;
+        const container = document.getElementById(`swatch-row-${cat}`);
+        if (!container) return;
+        container.style.display = 'flex';
         container.innerHTML = SWATCH_COLORS.map(c => {
           const sel = c.toLowerCase() === current;
           return `<button onclick="saveCatColorSwatch('${cat}','${c}');triggerHaptic(12)"
-            style="width:28px;height:28px;border-radius:50%;background:${c};border:${sel?'3px solid var(--text-primary)':'2px solid transparent'};outline:${sel?'2px solid var(--bg-card)':'none'};cursor:pointer;padding:0;flex-shrink:0;"></button>`;
+            style="width:34px;height:34px;border-radius:8px;background:${c};border:${sel?'3px solid var(--text-primary)':'2px solid transparent'};outline:${sel?'2px solid var(--bg-card)':'none'};cursor:pointer;padding:0;flex-shrink:0;transition:transform 0.12s;"></button>`;
         }).join('');
       });
+    }
+    function toggleColorPicker(cat) {
+      const row = document.getElementById(`swatch-row-${cat}`);
+      if (!row) return;
+      const isOpen = row.style.display === 'flex';
+      ['work','health','social','other'].forEach(c => {
+        const r = document.getElementById(`swatch-row-${c}`);
+        if (r) r.style.display = 'none';
+      });
+      if (!isOpen) {
+        const current = (catColorPrefs[cat] || CAT_DEFAULTS[cat] || '').toLowerCase();
+        row.innerHTML = SWATCH_COLORS.map(c => {
+          const sel = c.toLowerCase() === current;
+          return `<button onclick="saveCatColorSwatch('${cat}','${c}');triggerHaptic(12)"
+            style="width:34px;height:34px;border-radius:8px;background:${c};border:${sel?'3px solid var(--text-primary)':'2px solid transparent'};outline:${sel?'2px solid var(--bg-card)':'none'};cursor:pointer;padding:0;flex-shrink:0;"></button>`;
+        }).join('');
+        row.style.display = 'flex';
+      }
     }
     function saveCatColorSwatch(cat, color) {
       saveCatColor(cat, color);
@@ -1082,7 +1126,10 @@
         catColorPrefs['personal'] = color;
         localStorage.setItem('catColorPrefs', JSON.stringify(catColorPrefs));
       }
-      syncCatColorPickers();
+      const row = document.getElementById(`swatch-row-${cat}`);
+      if (row) row.style.display = 'none';
+      const preview = document.getElementById(`color-preview-${cat}`);
+      if (preview) preview.style.background = color;
     }
 
     // ── Share event — sends a one-tap ICS link that opens native calendar ──
@@ -2909,7 +2956,7 @@
             <span style="font-size:19px;line-height:1;">✎</span>
             <span style="font-size:12px;font-weight:700;">Edit</span>
           </button>
-          <button class="btn-secondary" style="flex-direction:column;gap:4px;padding:14px 8px;align-items:center;" onclick="closeEventPeek();shareEvent(allEvents.find(e=>e.id==='${eventId}'));triggerHaptic([20])">
+          <button class="btn-share" style="flex-direction:column;gap:4px;padding:14px 8px;align-items:center;" onclick="closeEventPeek();shareEvent(allEvents.find(e=>e.id==='${eventId}'));triggerHaptic([20])">
             <span style="font-size:19px;line-height:1;">↗</span>
             <span style="font-size:12px;font-weight:700;">Share</span>
           </button>
@@ -3409,7 +3456,7 @@
               </div>
               <div class="ev-card-actions">
                 <button class="ev-action-btn shr" onclick="event.stopPropagation(); shareEvent(allEvents.find(e=>e.id==='${ev.id}')); triggerHaptic([20])">Share</button>
-                <button class="ev-action-btn" style="color:${color};" onclick="event.stopPropagation(); openEditModal('${ev.id}'); triggerHaptic([40])">Edit</button>
+                <button class="ev-action-btn" onclick="event.stopPropagation(); openEditModal('${ev.id}'); triggerHaptic([40])">Edit</button>
                 <button class="ev-action-btn del" onclick="event.stopPropagation(); deleteEvent('${ev.id}'); triggerHaptic([100,50,100])">Delete</button>
               </div>
             </div>
