@@ -15,7 +15,14 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.set('trust proxy', 1); // Railway / reverse proxy: use X-Forwarded-For for real client IP
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('public', {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    }
+  }
+}));
 
 const EST_TIMEZONE = 'America/New_York';
 
