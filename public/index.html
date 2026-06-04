@@ -747,6 +747,27 @@
       </div>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
+      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 10px;">Event Colors</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Work</span>
+          <input type="color" id="color-pick-work" value="#5b8dee" onchange="saveCatColor('work',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Medical / Appointment</span>
+          <input type="color" id="color-pick-health" value="#ff6b6b" onchange="saveCatColor('health',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Personal / Social</span>
+          <input type="color" id="color-pick-social" value="#4a9d6f" onchange="saveCatColor('social',this.value);saveCatColor('personal',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Misc</span>
+          <input type="color" id="color-pick-other" value="#b39ddb" onchange="saveCatColor('other',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
       <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">CarPlay &amp; Calendar Apps</p>
       <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;line-height:1.4;">Subscribe so your events appear in iOS Calendar and on CarPlay.</div>
       <button class="btn-secondary" style="width:100%;" onclick="getCalendarSubURL(); triggerHaptic(20)">Get Subscription Link</button>
