@@ -76,8 +76,12 @@ const EMAIL_FROM = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `Marked <$
 
 async function sendEmail(to, subject, html) {
   if (resendClient) {
-    const { error } = await resendClient.emails.send({ from: EMAIL_FROM, to, subject, html });
-    if (error) throw new Error(error.message);
+    const { data, error } = await resendClient.emails.send({ from: EMAIL_FROM, to, subject, html });
+    if (error) {
+      console.error('[Resend] Send failed — from:', EMAIL_FROM, '| to:', to, '| error:', JSON.stringify(error));
+      throw new Error(error.message || JSON.stringify(error));
+    }
+    console.log('[Resend] Sent OK — id:', data?.id, '| to:', to);
     return;
   }
   if (smtpTransport) {
