@@ -614,10 +614,9 @@
                 <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ends On (optional)</label>
                 <input type="date" id="modal-recurrence-end-input" class="form-select" style="padding:10px 12px;">
               </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn-secondary" style="flex:1;" onclick="saveEditedEvent(); triggerHaptic([60,20,60])">Save</button>
-        <button class="btn-secondary" style="flex:1;border-color:var(--warning);color:var(--warning);" onclick="undoEditedEvent(); triggerHaptic([50,30,50])">↶ Undo</button>
-        <button class="btn-danger" style="flex:1;" onclick="deleteEditingEvent(); triggerHaptic([100,50,100])">Delete</button>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:16px;">
+        <button style="padding:13px;border-radius:12px;border:none;background:var(--primary);color:white;font-size:15px;font-weight:600;cursor:pointer;" onclick="saveEditedEvent();triggerHaptic([60,20,60])">Save</button>
+        <button class="btn-danger" style="padding:13px;font-size:14px;" onclick="deleteEditingEvent();triggerHaptic([100,50,100])">Delete</button>
         <button class="btn-cancel" style="padding:13px;font-size:14px;" onclick="closeModal();triggerHaptic(20)">Cancel</button>
       </div>
       <button class="btn-share" onclick="shareEvent(allEvents.find(e=>e.id===editingEventId));triggerHaptic(20)" style="width:100%;margin-top:8px;padding:13px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:7px;">
@@ -1094,7 +1093,6 @@
         if (preview) preview.style.background = current;
         const container = document.getElementById(`swatch-row-${cat}`);
         if (!container) return;
-        container.style.display = 'flex';
         container.innerHTML = SWATCH_COLORS.map(c => {
           const sel = c.toLowerCase() === current;
           return `<button onclick="saveCatColorSwatch('${cat}','${c}');triggerHaptic(12)"
