@@ -25,6 +25,7 @@
     "@anthropic-ai/sdk": "^0.36.1",
     "@capacitor/android": "^6.0.0",
     "@capacitor/core": "^6.0.0",
+    "@capacitor/haptics": "^6.0.0",
     "@capacitor/ios": "^6.0.0",
     "@capacitor/keyboard": "^6.0.0",
     "@capacitor/push-notifications": "^6.0.0",
@@ -36,6 +37,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^5.8.0",
     "nodemailer": "^8.0.7",
+    "resend": "^6.12.4",
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1",
     "web-push": "^3.6.7"
