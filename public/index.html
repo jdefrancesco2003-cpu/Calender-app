@@ -701,13 +701,48 @@
         <label class="switch"><input type="checkbox" id="notif-toggle" onchange="toggleNotifications()"><span class="slider"></span></label>
       </div>
       <div id="notif-subopts" style="display:none;margin:8px 0 0 4px;padding-left:14px;border-left:2px solid var(--border-color);">
-        <div class="toggle-switch" style="margin-bottom:6px;">
-          <label style="margin:0;font-size:13px;color:var(--text-secondary);">Day of event (6 AM)</label>
+        <div class="toggle-switch" style="margin-bottom:4px;">
+          <label style="margin:0;font-size:13px;color:var(--text-secondary);">Morning reminder</label>
           <label class="switch"><input type="checkbox" id="notif-dayof" onchange="toggleNotifOption()"><span class="slider"></span></label>
         </div>
-        <div class="toggle-switch">
-          <label style="margin:0;font-size:13px;color:var(--text-secondary);">1 hour before</label>
+        <div style="margin-bottom:10px;padding-left:2px;">
+          <label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px;">Reminder time</label>
+          <input type="time" id="notif-morning-time" value="06:00" onchange="toggleNotifOption()" style="font-size:13px;background:var(--bg-light);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;padding:5px 9px;width:100%;box-sizing:border-box;">
+        </div>
+        <div class="toggle-switch" style="margin-bottom:4px;">
+          <label style="margin:0;font-size:13px;color:var(--text-secondary);">Before event</label>
           <label class="switch"><input type="checkbox" id="notif-hourbefore" onchange="toggleNotifOption()"><span class="slider"></span></label>
+        </div>
+        <div style="padding-left:2px;">
+          <label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px;">How far in advance</label>
+          <select id="notif-before-mins" onchange="toggleNotifOption()" style="font-size:13px;background:var(--bg-light);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;padding:5px 9px;width:100%;box-sizing:border-box;">
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60" selected>1 hour</option>
+            <option value="90">1.5 hours</option>
+            <option value="120">2 hours</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
+      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 10px;">Event Colors</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Work</span>
+          <input type="color" id="color-pick-work" value="#5b8dee" onchange="saveCatColor('work',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Medical / Appointment</span>
+          <input type="color" id="color-pick-health" value="#ff6b6b" onchange="saveCatColor('health',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Personal / Social</span>
+          <input type="color" id="color-pick-social" value="#4a9d6f" onchange="saveCatColor('social',this.value);saveCatColor('personal',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;color:var(--text-primary);">Misc</span>
+          <input type="color" id="color-pick-other" value="#b39ddb" onchange="saveCatColor('other',this.value);triggerHaptic(12)" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:var(--bg-light);">
         </div>
       </div>
 
@@ -743,12 +778,17 @@
       </div>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
-      <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">Calendar Data</p>
-      <button class="btn-secondary" style="width:100%;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">Export .ics</button>
-      <label style="width:100%;margin-top:8px;display:block;">
-        <input type="file" id="ical-import-input" accept=".ics" style="display:none;" onchange="importIcalFile(event); closeSettings()">
-        <span class="btn-secondary" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box;" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">Import .ics</span>
-      </label>
+      <button onclick="(function(btn){const body=document.getElementById('data-section-body');const open=body.style.display!=='none';body.style.display=open?'none':'';btn.querySelector('.data-chevron').style.transform=open?'':'rotate(180deg)'})(this)" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:0;cursor:pointer;margin-bottom:0;">
+        <p style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0;">Data</p>
+        <span class="data-chevron" style="font-size:12px;color:var(--text-secondary);transition:transform 0.2s;display:inline-block;">&#x25BE;</span>
+      </button>
+      <div id="data-section-body" style="display:none;margin-top:8px;">
+        <button class="btn-secondary" style="width:100%;" onclick="exportIcal(); closeSettings(); triggerHaptic(20)">Export .ics</button>
+        <label style="width:100%;margin-top:8px;display:block;">
+          <input type="file" id="ical-import-input" accept=".ics" style="display:none;" onchange="importIcalFile(event); closeSettings()">
+          <span class="btn-secondary" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box;" onclick="document.getElementById('ical-import-input').click(); triggerHaptic(20)">Import .ics</span>
+        </label>
+      </div>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;" id="account-settings-divider"></div>
       <p class="settings-section-label" id="account-settings-label" style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;">Account</p>
@@ -992,6 +1032,8 @@
     let notificationsEnabled = false;
     let notifDayOf = true;
     let notifHourBefore = true;
+    let notifMorningTime = '06:00';
+    let notifBeforeMins = 60;
     let pushSubscription = null;
     let lastDeletedEvent = null;
     let lastDeletedEventIndex = -1;
@@ -1037,6 +1079,8 @@
       localStorage.setItem('catColorPrefs', JSON.stringify(catColorPrefs));
       renderCalendar();
       if (isWeekView) renderWeekView();
+      renderEventsPage();
+      renderUpcomingEvents();
     }
     function syncCatColorPickers() {
       ['work','health','social','other'].forEach(cat => {
@@ -1998,13 +2042,21 @@
       if (saved) {
         const s = JSON.parse(saved);
         notificationsEnabled = s.enabled || false;
-        notifDayOf = s.dayOf !== false;      // default true
-        notifHourBefore = s.hourBefore !== false; // default true
+        notifDayOf = s.dayOf !== false;
+        notifHourBefore = s.hourBefore !== false;
+        if (s.morningTime) notifMorningTime = s.morningTime;
+        if (s.beforeMins) notifBeforeMins = s.beforeMins;
       }
       updateSettingsUI();
     }
     function saveNotificationSettings() {
-      localStorage.setItem('notificationSettings', JSON.stringify({ enabled: notificationsEnabled, dayOf: notifDayOf, hourBefore: notifHourBefore }));
+      localStorage.setItem('notificationSettings', JSON.stringify({
+        enabled: notificationsEnabled,
+        dayOf: notifDayOf,
+        hourBefore: notifHourBefore,
+        morningTime: notifMorningTime,
+        beforeMins: notifBeforeMins
+      }));
     }
     function updateSettingsUI() {
       syncCatColorPickers();
@@ -2016,6 +2068,10 @@
       if (dayofEl) dayofEl.checked = notifDayOf;
       const hourEl = document.getElementById('notif-hourbefore');
       if (hourEl) hourEl.checked = notifHourBefore;
+      const morningEl = document.getElementById('notif-morning-time');
+      if (morningEl) morningEl.value = notifMorningTime;
+      const beforeEl = document.getElementById('notif-before-mins');
+      if (beforeEl) beforeEl.value = String(notifBeforeMins);
     }
     function openSettings() {
       document.getElementById('settings-overlay').classList.add('active');
@@ -2037,8 +2093,11 @@
     function toggleNotifOption() {
       notifDayOf = document.getElementById('notif-dayof').checked;
       notifHourBefore = document.getElementById('notif-hourbefore').checked;
+      const morningEl = document.getElementById('notif-morning-time');
+      if (morningEl && morningEl.value) notifMorningTime = morningEl.value;
+      const beforeEl = document.getElementById('notif-before-mins');
+      if (beforeEl) notifBeforeMins = parseInt(beforeEl.value, 10) || 60;
       saveNotificationSettings();
-      // Update server-side push subscription preferences
       if (pushSubscription && authToken) {
         fetch('/api/push/subscribe', {
           method: 'POST',
@@ -2535,12 +2594,16 @@
         eventDate.setHours(h, m, 0, 0);
         const schedule = [];
         if (notifDayOf) {
-          const dayOf = new Date(event.date + 'T06:00:00');
+          const dayOf = new Date(event.date + 'T' + notifMorningTime + ':00');
           schedule.push({ time: dayOf, body: `${event.title} at ${formatTimeEastern(event.time)} today` });
         }
         if (notifHourBefore) {
-          const hourBefore = new Date(eventDate.getTime() - 60 * 60000);
-          schedule.push({ time: hourBefore, body: `${event.title} in 1 hour` });
+          const beforeMs = notifBeforeMins * 60000;
+          const beforeLabel = notifBeforeMins >= 60
+            ? `${notifBeforeMins / 60} hour${notifBeforeMins > 60 ? 's' : ''}`
+            : `${notifBeforeMins} min`;
+          const beforeTime = new Date(eventDate.getTime() - beforeMs);
+          schedule.push({ time: beforeTime, body: `${event.title} in ${beforeLabel}` });
         }
         for (const s of schedule) {
           if (s.time > now) {
