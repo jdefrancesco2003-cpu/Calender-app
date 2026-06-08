@@ -6,7 +6,7 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <meta name="theme-color" content="#1a1a2e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -35,7 +35,7 @@
       --hour-w: 64px;
     }
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--bg-dark);
       color: var(--text-primary);
       padding-top: max(12px, env(safe-area-inset-top));
@@ -50,7 +50,7 @@
 
     /* ── HEADER ── */
     header { padding: 14px 0 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); }
-    h1 { font-size: 26px; font-weight: 800; letter-spacing: -1px; color: var(--text-primary); flex: 1; font-family: 'Inter', sans-serif; }
+    h1 { font-size: 26px; font-weight: 800; letter-spacing: -1px; color: var(--text-primary); flex: 1; font-family: 'Nunito', sans-serif; }
     h1 span { color: var(--primary); }
     .header-right { display: flex; align-items: center; gap: 10px; }
     .weather-widget { display: flex; align-items: center; gap: 5px; padding: 6px 10px; background: rgba(74,157,111,0.12); border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid rgba(74,157,111,0.22); animation: fadeIn 0.4s ease; }
@@ -573,27 +573,21 @@
       <div class="modal-handle"></div>
       <h3 id="modal-title">Edit Event</h3>
       <div class="input-group"><label>Title</label><input type="text" id="modal-title-input" placeholder="Event name" maxlength="100"></div>
-      <div class="input-group"><label>Date Range</label>
-        <div class="time-inputs">
-          <div><label style="font-size:10px;color:var(--text-secondary);">Start</label><input type="date" id="modal-date-input"></div>
-          <div><label style="font-size:10px;color:var(--text-secondary);">End</label><input type="date" id="modal-end-date-input"></div>
-        </div>
-      </div>
-      <div class="input-group"><label>Time</label>
-        <div class="time-inputs">
-          <div><label style="font-size:10px;color:var(--text-secondary);">Start</label><input type="time" id="modal-time-input"></div>
-          <div><label style="font-size:10px;color:var(--text-secondary);">End</label><input type="time" id="modal-end-time-input"></div>
-        </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="input-group"><label>Start Date</label><input type="date" id="modal-date-input"></div>
+        <div class="input-group"><label>End Date</label><input type="date" id="modal-end-date-input"></div>
+        <div class="input-group"><label>Start Time</label><input type="time" id="modal-time-input"></div>
+        <div class="input-group"><label>End Time</label><input type="time" id="modal-end-time-input"></div>
       </div>
       <div class="input-group"><label>Notes</label><textarea id="modal-desc-input" placeholder="Add details..." maxlength="500"></textarea></div>
       <div style="margin-top:8px;">
         <label style="font-size:13px;color:var(--text-secondary);">Category</label>
         <div class="cat-select" id="edit-cat-select">
           <button type="button" class="cat-btn cat-personal" data-cat="personal" onclick="selectCategory('edit','personal')" title="Personal"></button>
-          <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('edit','work')" title="Work"></button>
           <button type="button" class="cat-btn cat-health" data-cat="health" onclick="selectCategory('edit','health')" title="Health"></button>
-          <button type="button" class="cat-btn cat-social" data-cat="social" onclick="selectCategory('edit','social')" title="Social"></button>
+          <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('edit','work')" title="Work"></button>
           <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('edit','other')" title="Other"></button>
+          <button type="button" class="cat-btn cat-social" data-cat="social" onclick="selectCategory('edit','social')" title="Social"></button>
         </div>
       </div>
       <div class="toggle-switch">
@@ -840,10 +834,10 @@
           <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:6px;">Category</label>
           <div class="cat-select" id="add-cat-select">
             <button type="button" class="cat-btn cat-personal" data-cat="personal" onclick="selectCategory('add','personal')" title="Personal"></button>
-            <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('add','work')" title="Work"></button>
             <button type="button" class="cat-btn cat-health" data-cat="health" onclick="selectCategory('add','health')" title="Health"></button>
-            <button type="button" class="cat-btn cat-social" data-cat="social" onclick="selectCategory('add','social')" title="Social"></button>
+            <button type="button" class="cat-btn cat-work selected" data-cat="work" onclick="selectCategory('add','work')" title="Work"></button>
             <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('add','other')" title="Other"></button>
+            <button type="button" class="cat-btn cat-social" data-cat="social" onclick="selectCategory('add','social')" title="Social"></button>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding-bottom:2px;">
@@ -1558,8 +1552,13 @@
           el.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
           if (dy > 90) {
             triggerHaptic(20);
+            if (opts.onStartDismiss) opts.onStartDismiss();
             el.style.transform = `translateY(110%)`;
-            setTimeout(() => { el.style.transition = ''; el.style.transform = ''; onDismiss(); }, 280);
+            setTimeout(() => {
+              onDismiss();
+              el.style.transition = '';
+              el.style.transform = '';
+            }, 310);
           } else {
             el.style.transform = '';
             setTimeout(() => { el.style.transition = ''; }, 300);
@@ -1571,7 +1570,17 @@
       document.querySelectorAll('.modal-overlay').forEach(overlay => {
         const modal = overlay.querySelector('.modal');
         if (!modal) return;
-        makeSwipeHandler(modal, () => overlay.classList.remove('active', 'closing'), { scrollEl: modal });
+        makeSwipeHandler(
+          modal,
+          () => { overlay.style.transition = ''; overlay.style.opacity = ''; overlay.classList.remove('active', 'closing'); },
+          {
+            scrollEl: modal,
+            onStartDismiss: () => {
+              overlay.style.transition = 'opacity 0.31s ease';
+              overlay.style.opacity = '0';
+            }
+          }
+        );
       });
 
       // Day sheet (top-zone + scroll-top detection)
