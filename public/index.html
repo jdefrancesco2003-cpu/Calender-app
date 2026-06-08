@@ -1084,6 +1084,12 @@
       if (isWeekView) renderWeekView();
       renderEventsPage();
       renderUpcomingEvents();
+      syncCatButtons();
+    }
+    function syncCatButtons() {
+      document.querySelectorAll('.cat-btn[data-cat]').forEach(btn => {
+        btn.style.background = getCategoryColor(btn.dataset.cat);
+      });
     }
     const SWATCH_COLORS = ['#5b8dee','#ff6b6b','#4a9d6f','#b39ddb','#ff9500'];
     function syncCatColorPickers() {
@@ -1783,6 +1789,7 @@
       const dateEl = document.getElementById('date-input');
       if (dateEl && !dateEl.value) dateEl.value = selectedDate || getLocalDateString(new Date());
       document.getElementById('add-event-overlay').classList.add('active');
+      syncCatButtons();
       setTimeout(() => document.getElementById('event-input').focus(), 150);
     }
     function openAddModalForDate(dateStr) {
@@ -2560,6 +2567,7 @@
       if (recEnd) recEnd.value = event.recurrenceEnd || '';
       // Set category
       editEventCategory = event.category || 'work';
+      syncCatButtons();
       selectCategory('edit', editEventCategory);
       toggleAllDayModal();
       document.getElementById('modal-overlay').classList.add('active');
