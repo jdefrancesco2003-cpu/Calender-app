@@ -50,7 +50,7 @@
 
     /* ── HEADER ── */
     header { padding: 14px 0 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); }
-    h1 { font-size: 26px; font-weight: 800; letter-spacing: -1px; color: var(--text-primary); flex: 1; font-family: 'Nunito', sans-serif; }
+    h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary); flex: 1; font-family: 'Nunito', sans-serif; }
     h1 span { color: var(--primary); }
     .header-right { display: flex; align-items: center; gap: 10px; }
     .weather-widget { display: flex; align-items: center; gap: 5px; padding: 6px 10px; background: rgba(74,157,111,0.12); border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid rgba(74,157,111,0.22); animation: fadeIn 0.4s ease; }
@@ -97,8 +97,8 @@
     .section-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
     .section-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: -6px; }
     .input-group { display: flex; flex-direction: column; gap: 6px; }
-    .input-group label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.6px; }
-    input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--bg-light); color: var(--text-primary); appearance: none; min-height: 44px; transition: border-color 0.2s, box-shadow 0.2s; }
+    .input-group label { font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.2px; }
+    input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--bg-light); color: var(--text-primary); appearance: none; min-height: 44px; transition: border-color 0.2s, box-shadow 0.2s; color-scheme: dark; }
     input::placeholder, textarea::placeholder { color: var(--text-secondary); }
     input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,157,111,0.12); transition: border-color 0.15s, box-shadow 0.15s; }
     textarea { resize: none; min-height: 90px; font-size: 15px; }
@@ -174,7 +174,7 @@
     .auth-error.visible { display: block; }
     .user-chip { font-size: 11px; color: var(--text-secondary); background: var(--bg-light); border-radius: 20px; padding: 3px 10px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .recurrence-badge { font-size: 9px; color: var(--primary); font-weight: 700; margin-left: 4px; opacity: 0.8; }
-    select.form-select { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--text-primary); width: 100%; appearance: none; -webkit-appearance: none; outline: none; }
+    select.form-select { background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--text-primary); width: 100%; appearance: none; -webkit-appearance: none; outline: none; font-family: inherit; color-scheme: dark; }
     select.form-select:focus { border-color: var(--primary); }
     .day-dot.holiday { background: var(--warning); }
     .week-holiday-pill {
@@ -2035,6 +2035,12 @@
       localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
       lastSaveTimestamp = Date.now();
     }
+    function renderAll() {
+      renderCalendar();
+      renderUpcomingEvents();
+      renderEventsPage();
+      if (isWeekView) renderWeekView();
+    }
 
     // ── Load events (with fetch timeout + auth + decryption) ──
     async function loadEvents() {
@@ -2328,10 +2334,7 @@
             document.getElementById('event-input').value = '';
             clearAddForm();
             closeAddModal();
-            renderCalendar();
-            renderUpcomingEvents();
-            renderEventsPage();
-            if (isWeekView) renderWeekView();
+            renderAll();
             scheduleNotifications();
             triggerHaptic([60, 20, 60]);
           };
@@ -2441,8 +2444,7 @@
         showOverlapConfirmation(title, () => {
           allEvents.push(newEvent); saveEvents(); apiSaveEvent(newEvent);
           showStatus(`Marked — ${title}`, 'success'); showSyncIndicator();
-          clearAddForm(); closeAddModal(); renderCalendar(); renderUpcomingEvents(); renderEventsPage();
-          if (isWeekView) renderWeekView(); scheduleNotifications();
+          clearAddForm(); closeAddModal(); renderAll(); scheduleNotifications();
         });
         return;
       }
@@ -2453,10 +2455,7 @@
       showSyncIndicator();
       clearAddForm();
       closeAddModal();
-      renderCalendar();
-      renderUpcomingEvents();
-      renderEventsPage();
-      if (isWeekView) renderWeekView();
+      renderAll();
       scheduleNotifications();
     }
 
@@ -2508,10 +2507,7 @@
       allEvents = allEvents.filter(e => e.id !== id);
       saveEvents();
       showUndoToast(`Deleted "${eventToDelete.title}"`);
-      renderCalendar();
-      renderUpcomingEvents();
-      renderEventsPage();
-      if (isWeekView) renderWeekView();
+      renderAll();
       scheduleNotifications();
       // Schedule actual server delete after undo window expires
       if (pendingDeleteTimeout) clearTimeout(pendingDeleteTimeout);
@@ -2594,8 +2590,7 @@
       showStatus(`✓ ${lastEditedEvent.title} restored`, 'success');
       showSyncIndicator();
       closeModal();
-      renderCalendar(); renderUpcomingEvents(); renderEventsPage();
-      if (isWeekView) renderWeekView();
+      renderAll();
       scheduleNotifications();
     }
     async function saveEditedEvent() {
@@ -2615,8 +2610,7 @@
           const idx = allEvents.findIndex(e => e.id === editingEventId);
           if (idx >= 0) allEvents[idx] = { ...allEvents[idx], ...updatedEvent };
           saveEvents(); apiUpdateEvent(editingEventId, allEvents.find(e=>e.id===editingEventId)||updatedEvent); showStatus(`Marked — ${title}`, 'success'); showSyncIndicator();
-          closeModal(); renderCalendar(); renderUpcomingEvents(); renderEventsPage();
-          if (isWeekView) renderWeekView(); scheduleNotifications();
+          closeModal(); renderAll(); scheduleNotifications();
         });
         return;
       }
@@ -2627,8 +2621,7 @@
       showStatus(`Marked — ${title}`, 'success');
       showSyncIndicator();
       closeModal();
-      renderCalendar(); renderUpcomingEvents(); renderEventsPage();
-      if (isWeekView) renderWeekView();
+      renderAll();
       scheduleNotifications();
     }
     async function deleteEditingEvent() {
