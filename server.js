@@ -8,6 +8,7 @@ const { randomBytes, randomInt } = require('crypto');
 const webpush = require('web-push');
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
+const chrono = require('chrono-node');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -159,9 +160,101 @@ function makeRateLimiter(max, windowMs) {
     return true;
   };
 }
-const checkParseRateLimit = makeRateLimiter(20, 60000);   // 20/min for parse
+const checkParseRateLimit = makeRateLimiter(20, 60000);   // 20/min burst per IP
 const checkAuthRateLimit  = makeRateLimiter(5,  900000);  // 5 attempts/15 min for auth
 const checkShareRateLimit = makeRateLimiter(120, 60000);  // 120/min for public share endpoints
+
+// ── Per-user daily AI parse quota ──
+// Local parses are free/unlimited. AI fallback: 30/day signed-in, 5/day guest.
+const parseQuotas = new Map();
+setInterval(() => {
+  const today = getESTDateString();
+  for (const [k, v] of parseQuotas) if (v.date !== today) parseQuotas.delete(k);
+}, 3600000);
+function checkParseQuota(key, isGuest) {
+  const limit = isGuest ? 5 : 30;
+  const today = getESTDateString();
+  const entry = parseQuotas.get(key);
+  if (!entry || entry.date !== today) { parseQuotas.set(key, { count: 1, date: today }); return true; }
+  if (entry.count >= limit) return false;
+  entry.count++;
+  return true;
+}
+
+// ── Parse result cache (6-hour TTL, max 500 entries) ──
+const parseCache = new Map();
+function getCachedParse(text, today) {
+  const key = `${text.toLowerCase().trim()}|${today}`;
+  const hit = parseCache.get(key);
+  if (hit && Date.now() < hit.expiresAt) return hit.result;
+  parseCache.delete(key);
+  return null;
+}
+function setCachedParse(text, today, result) {
+  if (parseCache.size >= 500) parseCache.delete(parseCache.keys().next().value);
+  parseCache.set(`${text.toLowerCase().trim()}|${today}`, { result, expiresAt: Date.now() + 6 * 3600000 });
+}
+
+// ── Local natural-language parser (no API cost) ──
+const CAT_KEYWORDS = {
+  health: /\b(doctor|dr\.?|dentist|dental|medical|appointment|appt|therapy|therapist|physio|gym|workout|exercise|pharmacy|hospital|clinic|checkup|check.?up|surgery|physical|prescription|optometrist|eye exam|blood)\b/i,
+  work:   /\b(meeting|call|conference|standup|stand.?up|sprint|presentation|interview|review|deadline|client|office|team|zoom|teams|slack|1:?1|one.?on.?one|sync|demo|training|webinar|all.?hands|project)\b/i,
+  social: /\b(lunch|dinner|breakfast|brunch|party|birthday|wedding|hangout|date|concert|show|game|trip|travel|vacation|flight|hotel|coffee|drinks|bar|restaurant|movie|movies|festival|family|friends?)\b/i,
+};
+function detectCategory(text) {
+  if (CAT_KEYWORDS.health.test(text)) return 'health';
+  if (CAT_KEYWORDS.work.test(text))   return 'work';
+  if (CAT_KEYWORDS.social.test(text)) return 'social';
+  return 'work';
+}
+function detectRecurrence(text) {
+  const t = text.toLowerCase();
+  if (/every\s+day|daily/.test(t))                                                        return 'daily';
+  if (/every\s+week|weekly|every\s+(mon|tue|wed|thu|fri|sat|sun)/.test(t))               return 'weekly';
+  if (/every\s+month|monthly/.test(t))                                                    return 'monthly';
+  if (/every\s+year|yearly|annually/.test(t))                                             return 'yearly';
+  return 'none';
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+function parseEventLocal(text, todayStr, defaultDateStr) {
+  const refDate = new Date(`${todayStr}T12:00:00`);
+  const results = chrono.parse(text, refDate, { forwardDate: true });
+  if (!results || results.length === 0) return { confident: false };
+
+  const r = results[0];
+  const sd = r.start.date();
+  const dateStr = `${sd.getFullYear()}-${pad2(sd.getMonth()+1)}-${pad2(sd.getDate())}`;
+
+  let endDateStr = null;
+  if (r.end) {
+    const ed = r.end.date();
+    const eds = `${ed.getFullYear()}-${pad2(ed.getMonth()+1)}-${pad2(ed.getDate())}`;
+    if (eds !== dateStr) endDateStr = eds;
+  }
+
+  const hasTime = r.start.isCertain('hour');
+  let timeStr = null, endTimeStr = null;
+  if (hasTime) {
+    timeStr = `${pad2(sd.getHours())}:${pad2(sd.getMinutes())}`;
+    if (r.end && r.end.isCertain('hour')) {
+      const et = r.end.date();
+      endTimeStr = `${pad2(et.getHours())}:${pad2(et.getMinutes())}`;
+    } else {
+      const endH = sd.getHours() + 1;
+      endTimeStr = endH >= 24 ? '23:59' : `${pad2(endH)}:${pad2(sd.getMinutes())}`;
+    }
+  }
+
+  // Title = input minus the matched date/time text
+  const titleRaw = (text.slice(0, r.index) + ' ' + text.slice(r.index + r.text.length)).replace(/\s+/g, ' ').trim();
+  const title = toTitleCase(titleRaw || text.trim());
+  const recurrence = detectRecurrence(text);
+
+  return {
+    confident: true,
+    result: { title, date: dateStr, endDate: endDateStr, time: timeStr, endTimeStr, endTime: endTimeStr, isAllDay: !hasTime, category: detectCategory(text), recurrence, recurrenceEnd: null, isRecurring: recurrence !== 'none' }
+  };
+}
 
 // ── Auth middleware ──
 function requireAuth(req, res, next) {
@@ -304,10 +397,12 @@ Extract:
 4. time: Start time in HH:mm 24-hour format, or null
 5. endTime: End time in HH:mm format, or null
 6. isAllDay: true if no specific times mentioned, false otherwise
-7. category: one of "work", "health", or "social"
+7. category: one of "work", "health", "social", "personal", or "other"
    - "work": meetings, calls, deadlines, tasks, office, business, job, interview, conference
    - "health": doctor, dentist, medical, appointment, therapy, gym, workout, pharmacy, hospital, checkup
-   - "social": dinner, lunch, breakfast, hangout, party, travel, trip, vacation, friend, family, date, concert, anything else
+   - "social": dinner, lunch, breakfast, hangout, party, travel, vacation, friend, family, date, concert
+   - "personal": personal errands, bills, home tasks, hobbies, self-care
+   - "other": anything that doesn't fit the above
 
 Date rules (TODAY = ${today}, DEFAULT DATE = ${defaultDate}):
 - If no date is mentioned → use ${defaultDate}
@@ -352,7 +447,7 @@ Return ONLY this JSON:
   }
 
   if (!parsed.title || !parsed.date) throw new Error('Missing title or date');
-  if (!['work','health','social'].includes(parsed.category)) parsed.category = 'social';
+  if (!['work','health','social','personal','other'].includes(parsed.category)) parsed.category = 'work';
   parsed.title = toTitleCase(parsed.title.trim());
   if (!DATE_RE.test(parsed.date)) throw new Error(`Invalid date format: ${parsed.date}`);
   if (parsed.endDate && !DATE_RE.test(parsed.endDate)) parsed.endDate = null;
@@ -600,19 +695,51 @@ app.post('/api/migrate/claim-legacy-events', requireAuth, async (req, res) => {
   }
 });
 
-// ── Parse endpoint (parse only — client saves after confirmation) ──
+// ── Parse endpoint (local-first → cache → AI fallback) ──
 app.post('/api/events/parse', requireAuth, async (req, res) => {
   const ip = req.ip || 'unknown';
   if (!checkParseRateLimit(ip)) {
-    return res.status(429).json({ error: 'Too many parse requests. Please wait a minute.' });
+    return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
   }
 
   const { text, currentESTDate, currentESTTime, contextDate } = req.body;
   if (!text) return res.status(400).json({ error: 'Event text is required' });
 
+  const today = currentESTDate || getESTDateString();
+  const defaultDate = contextDate || today;
+
+  // 1. Local parser — free, instant, no API cost
   try {
-    const parsed = await parseEvent(text, currentESTDate, currentESTTime, contextDate);
-    // Return parsed data only — client is responsible for encrypting and saving
+    const local = parseEventLocal(text, today, defaultDate);
+    if (local.confident) {
+      console.log(`📅 Local: "${text}" → ${local.result.title} on ${local.result.date}`);
+      return res.json(local.result);
+    }
+  } catch (e) { /* fall through to AI */ }
+
+  // 2. Cache check
+  const cached = getCachedParse(text, today);
+  if (cached) {
+    console.log(`💾 Cache: "${text}"`);
+    return res.json(cached);
+  }
+
+  // 3. Per-user AI quota
+  const userId = req.user?.userId;
+  const isGuest = !userId || userId === 'dev-user';
+  const quotaKey = isGuest ? `ip:${ip}` : `user:${userId}`;
+  if (!checkParseQuota(quotaKey, isGuest)) {
+    return res.status(429).json({
+      error: isGuest
+        ? 'Daily AI limit reached (5/day for guests). Sign in for 30/day.'
+        : 'Daily AI limit reached (30/day). Resets at midnight.'
+    });
+  }
+
+  // 4. AI fallback
+  try {
+    const parsed = await parseEvent(text, today, currentESTTime, contextDate);
+    setCachedParse(text, today, parsed);
     res.json(parsed);
   } catch (err) {
     console.error('✗ Parse error:', err.message);
