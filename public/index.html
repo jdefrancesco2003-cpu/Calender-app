@@ -223,8 +223,10 @@
     .week-day-date-text { font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1; letter-spacing: -0.5px; }
     .week-day-name-text.today, .week-day-date-text.today { color: var(--primary); }
     /* All-day pills in label column */
-    .week-allday-pill { font-size: 8px; font-weight: 700; color: white; border-radius: 3px; padding: 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 76px; cursor: pointer; margin-top: 1px; }
-    .week-allday-pill:active { opacity: 0.7; }
+    .week-allday-dot { width: 6px; height: 6px; border-radius: 50%; cursor: pointer; flex-shrink: 0; }
+    .week-allday-dot:active { opacity: 0.6; }
+    .week-allday-stripe { position: absolute; left: 0; right: 0; height: 4px; z-index: 2; cursor: pointer; opacity: 0.85; transition: opacity 0.1s; }
+    .week-allday-stripe:active { opacity: 0.5; }
     /* Scrollable time area */
     .week-scroll-area { flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-gutter: stable; display: flex; align-items: stretch; }
     .week-scroll-inner { flex: 0 0 auto; min-width: max-content; display: flex; flex-direction: column; height: 100%; }
@@ -3130,24 +3132,27 @@
         const dateStr = getLocalDateString(date);
         const isToday = dateStr === todayStr;
 
-        // All-day / multi-day events → label column pills
+        // All-day / multi-day events → dots in label + stripes in scroll area
         const dayEvs = getEventsForDate(dateStr);
         const allDayEvs = dayEvs.filter(e => e.isAllDay || (e.endDate && !e.time));
-        const pillsHtml = allDayEvs.map(e => {
-          const pillColor = getCategoryColor(e.category || 'work');
-          return `<div class="week-allday-pill" style="background:${pillColor}cc;" onclick="openEditModal('${e.id}');triggerHaptic([40])" title="${escHtml(e.title)}">${escHtml(e.title)}</div>`;
+        const dotsHtml = allDayEvs.map(e => {
+          const dc = getCategoryColor(e.category || 'work');
+          return `<div class="week-allday-dot" style="background:${dc};" onclick="openEditModal('${e.id}');triggerHaptic([40])" title="${escHtml(e.title)}"></div>`;
+        }).join('');
+        const stripesHtml = allDayEvs.map((e, idx) => {
+          const sc = getCategoryColor(e.category || 'work');
+          return `<div class="week-allday-stripe" style="top:${idx * 4}px;background:${sc};" onclick="openEditModal('${e.id}');triggerHaptic([40])" title="${escHtml(e.title)}"></div>`;
         }).join('');
 
         const dayHolidays = holidays.filter(h => h.date === dateStr);
-        const holidayPillsHtml = dayHolidays.map(h =>
-          `<div class="week-holiday-pill" title="${escHtml(h.title)}">${escHtml(h.title)}</div>`
+        const holidayDotsHtml = dayHolidays.map(h =>
+          `<div class="week-allday-dot" style="background:var(--warning);border-radius:2px;" title="${escHtml(h.title)}"></div>`
         ).join('');
 
         labelsHtml += `<div class="week-day-label ${isToday ? 'today' : ''}">
           <div class="week-day-name-text ${isToday ? 'today' : ''}">${dayNames[date.getDay()]}</div>
           <div class="week-day-date-text ${isToday ? 'today' : ''}">${date.getDate()}</div>
-          ${pillsHtml}
-          ${holidayPillsHtml}
+          ${dotsHtml || holidayDotsHtml ? `<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:4px;">${dotsHtml}${holidayDotsHtml}</div>` : ''}
         </div>`;
 
         // Timed events
@@ -3162,7 +3167,8 @@
           slotsHtml += `<div class="week-hour-slot"></div>`;
         }
 
-        // Build event bars
+        // Build event bars (offset down by all-day stripes)
+        const allDayOffset = allDayEvs.length * 4;
         let barsHtml = '';
         overlapGroups.forEach(group => {
           // Font scales down as bars get narrower
@@ -3174,7 +3180,7 @@
             const endMins = ev.endTime ? timeToMins(ev.endTime) : startMins + 30;
             const leftPx = (startMins / 60) * 64;           // var(--hour-w) = 64px
             const widthPx = Math.max(((endMins - startMins) / 60) * 64, 28);
-            const topPx = 4 + idx * (barH + 2);
+            const topPx = allDayOffset + 4 + idx * (barH + 2);
             const timeLabel = formatEventTime(ev.time, ev.endTime);
             const barColor = getCategoryColor(ev.category || 'work');
             barsHtml += `<div class="week-event-bar"
@@ -3188,8 +3194,8 @@
           });
         });
 
-        // Add current-hour highlight slot (updated separately)
         rowsHtml += `<div class="week-day-row ${isToday ? 'today' : ''}" style="position:relative;">
+          ${stripesHtml}
           ${slotsHtml}
           ${barsHtml}
         </div>`;
