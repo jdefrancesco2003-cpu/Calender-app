@@ -223,7 +223,7 @@
     .week-day-date-text { font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1; letter-spacing: -0.5px; }
     .week-day-name-text.today, .week-day-date-text.today { color: var(--primary); }
     /* All-day pills in label column */
-    .week-allday-pill { font-size: 8px; font-weight: 700; color: white; background: rgba(74,157,111,0.7); border-radius: 3px; padding: 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 76px; cursor: pointer; margin-top: 1px; }
+    .week-allday-pill { font-size: 8px; font-weight: 700; color: white; border-radius: 3px; padding: 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 76px; cursor: pointer; margin-top: 1px; }
     .week-allday-pill:active { opacity: 0.7; }
     /* Scrollable time area */
     .week-scroll-area { flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-gutter: stable; display: flex; align-items: stretch; }
@@ -2918,7 +2918,7 @@
         : items.map(ev => {
             if (ev.isHoliday) return `<div style="padding:10px 12px;background:rgba(255,149,0,0.1);border-radius:10px;margin-bottom:6px;font-size:14px;color:var(--warning);font-weight:500;border-left:3px solid var(--warning);">${escHtml(ev.title)}</div>`;
             const color = getCategoryColor(ev.category || 'work');
-            const timeStr = ev.isAllDay ? 'All day' : (ev.time ? formatTimeEastern(ev.time) : '');
+            const timeStr = ev.isAllDay ? 'All day' : formatEventTime(ev.time, ev.endTime);
             return `<div onclick="closeDayModal();openEditModal('${ev.id}');triggerHaptic([40])" style="padding:10px 12px;background:var(--bg-dark);border-radius:10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;border-left:3px solid ${color};">
               <div style="flex:1;min-width:0;">
                 <div style="font-size:14px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(ev.title)}</div>
@@ -3133,9 +3133,10 @@
         // All-day / multi-day events → label column pills
         const dayEvs = getEventsForDate(dateStr);
         const allDayEvs = dayEvs.filter(e => e.isAllDay || (e.endDate && !e.time));
-        const pillsHtml = allDayEvs.map(e =>
-          `<div class="week-allday-pill" onclick="openEditModal('${e.id}');triggerHaptic([40])" title="${escHtml(e.title)}">${escHtml(e.title)}</div>`
-        ).join('');
+        const pillsHtml = allDayEvs.map(e => {
+          const pillColor = getCategoryColor(e.category || 'work');
+          return `<div class="week-allday-pill" style="background:${pillColor}cc;" onclick="openEditModal('${e.id}');triggerHaptic([40])" title="${escHtml(e.title)}">${escHtml(e.title)}</div>`;
+        }).join('');
 
         const dayHolidays = holidays.filter(h => h.date === dateStr);
         const holidayPillsHtml = dayHolidays.map(h =>
