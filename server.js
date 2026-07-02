@@ -216,43 +216,88 @@ function detectRecurrence(text) {
   return 'none';
 }
 function pad2(n) { return String(n).padStart(2, '0'); }
+// Disambiguate bare business-hours ranges like "9-5pm" → "9am-5pm" so chrono
+// doesn't read the start as pm and wrap the end past midnight.
+function normalizeBareRange(text) {
+  return text.replace(
+    /\b(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i,
+    (m, h1, m1, h2, m2, mer) => {
+      const H1 = parseInt(h1, 10), H2 = parseInt(h2, 10);
+      const lower = mer.toLowerCase();
+      // e.g. "9-5pm": first hour greater than second → first is am
+      const firstMer = (lower === 'pm' && H1 > H2 && H1 !== 12) ? 'am' : lower;
+      const t1 = h1 + (m1 ? ':' + m1 : '') + firstMer;
+      const t2 = h2 + (m2 ? ':' + m2 : '') + lower;
+      return t1 + '-' + t2;
+    }
+  );
+}
+function ymd(d) { return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function hhmm(d) { return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+function hasDayComponent(comp) {
+  return comp.isCertain('day') || comp.isCertain('weekday') || comp.isCertain('month');
+}
 function parseEventLocal(text, todayStr, defaultDateStr) {
-  const refDate = new Date(`${todayStr}T12:00:00`);
-  const results = chrono.parse(text, refDate, { forwardDate: true });
+  // Anchor to the day the user is looking at, so a bare time ("2pm") lands
+  // on the selected day rather than today.
+  const baseStr = defaultDateStr || todayStr;
+  const refDate = new Date(`${baseStr}T12:00:00`);
+  const ntext = normalizeBareRange(text);
+  const results = chrono.parse(ntext, refDate, { forwardDate: true });
   if (!results || results.length === 0) return { confident: false };
 
-  const r = results[0];
-  const sd = r.start.date();
-  const dateStr = `${sd.getFullYear()}-${pad2(sd.getMonth()+1)}-${pad2(sd.getDate())}`;
+  let dateStr = null, endDateStr = null, timeStr = null, endTimeStr = null;
+  const spans = [];
 
-  let endDateStr = null;
-  if (r.end) {
-    const ed = r.end.date();
-    const eds = `${ed.getFullYear()}-${pad2(ed.getMonth()+1)}-${pad2(ed.getDate())}`;
-    if (eds !== dateStr) endDateStr = eds;
-  }
+  for (const r of results) {
+    spans.push([r.index, r.index + r.text.length]);
+    const s = r.start, sd = s.date();
 
-  const hasTime = r.start.isCertain('hour');
-  let timeStr = null, endTimeStr = null;
-  if (hasTime) {
-    timeStr = `${pad2(sd.getHours())}:${pad2(sd.getMinutes())}`;
-    if (r.end && r.end.isCertain('hour')) {
-      const et = r.end.date();
-      endTimeStr = `${pad2(et.getHours())}:${pad2(et.getMinutes())}`;
-    } else {
-      const endH = sd.getHours() + 1;
-      endTimeStr = endH >= 24 ? '23:59' : `${pad2(endH)}:${pad2(sd.getMinutes())}`;
+    // First result carrying an explicit day/weekday/month sets the date
+    if (!dateStr && hasDayComponent(s)) {
+      dateStr = ymd(sd);
+      if (r.end) {
+        const eds = ymd(r.end.date());
+        if (eds !== dateStr) endDateStr = eds;
+      }
+    }
+    // First result carrying an explicit hour sets the time
+    if (!timeStr && s.isCertain('hour')) {
+      timeStr = hhmm(sd);
+      if (r.end && r.end.isCertain('hour')) endTimeStr = hhmm(r.end.date());
     }
   }
 
-  // Title = input minus the matched date/time text
-  const titleRaw = (text.slice(0, r.index) + ' ' + text.slice(r.index + r.text.length)).replace(/\s+/g, ' ').trim();
-  const title = toTitleCase(titleRaw || text.trim());
-  const recurrence = detectRecurrence(text);
+  // Nothing concrete (no day and no time) → let the AI handle vague input
+  if (!dateStr && !timeStr) return { confident: false };
 
+  // Bare time with no explicit day → anchor to the selected/default day
+  if (!dateStr) dateStr = baseStr;
+
+  // Default a 1-hour duration when only a start time was given
+  if (timeStr && !endTimeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    const eh = h + 1;
+    endTimeStr = eh >= 24 ? '23:59' : `${pad2(eh)}:${pad2(m)}`;
+  }
+
+  // Title = input minus every matched date/time span, with dangling
+  // connector words trimmed off the ends.
+  let title = ntext;
+  spans.sort((a, b) => b[0] - a[0]).forEach(([a, b]) => {
+    title = title.slice(0, a) + ' ' + title.slice(b);
+  });
+  title = title.replace(/\s+/g, ' ').trim()
+    .replace(/^(on|at|from|the|this|next|by|@)\s+/i, '')
+    .replace(/\s+(on|at|from|by|@)$/i, '')
+    .trim();
+  title = toTitleCase(title || text.trim());
+
+  const hasTime = !!timeStr;
+  const recurrence = detectRecurrence(text);
   return {
     confident: true,
-    result: { title, date: dateStr, endDate: endDateStr, time: timeStr, endTimeStr, endTime: endTimeStr, isAllDay: !hasTime, category: detectCategory(text), recurrence, recurrenceEnd: null, isRecurring: recurrence !== 'none' }
+    result: { title, date: dateStr, endDate: endDateStr, time: timeStr, endTime: endTimeStr, isAllDay: !hasTime, category: detectCategory(text), recurrence, recurrenceEnd: null, isRecurring: recurrence !== 'none' }
   };
 }
 
