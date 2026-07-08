@@ -2082,6 +2082,19 @@
             return e;
           }).filter(Boolean);
         }
+        // Any events still encrypted (no key loaded yet) can't be rendered —
+        // their time/title/isAllDay live inside the blob. Recover the full
+        // plaintext copy we cached locally so the calendar still shows them.
+        if (loaded.some(e => e.encryptedData)) {
+          const localById = {};
+          try {
+            JSON.parse(localStorage.getItem('calendarEvents') || '[]')
+              .forEach(e => { localById[e.id] = e; });
+          } catch {}
+          loaded = loaded
+            .map(e => (e.encryptedData && localById[e.id]) ? localById[e.id] : e)
+            .filter(e => !e.encryptedData);
+        }
         loadArchive();
         loaded = loaded.filter(e => !archivedIds.has(e.id));
         // One-time migration: capitalize all titles
@@ -2867,14 +2880,14 @@
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const startDow = firstDay.getDay();
       const today = new Date(); today.setHours(0,0,0,0);
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = getLocalDateString(today);
       let html = '';
       ['S','M','T','W','T','F','S'].forEach(d => { html += `<div class="day-header">${d}</div>`; });
       const prevMonthDays = new Date(year, month, 0).getDate();
       for (let i = startDow - 1; i >= 0; i--) html += `<div class="day-cell other-month"><div class="day-number">${prevMonthDays - i}</div></div>`;
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(date);
         const isToday = dateStr === todayStr;
         const isSelected = dateStr === selectedDate;
         const dayEvents = getEventsForDate(dateStr);

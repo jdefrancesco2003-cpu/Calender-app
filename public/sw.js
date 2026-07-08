@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calpal-v15';
+const CACHE_NAME = 'calpal-v16';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/nacl.min.js',
