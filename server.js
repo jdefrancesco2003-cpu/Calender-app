@@ -216,23 +216,56 @@ function detectRecurrence(text) {
   return 'none';
 }
 function pad2(n) { return String(n).padStart(2, '0'); }
-// Disambiguate bare business-hours ranges like "9-5pm" → "9am-5pm" so chrono
-// doesn't read the start as pm and wrap the end past midnight.
+const MONTH_NAMES = 'january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec';
+// Disambiguate time ranges so chrono doesn't read the start as pm and wrap the
+// end past midnight. Handles "9-5pm" → "9am-5pm" and bare "9-5:30" → "9am-5:30pm".
 function normalizeBareRange(text) {
-  return text.replace(
+  // Ranges that already carry a meridiem: fix the first half if it's missing one.
+  text = text.replace(
     /\b(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i,
     (m, h1, m1, h2, m2, mer) => {
       const H1 = parseInt(h1, 10), H2 = parseInt(h2, 10);
       const lower = mer.toLowerCase();
-      // e.g. "9-5pm": first hour greater than second → first is am
       const firstMer = (lower === 'pm' && H1 > H2 && H1 !== 12) ? 'am' : lower;
-      const t1 = h1 + (m1 ? ':' + m1 : '') + firstMer;
-      const t2 = h2 + (m2 ? ':' + m2 : '') + lower;
-      return t1 + '-' + t2;
+      return h1 + (m1 ? ':' + m1 : '') + firstMer + '-' + h2 + (m2 ? ':' + m2 : '') + lower;
     }
   );
+  // Bare ranges with no meridiem at all: "9-5:30", "10-2", "1-3". Only when both
+  // sides are plausible 1–12 hours (so we don't touch dates like "7-14").
+  text = text.replace(
+    /\b(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?\b(?!\s*(?:am|pm))/i,
+    (m, h1, m1, h2, m2) => {
+      const H1 = parseInt(h1, 10), H2 = parseInt(h2, 10);
+      if (H1 < 1 || H1 > 12 || H2 < 1 || H2 > 12) return m; // likely a date, leave it
+      let mer1, mer2;
+      if (H1 === 12 || H2 === 12) {           // noon-anchored: 12-1, 10-12
+        mer1 = (H1 === 12) ? 'pm' : ((H1 >= 8 && H1 <= 11) ? 'am' : 'pm');
+        mer2 = 'pm';
+      } else if (H1 > H2) { mer1 = 'am'; mer2 = 'pm'; }              // 9-5 → 9am-5pm
+      else { const mer = (H1 >= 8 && H1 <= 11) ? 'am' : 'pm'; mer1 = mer2 = mer; } // 8-11→am, 1-3→pm
+      return h1 + (m1 ? ':' + m1 : '') + mer1 + '-' + h2 + (m2 ? ':' + m2 : '') + mer2;
+    }
+  );
+  return text;
 }
 function ymd(d) { return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+// chrono misses a bare day-of-month like "the 14th" / "on the 14th" (no month).
+// Resolve it ourselves relative to the base day, rolling to next month if past.
+function resolveOrdinalDate(text, baseStr) {
+  const re = /\b(?:on\s+)?(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)\b/i;
+  const m = text.match(re);
+  if (!m) return null;
+  // If a month name sits right before the number, chrono handles it — skip.
+  const before = text.slice(0, m.index).trimEnd().toLowerCase();
+  if (new RegExp('(?:' + MONTH_NAMES + ')$').test(before)) return null;
+  const day = parseInt(m[1], 10);
+  if (day < 1 || day > 31) return null;
+  const base = new Date(`${baseStr}T12:00:00`);
+  let y = base.getFullYear(), mo = base.getMonth();
+  if (day < base.getDate()) { mo += 1; if (mo > 11) { mo = 0; y += 1; } }
+  if (day > new Date(y, mo + 1, 0).getDate()) return null; // e.g. "the 31st" of a 30-day month
+  return { dateStr: ymd(new Date(y, mo, day)), span: [m.index, m.index + m[0].length] };
+}
 function hhmm(d) { return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
 function hasDayComponent(comp) {
   return comp.isCertain('day') || comp.isCertain('weekday') || comp.isCertain('month');
@@ -244,19 +277,24 @@ function parseEventLocal(text, todayStr, defaultDateStr) {
   const refDate = new Date(`${baseStr}T12:00:00`);
   const ntext = normalizeBareRange(text);
   const results = chrono.parse(ntext, refDate, { forwardDate: true });
-  if (!results || results.length === 0) return { confident: false };
+
+  // Bare day-of-month ("the 14th") that chrono can't parse on its own.
+  const ordinal = resolveOrdinalDate(ntext, baseStr);
+
+  if ((!results || results.length === 0) && !ordinal) return { confident: false };
 
   let dateStr = null, endDateStr = null, timeStr = null, endTimeStr = null;
   const spans = [];
 
-  for (const r of results) {
+  for (const r of results || []) {
     spans.push([r.index, r.index + r.text.length]);
     const s = r.start, sd = s.date();
 
-    // First result carrying an explicit day/weekday/month sets the date
-    if (!dateStr && hasDayComponent(s)) {
+    // First result carrying an explicit day/weekday/month sets the date.
+    // A user-written ordinal ("the 14th") always wins over chrono's guess.
+    if (!dateStr && !ordinal && hasDayComponent(s)) {
       dateStr = ymd(sd);
-      if (r.end) {
+      if (r.end && r.end.isCertain('day')) {
         const eds = ymd(r.end.date());
         if (eds !== dateStr) endDateStr = eds;
       }
@@ -267,6 +305,9 @@ function parseEventLocal(text, todayStr, defaultDateStr) {
       if (r.end && r.end.isCertain('hour')) endTimeStr = hhmm(r.end.date());
     }
   }
+
+  // Explicit ordinal date overrides everything and gets stripped from the title
+  if (ordinal) { dateStr = ordinal.dateStr; spans.push(ordinal.span); }
 
   // Nothing concrete (no day and no time) → let the AI handle vague input
   if (!dateStr && !timeStr) return { confident: false };
@@ -287,9 +328,9 @@ function parseEventLocal(text, todayStr, defaultDateStr) {
   spans.sort((a, b) => b[0] - a[0]).forEach(([a, b]) => {
     title = title.slice(0, a) + ' ' + title.slice(b);
   });
-  title = title.replace(/\s+/g, ' ').trim()
-    .replace(/^(on|at|from|the|this|next|by|@)\s+/i, '')
-    .replace(/\s+(on|at|from|by|@)$/i, '')
+  title = title.replace(/[,;]/g, ' ').replace(/\s+/g, ' ').trim()
+    .replace(/^(?:on|at|from|the|this|next|by|@|for)\s+/i, '')
+    .replace(/\s+(?:on|at|from|by|@|for)$/i, '')
     .trim();
   title = toTitleCase(title || text.trim());
 
