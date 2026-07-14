@@ -315,7 +315,12 @@
     .archive-event-buttons { display: flex; gap: 6px; flex-shrink: 0; }
     .archive-event-buttons button { padding: 6px 10px; font-size: 11px; min-height: auto; }
     /* ── Reminders ── */
-    h1 { cursor: pointer; }
+    h1 { cursor: pointer; transition: color 0.2s; }
+    h1 span { transition: color 0.2s; }
+    /* While the sheet is open, lift the logo above the overlay so it stays
+       tappable — re-tapping it closes the sheet. */
+    h1.reminders-active { color: var(--primary); position: relative; z-index: 1001; }
+    h1.reminders-active span { color: var(--text-primary); }
     .rem-add-row { display: flex; gap: 8px; align-items: center; }
     .rem-add-row input { flex: 1; }
     .rem-add-btn { background: var(--primary); color: #fff; border: none; border-radius: 12px; width: 44px; height: 44px; font-size: 22px; font-weight: 400; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; line-height: 1; min-height: auto; }
@@ -456,7 +461,7 @@
 <body>
   <div class="container">
     <header>
-      <h1 onclick="openReminders(); triggerHaptic(20)" title="Reminders">Mark<span>ed</span></h1>
+      <h1 id="app-logo" onclick="toggleReminders(); triggerHaptic(20)" title="Reminders">Mark<span>ed</span></h1>
       <div class="header-right">
         <div class="weather-widget" id="weather-widget" style="display:none;">
           <span class="weather-icon" id="weather-icon"></span>
@@ -2211,6 +2216,10 @@
     function saveReminders() {
       localStorage.setItem('markedReminders', JSON.stringify(reminders));
     }
+    function toggleReminders() {
+      const isOpen = document.getElementById('reminders-overlay').classList.contains('active');
+      if (isOpen) closeReminders(); else openReminders();
+    }
     function openReminders() {
       renderReminders();
       document.getElementById('reminders-overlay').classList.add('active');
@@ -2300,10 +2309,22 @@
       }, msUntilMidnight);
     }
 
+    // Keep the logo's flipped-color state in sync with the reminders sheet,
+    // no matter how it's closed (✕ button, swipe-down, or logo re-tap).
+    function watchRemindersState() {
+      const overlay = document.getElementById('reminders-overlay');
+      const logo = document.getElementById('app-logo');
+      if (!overlay || !logo) return;
+      new MutationObserver(() => {
+        logo.classList.toggle('reminders-active', overlay.classList.contains('active'));
+      }).observe(overlay, { attributes: true, attributeFilter: ['class'] });
+    }
+
     // ── Init ──
     async function init() {
       loadTheme();
       loadReminders();
+      watchRemindersState();
 
       // Check if server requires auth
       try {
