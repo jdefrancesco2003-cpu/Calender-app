@@ -321,20 +321,15 @@
        tappable — re-tapping it closes the sheet. */
     h1.reminders-active { color: var(--primary); position: relative; z-index: 1001; }
     h1.reminders-active span { color: var(--text-primary); }
-    .rem-add-row { display: flex; gap: 8px; align-items: center; }
+    .rem-add-row { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
     .rem-add-row input { flex: 1; }
     .rem-add-btn { background: var(--primary); color: #fff; border: none; border-radius: 12px; width: 44px; height: 44px; font-size: 22px; font-weight: 400; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; line-height: 1; min-height: auto; }
     .rem-add-btn:active { transform: scale(0.92); }
-    .rem-list { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
-    .rem-item { display: flex; align-items: flex-start; gap: 11px; background: var(--bg-dark); border-radius: 12px; padding: 12px 13px; border-left: 3px solid var(--primary); }
-    .rem-check { width: 21px; height: 21px; border-radius: 6px; border: 2px solid var(--text-secondary); flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-top: 1px; transition: background 0.12s, border-color 0.12s; }
-    .rem-check.done { background: var(--primary); border-color: var(--primary); }
-    .rem-check svg { width: 13px; height: 13px; stroke: #fff; stroke-width: 3; fill: none; opacity: 0; }
-    .rem-check.done svg { opacity: 1; }
-    .rem-text { flex: 1; font-size: 15px; color: var(--text-primary); line-height: 1.4; word-break: break-word; cursor: pointer; }
-    .rem-item.done { border-left-color: var(--text-secondary); opacity: 0.55; }
-    .rem-item.done .rem-text { text-decoration: line-through; color: var(--text-secondary); }
-    .rem-del { background: none; border: none; color: var(--text-secondary); font-size: 18px; cursor: pointer; padding: 0 2px; min-height: auto; line-height: 1; flex-shrink: 0; opacity: 0.6; }
+    .rem-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .rem-item { display: flex; align-items: flex-start; gap: 8px; background: var(--bg-light); border-radius: 14px; padding: 12px 14px; transition: background 0.12s; }
+    .rem-text { flex: 1; font-size: 15px; color: var(--text-primary); line-height: 1.45; background: transparent; border: none; outline: none; resize: none; overflow: hidden; font-family: inherit; padding: 0; margin: 0; word-break: break-word; box-sizing: border-box; min-height: 22px; display: block; }
+    .rem-text::placeholder { color: var(--text-secondary); opacity: 0.7; }
+    .rem-del { background: none; border: none; color: var(--text-secondary); font-size: 17px; cursor: pointer; padding: 0 2px; min-height: auto; line-height: 1; flex-shrink: 0; opacity: 0.5; margin-top: 1px; }
     .rem-del:active { opacity: 1; color: var(--error); }
     .rem-empty { text-align: center; color: var(--text-secondary); font-size: 14px; padding: 32px 12px; opacity: 0.7; line-height: 1.6; }
     #update-banner { position: fixed; left: 12px; right: 12px; bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px)); z-index: 3000; background: var(--primary); color: #fff; padding: 12px 16px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); font-size: 14px; font-weight: 600; animation: slideUpToast 0.3s cubic-bezier(0.34,1.3,0.64,1); }
@@ -717,7 +712,7 @@
 
   <!-- ── SETTINGS MODAL ── -->
   <div class="modal-overlay" id="reminders-overlay">
-    <div class="modal" style="min-height:68vh;max-height:88vh;">
+    <div class="modal" style="height:82vh;">
       <div class="modal-handle"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <h3 style="margin:0;">Reminders</h3>
@@ -2221,8 +2216,8 @@
       if (isOpen) closeReminders(); else openReminders();
     }
     function openReminders() {
-      renderReminders();
       document.getElementById('reminders-overlay').classList.add('active');
+      renderReminders(); // after the sheet is visible so textarea sizing is correct
       setTimeout(() => document.getElementById('rem-input').focus(), 200);
     }
     function closeReminders() {
@@ -2232,27 +2227,26 @@
       const input = document.getElementById('rem-input');
       const text = input.value.trim();
       if (!text) return;
-      reminders.unshift({ id: generateId(), text, done: false, createdAt: Date.now() });
+      reminders.unshift({ id: generateId(), text, createdAt: Date.now() });
       saveReminders();
       input.value = '';
       renderReminders();
       triggerHaptic(20);
     }
-    function toggleReminder(id) {
+    function editReminder(id, el) {
       const r = reminders.find(x => x.id === id);
-      if (!r) return;
-      r.done = !r.done;
-      // Completed items sink to the bottom, keeping active tasks up top
-      reminders.sort((a, b) => (a.done === b.done) ? 0 : (a.done ? 1 : -1));
-      saveReminders();
-      renderReminders();
-      triggerHaptic(20);
+      if (r) { r.text = el.value; saveReminders(); }
+      autoGrowReminder(el);
     }
     function deleteReminder(id) {
       reminders = reminders.filter(x => x.id !== id);
       saveReminders();
       renderReminders();
       triggerHaptic(20);
+    }
+    function autoGrowReminder(el) {
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
     }
     function renderReminders() {
       const list = document.getElementById('rem-list');
@@ -2261,13 +2255,14 @@
         list.innerHTML = `<div class="rem-empty">No reminders yet.<br>Jot down anything you don't want to forget.</div>`;
         return;
       }
-      const check = `<svg viewBox="0 0 20 20"><polyline points="4,11 8,15 16,5"/></svg>`;
+      // Each reminder is a plain editable note — tap the text to edit in place.
       list.innerHTML = reminders.map(r => `
-        <div class="rem-item ${r.done ? 'done' : ''}">
-          <div class="rem-check ${r.done ? 'done' : ''}" onclick="toggleReminder('${r.id}')">${check}</div>
-          <div class="rem-text" onclick="toggleReminder('${r.id}')">${escHtml(r.text)}</div>
+        <div class="rem-item">
+          <textarea class="rem-text" rows="1" oninput="editReminder('${r.id}', this)" placeholder="Reminder">${escHtml(r.text)}</textarea>
           <button class="rem-del" onclick="deleteReminder('${r.id}')" title="Delete">✕</button>
         </div>`).join('');
+      // Size textareas after layout so scrollHeight is accurate
+      requestAnimationFrame(() => list.querySelectorAll('.rem-text').forEach(autoGrowReminder));
     }
     function toggleNotifications() {
       notificationsEnabled = document.getElementById('notif-toggle').checked;
