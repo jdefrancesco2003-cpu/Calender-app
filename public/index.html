@@ -22,6 +22,9 @@
       --primary: #4a9d6f;
       --primary-light: #5faf81;
       --primary-dark: #3a8d5f;
+      --primary-rgb: 74,157,111;
+      --share: #5ac8fa;
+      --handle: rgba(255,255,255,0.18);
       --bg-dark: #1c1c1e;
       --bg-card: #2c2c2e;
       --bg-light: #3a3a3c;
@@ -53,7 +56,7 @@
     h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary); flex: 1; font-family: 'Nunito', sans-serif; }
     h1 span { color: var(--primary); }
     .header-right { display: flex; align-items: center; gap: 10px; }
-    .weather-widget { display: flex; align-items: center; gap: 5px; padding: 6px 10px; background: rgba(74,157,111,0.12); border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid rgba(74,157,111,0.22); animation: fadeIn 0.4s ease; }
+    .weather-widget { display: flex; align-items: center; gap: 5px; padding: 6px 10px; background: rgba(var(--primary-rgb),0.12); border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid rgba(var(--primary-rgb),0.22); animation: fadeIn 0.4s ease; }
     .weather-icon { font-size: 15px; }
     .weather-temp { font-weight: 700; color: var(--primary); }
     .menu-btn { background: var(--bg-light); border: none; color: var(--text-primary); width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 17px; transition: background 0.2s; }
@@ -64,11 +67,11 @@
     .dropdown-menu.active { display: flex; flex-direction: column; animation: slideDown 0.2s ease; }
     .dropdown-item { padding: 13px 18px; background: none; border: none; border-bottom: 1px solid rgba(66,66,69,0.5); color: var(--text-primary); text-align: left; cursor: pointer; font-size: 15px; transition: background 0.15s; }
     .dropdown-item:last-child { border-bottom: none; }
-    .dropdown-item:active { background: rgba(74,157,111,0.18); }
+    .dropdown-item:active { background: rgba(var(--primary-rgb),0.18); }
 
     /* ── FAB ── */
-    .fab { position: fixed; bottom: max(48px, calc(env(safe-area-inset-bottom) + 40px)); right: 20px; width: 56px; height: 56px; background: var(--primary); color: white; border: none; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(74,157,111,0.45), 0 1px 6px rgba(74,157,111,0.2); z-index: 100; transition: transform 0.12s, box-shadow 0.12s; }
-    .fab:active { transform: scale(0.89); box-shadow: 0 2px 8px rgba(74,157,111,0.3); }
+    .fab { position: fixed; bottom: max(48px, calc(env(safe-area-inset-bottom) + 40px)); right: 20px; width: 56px; height: 56px; background: var(--primary); color: white; border: none; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(var(--primary-rgb),0.45), 0 1px 6px rgba(var(--primary-rgb),0.2); z-index: 100; transition: transform 0.12s, box-shadow 0.12s; }
+    .fab:active { transform: scale(0.89); box-shadow: 0 2px 8px rgba(var(--primary-rgb),0.3); }
     body.week-mode .fab { bottom: max(96px, calc(env(safe-area-inset-bottom) + 92px)); }
 
     /* ── STATUS ── */
@@ -81,7 +84,7 @@
     .section-tabs { display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-dark); flex-shrink: 0; padding: 8px 12px 0; gap: 4px; }
     .tab-button { flex: 1; padding: 8px 0; background: none; border: none; border-bottom: 2.5px solid transparent; font-size: 14px; font-weight: 600; color: var(--text-secondary); min-height: auto; transition: color 0.18s, border-color 0.18s; letter-spacing: 0.1px; border-radius: 0; }
     .tab-button.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .tab-button:active { background: rgba(74,157,111,0.08); }
+    .tab-button:active { background: rgba(var(--primary-rgb),0.08); }
 
     /* ── MAIN CONTENT ── */
     .main-content { display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
@@ -100,15 +103,15 @@
     .input-group label { font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.2px; }
     input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--bg-light); color: var(--text-primary); appearance: none; min-height: 44px; transition: border-color 0.2s, box-shadow 0.2s; color-scheme: dark; }
     input::placeholder, textarea::placeholder { color: var(--text-secondary); }
-    input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,157,111,0.12); transition: border-color 0.15s, box-shadow 0.15s; }
+    input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(var(--primary-rgb),0.12); transition: border-color 0.15s, box-shadow 0.15s; }
     textarea { resize: none; min-height: 90px; font-size: 15px; }
     button { padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.18s ease; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px; appearance: none; }
-    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 12px rgba(74,157,111,0.25); border-radius: 12px; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 12px rgba(var(--primary-rgb),0.25); border-radius: 12px; }
     .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
     .btn-secondary { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); font-weight: 600; border-radius: 12px; }
     .btn-secondary:active { background: var(--primary); color: white; transform: scale(0.97); }
-    .btn-share { background: transparent; color: #5ac8fa; border: 1.5px solid #5ac8fa; font-weight: 600; border-radius: 12px; }
-    .btn-share:active { background: #5ac8fa; color: white; transform: scale(0.97); }
+    .btn-share { background: transparent; color: var(--share); border: 1.5px solid var(--share); font-weight: 600; border-radius: 12px; }
+    .btn-share:active { background: var(--share); color: white; transform: scale(0.97); }
     .btn-cancel { background: transparent; color: var(--text-secondary); border: 1.5px solid var(--border-color); font-weight: 600; border-radius: 12px; }
     .btn-cancel:active { background: var(--bg-light); transform: scale(0.97); }
     .btn-danger { background: transparent; color: var(--error); border: 1.5px solid var(--error); font-weight: 600; border-radius: 12px; }
@@ -191,8 +194,8 @@
     #day-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
     #day-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-radius: 22px 22px 0 0; z-index: 451; max-height: 78vh; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1); box-shadow: 0 -4px 30px rgba(0,0,0,0.35); }
     #day-sheet.open { transform: translateY(0); }
-    #day-sheet-handle { width: 38px; height: 5px; background: rgba(255,255,255,0.13); border-radius: 3px; margin: 10px auto 4px; flex-shrink: 0; }
-    #day-sheet-content { overflow-y: auto; padding: 0 16px 32px; flex: 1; min-height: 0; }
+    #day-sheet-handle { width: 38px; height: 5px; background: var(--handle); border-radius: 3px; margin: 10px auto 4px; flex-shrink: 0; }
+    #day-sheet-content { overflow-y: auto; padding: 0 16px max(32px, calc(env(safe-area-inset-bottom) + 16px)); flex: 1; min-height: 0; }
     .upcoming-day-group { margin-bottom: 16px; }
     .upcoming-day-header { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.7; }
 
@@ -201,8 +204,8 @@
     #event-peek-backdrop.open { opacity: 1; pointer-events: auto; }
     #event-peek { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-radius: 22px 22px 0 0; z-index: 451; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1); box-shadow: 0 -4px 30px rgba(0,0,0,0.35); }
     #event-peek.open { transform: translateY(0); }
-    #event-peek-handle { width: 38px; height: 5px; background: rgba(255,255,255,0.13); border-radius: 3px; margin: 10px auto 4px; flex-shrink: 0; }
-    #event-peek-content { padding: 8px 16px 32px; }
+    #event-peek-handle { width: 38px; height: 5px; background: var(--handle); border-radius: 3px; margin: 10px auto 4px; flex-shrink: 0; }
+    #event-peek-content { padding: 8px 16px max(32px, calc(env(safe-area-inset-bottom) + 16px)); }
 
     /* ── VIEW SLIDE CONTAINER ── */
     #cal-view-container { flex-shrink: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; }
@@ -216,8 +219,8 @@
     .week-labels { width: 84px; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-dark); border-right: 1px solid var(--border-color); z-index: 2; }
     .week-label-header { height: 28px; display: flex; align-items: center; justify-content: center; background: var(--bg-dark); border-bottom: 1px solid var(--border-color); flex-shrink: 0; font-size: 9px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
     .week-day-label { flex: 1; min-height: 54px; display: flex; flex-direction: column; justify-content: center; padding: 4px 10px; border-bottom: 1px solid var(--border-color); gap: 1px; position: relative; overflow: hidden; cursor: pointer; transition: background 0.12s; }
-    .week-day-label:active { background: rgba(74,157,111,0.08); }
-    .week-day-label.today { background: rgba(74,157,111,0.06); }
+    .week-day-label:active { background: rgba(var(--primary-rgb),0.08); }
+    .week-day-label.today { background: rgba(var(--primary-rgb),0.06); }
     .week-day-label.today::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2.5px; background: var(--primary); border-radius: 0 2px 2px 0; }
     .week-day-name-text { font-size: 9px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
     .week-day-date-text { font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1; letter-spacing: -0.5px; }
@@ -237,12 +240,12 @@
     .week-hour-cell { width: var(--hour-w); flex-shrink: 0; font-size: 9px; color: var(--text-secondary); text-align: center; border-right: 1px solid rgba(66,66,69,0.4); display: flex; align-items: center; justify-content: center; font-weight: 500; }
     /* Day rows */
     .week-day-row { display: flex; flex: 1; min-height: 54px; border-bottom: 1px solid var(--border-color); position: relative; background: var(--bg-card); overflow: hidden; }
-    .week-day-row.today { background: rgba(74,157,111,0.05); }
+    .week-day-row.today { background: rgba(var(--primary-rgb),0.05); }
     .week-day-row:last-child { border-bottom: none; }
     .week-hour-slot { width: var(--hour-w); flex-shrink: 0; border-right: 1px solid rgba(66,66,69,0.25); }
-    .week-hour-slot.current-hour { background: rgba(74,157,111,0.04); }
+    .week-hour-slot.current-hour { background: rgba(var(--primary-rgb),0.04); }
     /* Event bars */
-    .week-event-bar { position: absolute; top: 4px; border-radius: 5px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); padding: 3px 7px; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; display: flex; align-items: center; box-shadow: 0 2px 8px rgba(74,157,111,0.3); transition: opacity 0.15s, transform 0.1s; z-index: 1; }
+    .week-event-bar { position: absolute; top: 4px; border-radius: 5px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); padding: 3px 7px; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; display: flex; align-items: center; box-shadow: 0 2px 8px rgba(var(--primary-rgb),0.3); transition: opacity 0.15s, transform 0.1s; z-index: 1; }
     .week-event-bar:active { opacity: 0.82; transform: scaleY(0.97); }
     /* Current time vertical line */
     .week-current-time { position: absolute; top: 0; bottom: 0; width: 2px; background: #ff453a; z-index: 10; pointer-events: none; box-shadow: 0 0 6px rgba(255,69,58,0.6); }
@@ -281,7 +284,7 @@
     .ev-action-btn { flex: 1; border: none; border-left: 1.5px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; padding: 0; min-height: auto; color: var(--primary); }
     .ev-action-btn:active { opacity: 0.65; }
     .ev-action-btn.del { color: var(--error); border-left-color: var(--error); }
-    .ev-action-btn.shr { color: #5ac8fa; border-left-color: #5ac8fa; }
+    .ev-action-btn.shr { color: var(--share); border-left-color: var(--share); }
     .empty-state { text-align: center; padding: 36px 16px; color: var(--text-secondary); font-size: 15px; line-height: 1.6; }
     .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
 
@@ -294,10 +297,10 @@
       to   { transform: translateY(0);    opacity: 1; }
     }
     .modal-overlay.closing { pointer-events: none; animation: fadeOut 0.22s ease forwards; }
-    .modal-overlay.closing .modal { animation: slideDown 0.22s cubic-bezier(0.4,0,1,1) forwards; }
+    .modal-overlay.closing .modal { animation: modalSlideOut 0.22s cubic-bezier(0.4,0,1,1) forwards; }
     @keyframes fadeOut { to { opacity: 0; } }
-    @keyframes slideDown { to { transform: translateY(100%); } }
-    .modal { background: var(--bg-card); border-radius: 24px 24px 0 0; padding: 16px 18px 24px; width: 100%; max-width: 500px; max-height: 88vh; overflow-y: auto; box-shadow: 0 -4px 32px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 12px; }
+    @keyframes modalSlideOut { to { transform: translateY(100%); } }
+    .modal { background: var(--bg-card); border-radius: 24px 24px 0 0; padding: 16px 18px max(24px, calc(env(safe-area-inset-bottom) + 16px)); width: 100%; max-width: 500px; max-height: 88vh; overflow-y: auto; box-shadow: 0 -4px 32px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 12px; }
     .modal h3 { font-size: 17px; font-weight: 700; color: var(--text-primary); }
     .modal-handle { width: 40px; height: 4px; background: rgba(128,128,128,0.35); border-radius: 2px; margin: 0 auto 18px; }
     .confirmation-modal { padding: 24px 20px; }
@@ -307,11 +310,11 @@
     .confirmation-buttons { display: flex; gap: 8px; }
     .confirmation-buttons button { flex: 1; }
     .edit-button-modal { padding: 12px; border-radius: 10px; background: var(--bg-light); border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; transition: background 0.15s; font-size: 14px; }
-    .edit-button-modal:active { background: rgba(74,157,111,0.25); }
+    .edit-button-modal:active { background: rgba(var(--primary-rgb),0.25); }
     .day-events-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
     /* Archive */
     .archive-modal { max-height: 70vh; }
-    .archive-event-item { background: var(--bg-light); padding: 11px 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid rgba(74,157,111,0.4); gap: 8px; }
+    .archive-event-item { background: var(--bg-light); padding: 11px 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid rgba(var(--primary-rgb),0.4); gap: 8px; }
     .archive-event-buttons { display: flex; gap: 6px; flex-shrink: 0; }
     .archive-event-buttons button { padding: 6px 10px; font-size: 11px; min-height: auto; }
     /* ── Reminders ── */
@@ -366,7 +369,7 @@
     .cat-other   { background:#b39ddb; }
     .cat-select { display:flex;gap:10px;align-items:center;margin:8px 0; }
     .cat-btn { width:32px;height:32px;border-radius:8px;border:3px solid transparent;cursor:pointer;transition:border 0.15s,transform 0.12s; }
-    .cat-btn.selected { border-color:white;transform:scale(1.1); }
+    .cat-btn.selected { border-color:var(--text-primary);transform:scale(1.1); }
 
     /* ── PULL-TO-REFRESH ── */
     #ptr-container {
@@ -395,7 +398,7 @@
     #ptr-arc-svg { width: 22px; height: 22px; transform: rotate(-90deg); }
     #ptr-arc-circle {
       fill: none;
-      stroke: var(--accent);
+      stroke: var(--primary);
       stroke-width: 2.5;
       stroke-linecap: round;
       stroke-dasharray: 56.5;   /* 2π × 9 */
@@ -417,7 +420,7 @@
 
     #ptr-check {
       display: none; width: 22px; height: 22px;
-      color: var(--accent); stroke: var(--accent);
+      color: var(--primary); stroke: var(--primary);
     }
     #ptr-check.visible { display: block; animation: ptr-pop 0.25s cubic-bezier(0.34,1.56,0.64,1); }
     @keyframes ptr-pop { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -438,14 +441,20 @@
       --primary: #2563eb;
       --primary-light: #3b82f6;
       --primary-dark: #1d4ed8;
+      --primary-rgb: 37,99,235;
+      --error: #d70015;
+      --share: #0071e3;
+      --handle: rgba(0,0,0,0.22);
     }
+    /* Native date/time/select pickers must follow the theme */
+    body.light-mode input, body.light-mode textarea, body.light-mode select.form-select { color-scheme: light; }
 
     /* ── ONBOARDING (Task 7) ── */
     #onboarding-overlay { position:fixed;inset:0;background:var(--bg-dark);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px; }
     #onboarding-overlay.hidden { display:none; }
     .ob-slide { display:none;flex-direction:column;align-items:center;text-align:center;max-width:320px; }
     .ob-slide.active { display:flex; }
-    .ob-icon { width:72px;height:72px;border-radius:20px;background:rgba(74,157,111,0.15);border:2px solid rgba(74,157,111,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:28px;font-weight:800;color:var(--primary);letter-spacing:-1px; }
+    .ob-icon { width:72px;height:72px;border-radius:20px;background:rgba(var(--primary-rgb),0.15);border:2px solid rgba(var(--primary-rgb),0.3);display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:28px;font-weight:800;color:var(--primary);letter-spacing:-1px; }
     .ob-title { font-size:26px;font-weight:700;color:var(--text-primary);margin-bottom:12px; }
     .ob-desc { font-size:16px;color:var(--text-secondary);line-height:1.6;margin-bottom:32px; }
     .ob-dots { display:flex;gap:8px;margin-bottom:32px; }
@@ -533,6 +542,9 @@
             </div>
           </div>
         </div>
+
+        <!-- Upcoming / month events list (month mode only) -->
+        <div class="events-container" id="calendar-bottom"></div>
 
         <!-- Week view bottom buffer (visible only in week mode) -->
         <div id="week-spacer"></div>
@@ -1079,8 +1091,7 @@
     let lastDeletedEventIndex = -1;
     let lastEditedEvent = null;
     let pendingOverlapConfirmation = null;
-    let pendingDeleteId = null;
-    let pendingDeleteTimeout = null;
+    const pendingDeletes = new Map(); // id -> timeout, so rapid deletes don't cancel each other
     let notificationTimeouts = [];
     let filterDebounceTimer = null;
     let authToken = localStorage.getItem('calpal_token') || null;
@@ -1296,9 +1307,8 @@
       ptrContainer.classList.add('ptr-loading');
 
       await loadEvents();
-      renderCalendar();
-      renderUpcomingEvents();
-      renderWeekView();
+      if (isWeekView) renderWeekView();
+      else { renderCalendar(); renderUpcomingEvents(); }
 
       // Show check mark
       ptrArcSvg.style.display = 'none';
@@ -1321,19 +1331,25 @@
     }, { passive: true });
 
     // ── Task 6: Theme ──
+    function applyThemeColor(light) {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.content = light ? '#f5f5f7' : '#1a1a2e';
+    }
     function toggleTheme() {
       const light = document.getElementById('theme-toggle').checked;
       document.body.classList.toggle('light-mode', light);
       localStorage.setItem('calpal_theme', light ? 'light' : 'dark');
+      applyThemeColor(light);
     }
 
     function loadTheme() {
-      const saved = localStorage.getItem('calpal_theme');
-      if (saved === 'light') {
+      const light = localStorage.getItem('calpal_theme') === 'light';
+      if (light) {
         document.body.classList.add('light-mode');
         const toggle = document.getElementById('theme-toggle');
         if (toggle) toggle.checked = true;
       }
+      applyThemeColor(light);
     }
 
     // ── Task 7: Onboarding ──
@@ -1461,26 +1477,37 @@
     function getWeekStartStr() {
       const d = new Date();
       d.setDate(d.getDate() - d.getDay()); // back to Sunday
-      return d.toISOString().split('T')[0];
+      return getLocalDateString(d);
+    }
+    // A still-active recurring series must never be archived by its first
+    // occurrence — that would erase all its future instances.
+    function isArchivablePast(e, cutoff) {
+      if ((e.endDate || e.date) >= cutoff) return false;
+      if (e.recurrence && e.recurrence !== 'none') {
+        if (!e.recurrenceEnd || e.recurrenceEnd >= cutoff) return false;
+      }
+      return true;
     }
     function archivePastEventsSilent() {
       const cutoff = getWeekStartStr();
-      const past = allEvents.filter(e => (e.endDate || e.date) < cutoff && !archivedIds.has(e.id));
+      const past = allEvents.filter(e => isArchivablePast(e, cutoff) && !archivedIds.has(e.id));
       if (past.length === 0) return;
+      const pastIds = new Set(past.map(e => e.id));
       archivedEvents.push(...past);
-      allEvents = allEvents.filter(e => (e.endDate || e.date) >= cutoff);
+      allEvents = allEvents.filter(e => !pastIds.has(e.id));
       saveArchive();
       saveEvents();
     }
     function archivePastEvents() {
       const cutoff = getWeekStartStr();
-      const past = allEvents.filter(e => (e.endDate || e.date) < cutoff && !archivedIds.has(e.id));
+      const past = allEvents.filter(e => isArchivablePast(e, cutoff) && !archivedIds.has(e.id));
       if (past.length === 0) {
         showStatus('No past events to archive', 'error');
         return false;
       }
+      const pastIds = new Set(past.map(e => e.id));
       archivedEvents.push(...past);
-      allEvents = allEvents.filter(e => (e.endDate || e.date) >= cutoff);
+      allEvents = allEvents.filter(e => !pastIds.has(e.id));
       saveArchive();
       saveEvents();
       showStatus(`✓ ${past.length} event(s) archived`, 'success');
@@ -1527,6 +1554,7 @@
       allEvents.push(event);
       saveArchive();
       saveEvents();
+      apiSaveEvent(event); // re-persist to server, else next sync drops it again
       showStatus(`✓ ${event.title} restored`, 'success');
       showSyncIndicator();
       viewArchived();
@@ -1646,7 +1674,9 @@
     function escHtml(str) {
       const d = document.createElement('div');
       d.textContent = str;
-      return d.innerHTML;
+      // innerHTML escapes & < >; also escape quotes so this is safe inside
+      // double/single-quoted HTML attributes (e.g. title="${escHtml(...)}").
+      return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
     function capitalizeTitle(str) {
       if (!str) return '';
@@ -1806,6 +1836,18 @@
       if (m) return allEvents.find(e => e.id === m[1]) || null;
       return allEvents.find(e => e.id === virtualOrRegularId) || null;
     }
+    // Resolve an id (real or virtual "master_YYYY-MM-DD") to a concrete event
+    // object — reconstructing the recurring occurrence when needed.
+    function resolveEventInstance(id) {
+      const direct = allEvents.find(e => e.id === id);
+      if (direct) return direct;
+      const m = id.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
+      if (m) {
+        const master = allEvents.find(e => e.id === m[1]);
+        if (master) return makeVirtualInstance(master, m[2]);
+      }
+      return null;
+    }
 
     function showStatus(message, type) {
       const el = document.getElementById('status-message');
@@ -1827,7 +1869,7 @@
       if (btn) btn.classList.add('active');
       closeMenuOnTab();
       if (tab === 'events') renderEventsPage();
-      if (tab === 'calendar') { renderCalendar(); renderUpcomingEvents(); }
+      if (tab === 'calendar') { if (isWeekView) renderWeekView(); else { renderCalendar(); renderUpcomingEvents(); } }
     }
     function toggleMenu() {
       document.getElementById('dropdown-menu').classList.toggle('active');
@@ -1855,6 +1897,9 @@
     }
     function closeAddModal() {
       _closeModal('add-event-overlay');
+      // Clear the day tapped in the day-sheet so it doesn't linger as the
+      // selected cell or leak into the next parse as a stale contextDate.
+      if (selectedDate) { selectedDate = null; if (!isWeekView) { renderCalendar(); renderUpcomingEvents(); } }
     }
     function openAddEventTab() { openAddModal(); }
 
@@ -1966,19 +2011,8 @@
     async function continueAsGuest() {
       guestMode = true;
       hideAuthModal();
-      await loadEvents();
-      archivePastEventsSilent();
-      scheduleArchiveAtMidnight();
-      loadNotificationSettings();
-      renderCalendar();
-      renderUpcomingEvents();
-      setTodayDate();
-      checkNotificationPermission();
-      scheduleNotifications();
-      fetchWeather();
-      updateUserChip();
-      setInterval(fetchWeather, 600000);
-      setInterval(() => { if (isWeekView) updateCurrentTimeLine(); }, 60000);
+      await startApp();
+      showOnboarding();
     }
 
     function toggleAuthMode() {
@@ -2022,10 +2056,7 @@
         updateUserChip();
         // Claim any legacy (pre-auth) events — await so loadEvents sees them
         await fetch('/api/migrate/claim-legacy-events', { method: 'POST', headers: getAuthHeaders() }).catch(() => {});
-        await loadEvents();
-        renderCalendar();
-        renderUpcomingEvents();
-        archivePastEventsSilent();
+        await startApp();
         // Show recovery codes after registration, then prompt email verification
         if (authMode === 'register' && data.recoveryCodes) {
           showRecoveryCodes(data.recoveryCodes);
@@ -2052,7 +2083,7 @@
       allEvents = [];
       saveEvents();
       updateUserChip();
-      toggleMenu();
+      closeDropdown();
       showAuthModal('login');
     }
 
@@ -2332,18 +2363,29 @@
         return; // don't load events until logged in
       }
 
+      await startApp();
+      showOnboarding();
+    }
+
+    // Everything that must run once the user is authenticated (or a guest).
+    // Called from init(), submitAuth(), and continueAsGuest() so no entry path
+    // is missing notifications, weather, swipe-dismiss, intervals, etc.
+    let appStarted = false;
+    async function startApp() {
       await loadEvents();
-      archivePastEventsSilent();
-      scheduleArchiveAtMidnight();
-      loadNotificationSettings();
+      if (!appStarted) loadNotificationSettings(); // set notif prefs before scheduling
+      archivePastEventsSilent();                    // prune before rendering
       renderCalendar();
       renderUpcomingEvents();
+      renderEventsPage();
+      updateUserChip();
+      scheduleNotifications();                       // safe to re-run (clears timeouts)
+      if (appStarted) return;                        // one-time setup below
+      appStarted = true;
+      scheduleArchiveAtMidnight();
       setTodayDate();
       checkNotificationPermission();
-      showOnboarding();
-      scheduleNotifications();
       fetchWeather();
-      updateUserChip();
       setInterval(fetchWeather, 600000);
       setInterval(() => { if (isWeekView) updateCurrentTimeLine(); }, 60000);
       _initSwipeDismiss();
@@ -2546,7 +2588,7 @@
 
     // ── Manual add ──
     function setTodayDate() {
-      document.getElementById('date-input').value = new Date().toISOString().split('T')[0];
+      document.getElementById('date-input').value = getLocalDateString(new Date());
     }
     function toggleAllDayManual() {
       const isAllDay = document.getElementById('all-day-toggle').checked;
@@ -2643,21 +2685,22 @@
       showUndoToast(`Deleted "${eventToDelete.title}"`);
       renderAll();
       scheduleNotifications();
-      // Schedule actual server delete after undo window expires
-      if (pendingDeleteTimeout) clearTimeout(pendingDeleteTimeout);
-      pendingDeleteId = id;
-      pendingDeleteTimeout = setTimeout(async () => {
-        try { await fetch(`/api/events/${pendingDeleteId}`, { method: 'DELETE', headers: getAuthHeaders() }); }
+      // Schedule this event's server delete after its own undo window — keyed
+      // by id so deleting several events in quick succession doesn't cancel
+      // each other's pending deletes.
+      const timeout = setTimeout(async () => {
+        try { await fetch(`/api/events/${id}`, { method: 'DELETE', headers: getAuthHeaders() }); }
         catch (err) { /* server delete best-effort */ }
-        pendingDeleteId = null;
-        pendingDeleteTimeout = null;
+        pendingDeletes.delete(id);
       }, 5500);
+      pendingDeletes.set(id, timeout);
     }
 
     async function undoDelete() {
       if (!lastDeletedEvent) return;
-      // Cancel the pending server delete
-      if (pendingDeleteTimeout) { clearTimeout(pendingDeleteTimeout); pendingDeleteTimeout = null; pendingDeleteId = null; }
+      // Cancel this event's pending server delete
+      const pd = pendingDeletes.get(lastDeletedEvent.id);
+      if (pd) { clearTimeout(pd); pendingDeletes.delete(lastDeletedEvent.id); }
       allEvents.push(lastDeletedEvent);
       saveEvents();
       archivedEvents = archivedEvents.filter(e => e.id !== lastDeletedEvent.id);
@@ -2770,9 +2813,16 @@
       notificationTimeouts.forEach(id => clearTimeout(id));
       notificationTimeouts = [];
       if (!notificationsEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
-      // In-app fallback: fires only when the page is open
+      // In-app fallback: fires only when the page is open. setTimeout can't span
+      // more than ~24 days, so only schedule within a short horizon and expand
+      // recurring series into concrete occurrences within it.
       const now = new Date();
-      allEvents.forEach(event => {
+      const MAX_DELAY = 2 * 86400000; // 2 days
+      const todayStr = getESTDateString();
+      const horizonStr = getLocalDateString(new Date(Date.now() + MAX_DELAY));
+      const list = allEvents.filter(e => !archivedIds.has(e.id));
+      getRecurringInstancesInRange(todayStr, horizonStr).forEach(ri => list.push(ri));
+      list.forEach(event => {
         if (!event.title || !event.time || !event.date) return;
         const [h, m] = event.time.split(':').map(Number);
         const eventDate = new Date(event.date + 'T00:00:00');
@@ -2791,14 +2841,15 @@
           schedule.push({ time: beforeTime, body: `${event.title} in ${beforeLabel}` });
         }
         for (const s of schedule) {
-          if (s.time > now) {
+          const delay = s.time.getTime() - now.getTime();
+          if (delay > 0 && delay <= MAX_DELAY) {
             const id = setTimeout(() => {
               navigator.serviceWorker?.ready.then(reg => {
                 reg.showNotification('Marked', { body: s.body, tag: `${event.id}-${s.time.getTime()}`, icon: '/icons/icon-192.png', data: { url: '/' } });
               }).catch(() => {
                 new Notification('Marked', { body: s.body, tag: `${event.id}-${s.time.getTime()}` });
               });
-            }, s.time.getTime() - now.getTime());
+            }, delay);
             notificationTimeouts.push(id);
           }
         }
@@ -3079,7 +3130,7 @@
     }
 
     function openEventPeek(eventId) {
-      const ev = allEvents.find(e => e.id === eventId);
+      const ev = resolveEventInstance(eventId);
       if (!ev) return;
       const color = getCategoryColor(ev.category || 'work');
       const timeStr = ev.isAllDay ? 'All day' : [
@@ -3121,9 +3172,9 @@
     // ── Upcoming events (calendar tab) ──
     function getDateGroup(dateStr) {
       const today = new Date(); today.setHours(0,0,0,0);
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = getLocalDateString(today);
       const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      const tomorrowStr = getLocalDateString(tomorrow);
       const thisWeekEnd = new Date(today); thisWeekEnd.setDate(today.getDate() + (6 - today.getDay()));
       const nextWeekEnd = new Date(thisWeekEnd); nextWeekEnd.setDate(thisWeekEnd.getDate() + 7);
       const date = new Date(dateStr + 'T00:00:00');
@@ -3134,6 +3185,10 @@
       return { group: 'later', label: 'Later' };
     }
 
+    function _setBottomPanel(html) {
+      const el = document.getElementById('calendar-bottom');
+      if (el) el.innerHTML = html;
+    }
     function renderUpcomingEvents() {
       const container = document.getElementById('calendar-bottom');
       if (!container || selectedDate || isWeekView) return;
@@ -3431,12 +3486,15 @@
         newStart = Math.round(newStart / 15) * 15;
         const newEnd = Math.min(24 * 60 - 1, newStart + barDragState.durationMins);
 
-        const idx = allEvents.findIndex(ev => ev.id === barDragState.eventId);
+        // A dragged recurring occurrence moves the whole series (its master).
+        const masterMatch = barDragState.eventId.match(/^(.+)_\d{4}-\d{2}-\d{2}$/);
+        const targetId = masterMatch ? masterMatch[1] : barDragState.eventId;
+        const idx = allEvents.findIndex(ev => ev.id === targetId);
         if (idx >= 0 && minsToTimeStr(newStart) !== allEvents[idx].time) {
           allEvents[idx].time = minsToTimeStr(newStart);
           allEvents[idx].endTime = minsToTimeStr(newEnd);
           saveEvents();
-          apiUpdateEvent(barDragState.eventId, allEvents[idx]);
+          apiUpdateEvent(targetId, allEvents[idx]);
           showStatus(`✓ ${allEvents[idx].title} → ${formatTimeEastern(allEvents[idx].time)}`, 'success');
           showSyncIndicator();
           triggerHaptic([40]);
@@ -3490,8 +3548,8 @@
 
     // ── Events page (search tab) ──
     function renderEventsPage() {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const farOut = new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0];
+      const todayStr = getESTDateString();
+      const farOut = getLocalDateString(new Date(Date.now() + 180 * 86400000));
       const activeEvents = allEvents.filter(e => !archivedIds.has(e.id) && (e.endDate || e.date) >= todayStr);
       const upcomingHolidays = holidays.filter(h => h.date >= todayStr && h.date <= farOut);
       const sorted = [...activeEvents, ...upcomingHolidays].sort((a, b) => {
@@ -3514,8 +3572,8 @@
       const query = document.getElementById('search-input').value.toLowerCase();
       const fromDate = document.getElementById('search-from').value;
       const toDate = document.getElementById('search-to').value;
-      const todayStr = new Date().toISOString().split('T')[0];
-      const farOut = new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0];
+      const todayStr = getESTDateString();
+      const farOut = getLocalDateString(new Date(Date.now() + 180 * 86400000));
       const filteredEvents = allEvents.filter(e => {
         if (archivedIds.has(e.id)) return false;
         if (!fromDate && (e.endDate || e.date) < todayStr) return false;
@@ -3548,7 +3606,7 @@
       const btn = document.getElementById('filter-toggle-btn');
       const open = row.style.display === 'none';
       row.style.display = open ? 'flex' : 'none';
-      btn.style.background = open ? 'rgba(74,157,111,0.15)' : 'var(--bg-light)';
+      btn.style.background = open ? 'rgba(var(--primary-rgb),0.15)' : 'var(--bg-light)';
       btn.style.borderColor = open ? 'var(--primary)' : 'var(--border-color)';
     }
     function clearSearchFilters() {
@@ -3569,7 +3627,7 @@
         container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div>No upcoming events</div>';
         return;
       }
-      const today = new Date().toISOString().split('T')[0];
+      const today = getESTDateString();
       const grouped = {};
       events.forEach(e => { if (!grouped[e.date]) grouped[e.date] = []; grouped[e.date].push(e); });
 
@@ -3817,8 +3875,12 @@
         const isAllDay=!start.time;
         let endDate=null;
         if (end&&end.date!==start.date) { if(isAllDay){const d=new Date(end.date+'T00:00:00');d.setDate(d.getDate()-1);endDate=d.toISOString().slice(0,10);}else{endDate=end.date;} }
-        const uid = get('UID') || null;
-        const newEv = { id: uid ? uid.replace('@marked.app','') : (crypto.randomUUID?(crypto.randomUUID()):(Date.now().toString(36)+Math.random().toString(36).slice(2))), title:get('SUMMARY')||'Imported Event', date:start.date, endDate:endDate||null, time:start.time, endTime:end?.time||null, isAllDay, isMultiDay:!!endDate, createdAt:new Date().toISOString() };
+        const rawUid = (get('UID') || '').replace('@marked.app', '');
+        // Only trust simple UIDs; anything else gets a fresh safe id so it can't
+        // break out of onclick="…('${id}')" handlers.
+        const genId = () => (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+        const uid = /^[A-Za-z0-9_-]{1,64}$/.test(rawUid) ? rawUid : genId();
+        const newEv = { id: uid, title:get('SUMMARY')||'Imported Event', date:start.date, endDate:endDate||null, time:start.time, endTime:end?.time||null, isAllDay, isMultiDay:!!endDate, createdAt:new Date().toISOString() };
         if (allEvents.find(e=>e.id===newEv.id)) continue; // skip duplicates
         allEvents.push(newEv); saveEvents(); await apiSaveEvent(newEv); imported++;
       }
@@ -4018,6 +4080,7 @@
     });
 
     // ── PWA Service Worker + auto-update ──
+    let swSkipWaitingRequested = false;
     function showUpdateBanner(worker) {
       if (document.getElementById('update-banner')) return;
       const bar = document.createElement('div');
@@ -4025,14 +4088,18 @@
       bar.innerHTML = `<span>A new version of Marked is ready.</span><button id="update-refresh-btn">Refresh</button>`;
       document.body.appendChild(bar);
       document.getElementById('update-refresh-btn').onclick = () => {
+        swSkipWaitingRequested = true;
         worker.postMessage('SKIP_WAITING');
       };
     }
     if ('serviceWorker' in navigator) {
       let refreshing = false;
-      // When the new SW takes control, reload once to pick up fresh assets
+      // Only reload when an update actually swaps in — NOT on the first-ever
+      // control acquisition (which would flash-reload every first visit).
+      const hadController = !!navigator.serviceWorker.controller;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (refreshing) return;
+        if (!hadController && !swSkipWaitingRequested) return; // initial claim on fresh load
         refreshing = true;
         window.location.reload();
       });

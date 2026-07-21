@@ -183,16 +183,19 @@ function checkParseQuota(key, isGuest) {
 
 // ── Parse result cache (6-hour TTL, max 500 entries) ──
 const parseCache = new Map();
-function getCachedParse(text, today) {
-  const key = `${text.toLowerCase().trim()}|${today}`;
+function cacheKey(text, today, defaultDate) {
+  return `${text.toLowerCase().trim()}|${today}|${defaultDate || today}`;
+}
+function getCachedParse(text, today, defaultDate) {
+  const key = cacheKey(text, today, defaultDate);
   const hit = parseCache.get(key);
   if (hit && Date.now() < hit.expiresAt) return hit.result;
   parseCache.delete(key);
   return null;
 }
-function setCachedParse(text, today, result) {
+function setCachedParse(text, today, defaultDate, result) {
   if (parseCache.size >= 500) parseCache.delete(parseCache.keys().next().value);
-  parseCache.set(`${text.toLowerCase().trim()}|${today}`, { result, expiresAt: Date.now() + 6 * 3600000 });
+  parseCache.set(cacheKey(text, today, defaultDate), { result, expiresAt: Date.now() + 6 * 3600000 });
 }
 
 // ── Local natural-language parser (no API cost) ──
@@ -219,14 +222,21 @@ function pad2(n) { return String(n).padStart(2, '0'); }
 const MONTH_NAMES = 'january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec';
 // Disambiguate time ranges so chrono doesn't read the start as pm and wrap the
 // end past midnight. Handles "9-5pm" → "9am-5pm" and bare "9-5:30" → "9am-5:30pm".
+const MONTH_BEFORE_RE = new RegExp('(?:' + MONTH_NAMES + ')\\s*$', 'i');
 function normalizeBareRange(text) {
   // Ranges that already carry a meridiem: fix the first half if it's missing one.
   text = text.replace(
     /\b(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i,
-    (m, h1, m1, h2, m2, mer) => {
+    (m, h1, m1, h2, m2, mer, offset, full) => {
+      if (MONTH_BEFORE_RE.test(full.slice(0, offset))) return m; // "June 5-7pm" → leave the dates
       const H1 = parseInt(h1, 10), H2 = parseInt(h2, 10);
       const lower = mer.toLowerCase();
-      const firstMer = (lower === 'pm' && H1 > H2 && H1 !== 12) ? 'am' : lower;
+      // 9-5pm → 9am-5pm; 11-12pm → 11am-12pm (noon), not 11pm.
+      let firstMer = lower;
+      if (lower === 'pm' && H1 !== 12) {
+        if (H1 > H2) firstMer = 'am';
+        else if (H2 === 12 && H1 >= 7 && H1 <= 11) firstMer = 'am';
+      }
       return h1 + (m1 ? ':' + m1 : '') + firstMer + '-' + h2 + (m2 ? ':' + m2 : '') + lower;
     }
   );
@@ -234,7 +244,8 @@ function normalizeBareRange(text) {
   // sides are plausible 1–12 hours (so we don't touch dates like "7-14").
   text = text.replace(
     /\b(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?\b(?!\s*(?:am|pm))/i,
-    (m, h1, m1, h2, m2) => {
+    (m, h1, m1, h2, m2, offset, full) => {
+      if (MONTH_BEFORE_RE.test(full.slice(0, offset))) return m; // "trip June 5-7" is a date range
       const H1 = parseInt(h1, 10), H2 = parseInt(h2, 10);
       if (H1 < 1 || H1 > 12 || H2 < 1 || H2 > 12) return m; // likely a date, leave it
       let mer1, mer2;
@@ -291,8 +302,7 @@ function parseEventLocal(text, todayStr, defaultDateStr) {
     const s = r.start, sd = s.date();
 
     // First result carrying an explicit day/weekday/month sets the date.
-    // A user-written ordinal ("the 14th") always wins over chrono's guess.
-    if (!dateStr && !ordinal && hasDayComponent(s)) {
+    if (!dateStr && hasDayComponent(s)) {
       dateStr = ymd(sd);
       if (r.end && r.end.isCertain('day')) {
         const eds = ymd(r.end.date());
@@ -306,8 +316,10 @@ function parseEventLocal(text, todayStr, defaultDateStr) {
     }
   }
 
-  // Explicit ordinal date overrides everything and gets stripped from the title
-  if (ordinal) { dateStr = ordinal.dateStr; spans.push(ordinal.span); }
+  // A bare ordinal ("the 14th") is only a *fallback* — it fills in the date when
+  // chrono found none, but never overrides an explicit weekday/date the user gave
+  // (e.g. "21st birthday party friday" must land on Friday, not the 21st).
+  if (ordinal && !dateStr) { dateStr = ordinal.dateStr; spans.push(ordinal.span); }
 
   // Nothing concrete (no day and no time) → let the AI handle vague input
   if (!dateStr && !timeStr) return { confident: false };
@@ -320,6 +332,13 @@ function parseEventLocal(text, todayStr, defaultDateStr) {
     const [h, m] = timeStr.split(':').map(Number);
     const eh = h + 1;
     endTimeStr = eh >= 24 ? '23:59' : `${pad2(eh)}:${pad2(m)}`;
+  }
+  // End time earlier than start on a single day means the event crosses midnight
+  // (e.g. "10pm-2am") — roll the end onto the next day instead of leaving a
+  // negative-duration event.
+  if (timeStr && endTimeStr && endTimeStr < timeStr && !endDateStr) {
+    const d = new Date(`${dateStr}T12:00:00`); d.setDate(d.getDate() + 1);
+    endDateStr = ymd(d);
   }
 
   // Title = input minus every matched date/time span, with dangling
@@ -431,8 +450,9 @@ async function updateEvent(id, userId, updates) {
   if (!eventsCollection) return updates;
   try {
     const query = userId ? { id, userId } : { id };
-    await eventsCollection.updateOne(query, { $set: updates });
-    return updates;
+    const r = await eventsCollection.updateOne(query, { $set: updates });
+    // Don't report success when nothing matched (wrong id / not the owner).
+    return r.matchedCount > 0 ? updates : null;
   } catch (err) {
     console.error('Error updating event:', err.message);
     return null;
@@ -562,11 +582,13 @@ app.post('/api/auth/register', async (req, res) => {
   if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' });
   if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
 
-  // Dev mode: no real DB, return token immediately
-  if (!usersCollection || !JWT_SECRET) {
-    const salt = generateSalt();
-    const token = JWT_SECRET ? jwt.sign({ sub: 'dev-user', email }, JWT_SECRET, { expiresIn: '30d' }) : 'dev-token';
-    return res.json({ token, encryptionSalt: salt });
+  // Dev mode = no JWT secret. If a secret is set but the DB is down, fail
+  // closed rather than minting a real token against no account.
+  if (!JWT_SECRET) {
+    return res.json({ token: 'dev-token', encryptionSalt: generateSalt() });
+  }
+  if (!usersCollection) {
+    return res.status(503).json({ error: 'Service temporarily unavailable. Please try again shortly.' });
   }
 
   try {
@@ -611,10 +633,13 @@ app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
-  // Dev mode
-  if (!usersCollection || !JWT_SECRET) {
-    const token = JWT_SECRET ? jwt.sign({ sub: 'dev-user', email }, JWT_SECRET, { expiresIn: '30d' }) : 'dev-token';
-    return res.json({ token, encryptionSalt: 'dev-salt' });
+  // Dev mode = no JWT secret configured at all. If a secret IS set but the DB
+  // is unreachable, do NOT mint a real token for an unverified password.
+  if (!JWT_SECRET) {
+    return res.json({ token: 'dev-token', encryptionSalt: 'dev-salt' });
+  }
+  if (!usersCollection) {
+    return res.status(503).json({ error: 'Service temporarily unavailable. Please try again shortly.' });
   }
 
   try {
@@ -684,6 +709,8 @@ app.delete('/api/auth/account', requireAuth, async (req, res) => {
 // Generates 16 one-time recovery codes, stores hashed, returns plaintext once
 // POST /api/auth/forgot-password — sends 6-digit OTP via email
 app.post('/api/auth/forgot-password', async (req, res) => {
+  const ip = req.ip || 'unknown';
+  if (!checkAuthRateLimit(ip)) return res.status(429).json({ error: 'Too many attempts. Try again later.' });
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
   if (!usersCollection || !JWT_SECRET) return res.status(400).json({ error: 'Not available in dev mode' });
@@ -705,6 +732,8 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
 // POST /api/auth/reset-password — validates OTP, resets password
 app.post('/api/auth/reset-password', async (req, res) => {
+  const ip = req.ip || 'unknown';
+  if (!checkAuthRateLimit(ip)) return res.status(429).json({ error: 'Too many attempts. Try again later.' });
   const { email, code, newPassword } = req.body;
   if (!email || !code || !newPassword) return res.status(400).json({ error: 'All fields required' });
   if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
@@ -714,10 +743,19 @@ app.post('/api/auth/reset-password', async (req, res) => {
     if (!user?.resetOtp) return res.status(400).json({ error: 'No reset pending for this email' });
     if (new Date() > user.resetOtpExpiry) return res.status(400).json({ error: 'Code expired — request a new one' });
     const valid = await bcrypt.compare(code.trim(), user.resetOtp);
-    if (!valid) return res.status(400).json({ error: 'Incorrect code' });
+    if (!valid) {
+      // Invalidate the OTP after too many wrong guesses so it can't be brute-forced.
+      const attempts = (user.resetOtpAttempts || 0) + 1;
+      if (attempts >= 5) {
+        await usersCollection.updateOne({ userId: user.userId }, { $unset: { resetOtp: '', resetOtpExpiry: '', resetOtpAttempts: '' } });
+        return res.status(400).json({ error: 'Too many incorrect attempts — request a new code' });
+      }
+      await usersCollection.updateOne({ userId: user.userId }, { $set: { resetOtpAttempts: attempts } });
+      return res.status(400).json({ error: 'Incorrect code' });
+    }
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     const encryptionSalt = generateSalt();
-    await usersCollection.updateOne({ userId: user.userId }, { $set: { passwordHash, encryptionSalt, updatedAt: new Date() }, $unset: { resetOtp: '', resetOtpExpiry: '' } });
+    await usersCollection.updateOne({ userId: user.userId }, { $set: { passwordHash, encryptionSalt, updatedAt: new Date() }, $unset: { resetOtp: '', resetOtpExpiry: '', resetOtpAttempts: '' } });
     const token = jwt.sign({ sub: user.userId, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
     console.log('✓ Password reset:', user.email);
     res.json({ token, encryptionSalt, userId: user.userId, warning: 'Events encrypted with your old password are no longer accessible' });
@@ -804,7 +842,7 @@ app.post('/api/events/parse', requireAuth, async (req, res) => {
   } catch (e) { /* fall through to AI */ }
 
   // 2. Cache check
-  const cached = getCachedParse(text, today);
+  const cached = getCachedParse(text, today, defaultDate);
   if (cached) {
     console.log(`💾 Cache: "${text}"`);
     return res.json(cached);
@@ -825,7 +863,7 @@ app.post('/api/events/parse', requireAuth, async (req, res) => {
   // 4. AI fallback
   try {
     const parsed = await parseEvent(text, today, currentESTTime, contextDate);
-    setCachedParse(text, today, parsed);
+    setCachedParse(text, today, defaultDate, parsed);
     res.json(parsed);
   } catch (err) {
     console.error('✗ Parse error:', err.message);
@@ -1180,20 +1218,30 @@ app.post('/api/push/subscribe', requireAuth, async (req, res) => {
   if (!pushSubsCollection) return res.json({ ok: true });
   const { subscription, preferences } = req.body;
   if (!subscription?.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
-  await pushSubsCollection.updateOne(
-    { 'subscription.endpoint': subscription.endpoint },
-    { $set: { userId: req.user.userId, subscription, preferences: preferences || { dayOf: true, hourBefore: false }, updatedAt: new Date() } },
-    { upsert: true }
-  );
-  res.json({ ok: true });
+  try {
+    await pushSubsCollection.updateOne(
+      { 'subscription.endpoint': subscription.endpoint },
+      { $set: { userId: req.user.userId, subscription, preferences: preferences || { dayOf: true, hourBefore: false }, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Push subscribe error:', err.message);
+    res.status(500).json({ error: 'Failed to save subscription' });
+  }
 });
 
 app.delete('/api/push/unsubscribe', requireAuth, async (req, res) => {
   if (!pushSubsCollection) return res.json({ ok: true });
   const { endpoint } = req.body;
-  if (endpoint) await pushSubsCollection.deleteOne({ 'subscription.endpoint': endpoint });
-  else await pushSubsCollection.deleteMany({ userId: req.user.userId });
-  res.json({ ok: true });
+  try {
+    if (endpoint) await pushSubsCollection.deleteOne({ 'subscription.endpoint': endpoint });
+    else await pushSubsCollection.deleteMany({ userId: req.user.userId });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Push unsubscribe error:', err.message);
+    res.status(500).json({ error: 'Failed to unsubscribe' });
+  }
 });
 
 // ── Static legal pages ──
@@ -1311,33 +1359,50 @@ function buildSubscriptionIcs(events) {
 app.get('/api/cal/token', requireAuth, async (req, res) => {
   if (!calTokensCollection) return res.status(503).json({ error: 'Not available without MongoDB' });
   const userId = req.user.userId;
-  let doc = await calTokensCollection.findOne({ userId });
-  if (!doc) {
-    const { randomBytes } = require('crypto');
-    const token = randomBytes(24).toString('hex');
-    await calTokensCollection.insertOne({ userId, token, createdAt: new Date() });
-    doc = { token };
+  try {
+    let doc = await calTokensCollection.findOne({ userId });
+    if (!doc) {
+      const { randomBytes } = require('crypto');
+      const token = randomBytes(24).toString('hex');
+      // Upsert so two concurrent first-requests can't both insert on the unique
+      // userId index and crash with a duplicate-key error.
+      await calTokensCollection.updateOne(
+        { userId },
+        { $setOnInsert: { userId, token, createdAt: new Date() } },
+        { upsert: true }
+      );
+      doc = await calTokensCollection.findOne({ userId });
+    }
+    res.json({ token: doc.token });
+  } catch (err) {
+    console.error('Cal token error:', err.message);
+    res.status(500).json({ error: 'Failed to get calendar token' });
   }
-  res.json({ token: doc.token });
 });
 
 app.get('/api/cal/:token/events.ics', async (req, res) => {
   if (!calTokensCollection || !eventsCollection) return res.status(503).send('Not available');
-  const doc = await calTokensCollection.findOne({ token: req.params.token });
-  if (!doc) return res.status(404).send('Calendar not found');
-  const events = await eventsCollection.find({ userId: doc.userId }).toArray();
-  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-  res.setHeader('Content-Disposition', 'inline; filename="marked.ics"');
-  res.setHeader('Cache-Control', 'max-age=3600');
-  res.send(buildSubscriptionIcs(events));
+  try {
+    const doc = await calTokensCollection.findOne({ token: String(req.params.token) });
+    if (!doc) return res.status(404).send('Calendar not found');
+    const events = await eventsCollection.find({ userId: doc.userId }).toArray();
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline; filename="marked.ics"');
+    res.setHeader('Cache-Control', 'max-age=3600');
+    res.send(buildSubscriptionIcs(events));
+  } catch (err) {
+    console.error('Cal feed error:', err.message);
+    res.status(500).send('Failed to build calendar');
+  }
 });
 
 async function startServer() {
   await connectMongoDB();
 
   // ── Push notification scheduler (runs every minute) ──
-  // sentNotifKeys deduplicates within a day — cleared at midnight EST each day
+  // sentNotifKeys deduplicates within a day — reset whenever the EST date rolls.
   const sentNotifKeys = new Set();
+  let lastNotifDate = null;
 
   setInterval(async () => {
     if (!pushSubsCollection || !eventsCollection || !process.env.VAPID_PUBLIC_KEY) return;
@@ -1349,8 +1414,9 @@ async function startServer() {
     const estMin = parseInt(p.minute, 10);
     const estMins = estHour * 60 + estMin;
 
-    // Reset dedup set at midnight so next day's notifications fire
-    if (estHour === 0 && estMin === 0) sentNotifKeys.clear();
+    // Reset dedup set whenever the date changes — robust even if the exact
+    // midnight tick is skipped (avoids the set growing unbounded across days).
+    if (estDateStr !== lastNotifDate) { sentNotifKeys.clear(); lastNotifDate = estDateStr; }
 
     try {
       const subs = await pushSubsCollection.find({}).toArray();
@@ -1363,8 +1429,8 @@ async function startServer() {
           if (event.time) {
             const [eh, em] = event.time.split(':').map(Number);
             const evMins = eh * 60 + em;
-            if (prefs.dayOf && estMins === 6 * 60) {
-              // Morning reminder at 6 AM
+            if (prefs.dayOf && estMins >= 6 * 60 && estMins <= 6 * 60 + 1) {
+              // Morning reminder ~6 AM (±1 min window so a skipped tick still fires)
               body = `${event.title} today at ${fmt12(event.time)}`;
               tag = `${event.id}-morning-${estDateStr}`;
             } else if (prefs.hourBefore && Math.abs(estMins - (evMins - 60)) <= 1) {
