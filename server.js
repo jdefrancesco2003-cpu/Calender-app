@@ -826,6 +826,20 @@ app.post('/api/migrate/claim-legacy-events', requireAuth, async (req, res) => {
 });
 
 // ── Parse endpoint (local-first → cache → AI fallback) ──
+// Live preview — local parser only. Free, instant, never touches the AI or the
+// daily quota, so it's safe to call on every keystroke (debounced client-side).
+app.post('/api/events/parse-preview', requireAuth, (req, res) => {
+  const { text, currentESTDate, contextDate } = req.body || {};
+  if (!text || !text.trim()) return res.json({ confident: false });
+  try {
+    const today = currentESTDate || getESTDateString();
+    const local = parseEventLocal(text, today, contextDate || today);
+    return res.json(local.confident ? { confident: true, result: local.result } : { confident: false });
+  } catch (e) {
+    return res.json({ confident: false });
+  }
+});
+
 app.post('/api/events/parse', requireAuth, async (req, res) => {
   const ip = req.ip || 'unknown';
   if (!checkParseRateLimit(ip)) {
