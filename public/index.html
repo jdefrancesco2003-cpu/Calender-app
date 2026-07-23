@@ -1828,6 +1828,18 @@
       }
       return null;
     }
+    // Resolve an id (real or virtual "master_YYYY-MM-DD") to a concrete event
+    // object — reconstructing the recurring occurrence when needed.
+    function resolveEventInstance(id) {
+      const direct = allEvents.find(e => e.id === id);
+      if (direct) return direct;
+      const m = id.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
+      if (m) {
+        const master = allEvents.find(e => e.id === m[1]);
+        if (master) return makeVirtualInstance(master, m[2]);
+      }
+      return null;
+    }
 
     function showStatus(message, type) {
       const el = document.getElementById('status-message');
