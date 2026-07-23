@@ -304,15 +304,40 @@
     .archive-event-item { background: var(--bg-light); padding: 11px 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid rgba(var(--primary-rgb),0.4); gap: 8px; }
     .archive-event-buttons { display: flex; gap: 6px; flex-shrink: 0; }
     .archive-event-buttons button { padding: 6px 10px; font-size: 11px; min-height: auto; }
-    /* ── Notes tab (freeform planner) ── */
+    /* ── Notes tab (dated planner entries) ── */
     #notes-tab { padding: 0; }
-    .notes-head { padding: 14px 18px 6px; flex-shrink: 0; }
-    .notes-title { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; color: var(--text-primary); font-family: 'Nunito', sans-serif; }
-    .notes-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-    .notes-area { flex: 1; min-height: 0; width: 100%; box-sizing: border-box; border: none; outline: none; resize: none; background: var(--bg-dark); color: var(--text-primary); font-family: inherit; font-size: 16px; line-height: 1.75; padding: 8px 18px 12px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-    .notes-area::placeholder { color: var(--text-secondary); opacity: 0.55; }
-    .notes-status { flex-shrink: 0; height: 18px; padding: 0 18px max(6px, env(safe-area-inset-bottom)); font-size: 11px; color: var(--text-secondary); opacity: 0; transition: opacity 0.2s; }
-    .notes-status.show { opacity: 0.7; }
+    .notes-head { padding: 12px 16px 8px; flex-shrink: 0; }
+    .notes-title { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; color: var(--text-primary); font-family: 'Nunito', sans-serif; margin-bottom: 8px; }
+    .note-search { width: 100%; box-sizing: border-box; padding: 9px 13px; border-radius: 10px; border: 1.5px solid var(--border-color); background: var(--bg-light); color: var(--text-primary); font-size: 14px; font-family: inherit; }
+    .note-compose { flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; padding: 4px 16px 8px; }
+    #note-compose { flex: 1; box-sizing: border-box; padding: 10px 13px; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--bg-light); color: var(--text-primary); font-size: 15px; font-family: inherit; line-height: 1.4; resize: none; overflow-y: auto; max-height: 120px; min-height: 44px; }
+    #note-compose::placeholder { color: var(--text-secondary); opacity: 0.65; }
+    .note-add-btn { flex-shrink: 0; background: var(--primary); color: #fff; border: none; border-radius: 12px; height: 44px; padding: 0 16px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .note-add-btn:active { transform: scale(0.94); }
+    .note-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 12px max(16px, env(safe-area-inset-bottom)); }
+    .note-empty { text-align: center; color: var(--text-secondary); font-size: 14px; padding: 40px 16px; opacity: 0.7; line-height: 1.6; }
+    /* Swipeable dated entry (shares the .swipe engine with events) */
+    .note-card { overflow: hidden; border-radius: 12px; margin-bottom: 8px; }
+    .note-card-inner { display: flex; align-items: stretch; width: calc(100% + 132px); will-change: transform; }
+    .note-card-inner.swipe-left { }
+    .note-card-body { flex: 1; display: flex; align-items: flex-start; gap: 11px; background: var(--bg-card); border-radius: 12px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.12); overflow: hidden; min-width: 0; padding: 12px 14px; transition: background 0.12s; }
+    .note-card-body:active { opacity: 0.85; }
+    .note-date { flex-shrink: 0; width: 48px; font-size: 11px; font-weight: 700; color: var(--text-secondary); line-height: 1.35; text-transform: uppercase; letter-spacing: 0.3px; padding-top: 1px; }
+    .note-date .note-year { font-weight: 500; opacity: 0.7; }
+    .note-text { flex: 1; min-width: 0; font-size: 15px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+    .note-actions { flex: 0 0 132px; display: flex; background: var(--bg-card); }
+    .note-act { flex: 1; border: none; border-left: 1.5px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; padding: 0; min-height: auto; color: var(--primary); }
+    .note-act:active { opacity: 0.65; }
+    .note-act.del { color: var(--error); border-left-color: var(--error); }
+    /* Full-slide-to-delete armed cue (events + notes) */
+    .ev-card-inner.swipe-armed .ev-card-body, .note-card-inner.swipe-armed .note-card-body { background: rgba(255,69,58,0.16); }
+    /* Inline edit */
+    .note-edit-wrap { background: var(--bg-card); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); padding: 12px 14px; margin-bottom: 8px; }
+    .note-edit-ta { width: 100%; box-sizing: border-box; background: var(--bg-light); border: 1.5px solid var(--primary); border-radius: 10px; color: var(--text-primary); font-size: 15px; font-family: inherit; line-height: 1.5; padding: 10px 12px; resize: none; outline: none; min-height: 60px; }
+    .note-edit-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+    .note-edit-actions button { padding: 7px 14px; font-size: 13px; font-weight: 700; border-radius: 9px; border: none; cursor: pointer; min-height: auto; }
+    .note-edit-actions .save { background: var(--primary); color: #fff; }
+    .note-edit-actions .cancel { background: var(--bg-light); color: var(--text-secondary); }
     /* Live parse preview chip under the add-event input */
     .parse-preview { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.2s ease, opacity 0.2s ease, margin 0.2s ease; }
     .parse-preview.show { max-height: 60px; opacity: 1; margin-top: 8px; }
@@ -564,14 +589,13 @@
       <div id="notes-tab" class="tab-content" style="flex-direction:column;overflow:hidden;">
         <div class="notes-head">
           <div class="notes-title">Notes</div>
-          <div class="notes-sub">Your planner page — lists, thoughts, plans, anything.</div>
+          <input type="search" id="note-search" class="note-search" placeholder="Search notes…" oninput="renderJournal()">
         </div>
-        <textarea id="notes-area" class="notes-area" oninput="onNotesInput(this)" placeholder="Start writing…
-
-Groceries — eggs, milk, bread, coffee
-Weekend ideas…
-Don't forget to…"></textarea>
-        <div class="notes-status" id="notes-status"></div>
+        <div class="note-compose">
+          <textarea id="note-compose" rows="1" placeholder="Write a note — groceries, thoughts, plans…" oninput="autoGrowCompose(this)" onkeydown="noteComposeKey(event)"></textarea>
+          <button class="note-add-btn" onclick="addJournalEntry()">Add</button>
+        </div>
+        <div class="note-list" id="note-list"></div>
       </div>
 
     </div><!-- .main-content -->
@@ -1046,7 +1070,7 @@ Don't forget to…"></textarea>
   <!-- ── UNDO TOAST ── -->
   <div class="undo-toast" id="undo-toast" style="display:none;">
     <span id="undo-message" style="font-size:14px;font-weight:500;"></span>
-    <button onclick="undoDelete(); triggerHaptic([40])">Undo</button>
+    <button onclick="runUndoToast(); triggerHaptic([40])">Undo</button>
   </div>
 
   <!-- Day events bottom sheet -->
@@ -1864,7 +1888,7 @@ Don't forget to…"></textarea>
       if (logo) logo.classList.toggle('reminders-active', tab === 'notes');
       document.body.classList.toggle('on-notes', tab === 'notes');
       if (tab === 'events') renderEventsPage();
-      if (tab === 'notes') loadNotes();
+      if (tab === 'notes') renderJournal();
       if (tab === 'calendar') { if (isWeekView) renderWeekView(); else { renderCalendar(); renderUpcomingEvents(); } }
     }
     function toggleMenu() {
@@ -2271,31 +2295,114 @@ Don't forget to…"></textarea>
       _closeModal('settings-overlay');
     }
 
-    // ── Notes (freeform planner page — one continuous writing surface) ──
-    let notesSaveTimer = null;
-    function loadNotes() {
-      let notes = localStorage.getItem('markedNotes');
-      if (notes === null) {
-        // One-time migration: fold the old per-item reminders into one page
-        try {
-          const old = JSON.parse(localStorage.getItem('markedReminders') || '[]');
-          notes = old.map(r => (r.text || '').trim()).filter(Boolean).join('\n');
-        } catch { notes = ''; }
-        localStorage.setItem('markedNotes', notes);
+    // ── Notes: dated planner entries (journal) ──
+    let journal = [];
+    let editingNoteId = null;
+    function loadJournal() {
+      const raw = localStorage.getItem('markedJournal');
+      if (raw !== null) {
+        try { journal = JSON.parse(raw) || []; } catch { journal = []; }
+        return;
       }
-      const area = document.getElementById('notes-area');
-      if (area && area.value !== notes) area.value = notes;
+      // One-time migration from earlier formats into dated entries
+      journal = [];
+      const now = Date.now();
+      const notepad = localStorage.getItem('markedNotes');
+      if (notepad != null && notepad.trim()) {
+        journal.push({ id: generateId(), text: notepad.trim(), ts: now });
+      } else {
+        try {
+          JSON.parse(localStorage.getItem('markedReminders') || '[]')
+            .forEach(r => { const t = (r.text || '').trim(); if (t) journal.push({ id: generateId(), text: t, ts: r.createdAt || now }); });
+        } catch {}
+      }
+      saveJournal();
     }
-    function onNotesInput(el) {
-      clearTimeout(notesSaveTimer);
-      notesSaveTimer = setTimeout(() => {
-        localStorage.setItem('markedNotes', el.value);
-        const s = document.getElementById('notes-status');
-        if (s) { s.textContent = 'Saved'; s.classList.add('show'); clearTimeout(s._t); s._t = setTimeout(() => s.classList.remove('show'), 1200); }
-      }, 400);
+    function saveJournal() { localStorage.setItem('markedJournal', JSON.stringify(journal)); }
+    function goToNotes() { showTab('notes', document.getElementById('tab-btn-notes')); }
+    function autoGrowCompose(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+    function noteComposeKey(e) {
+      // Cmd/Ctrl+Enter commits; plain Enter keeps a new line (freeform)
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); addJournalEntry(); }
     }
-    function goToNotes() {
-      showTab('notes', document.getElementById('tab-btn-notes'));
+    function addJournalEntry() {
+      const el = document.getElementById('note-compose');
+      const text = el.value.trim();
+      if (!text) return;
+      journal.unshift({ id: generateId(), text, ts: Date.now() });
+      saveJournal();
+      el.value = ''; autoGrowCompose(el);
+      renderJournal();
+      triggerHaptic(20);
+    }
+    function editJournalEntry(id) {
+      editingNoteId = id;
+      renderJournal();
+      setTimeout(() => { const ta = document.getElementById('note-edit-ta'); if (ta) { ta.focus(); ta.style.height = ta.scrollHeight + 'px'; ta.setSelectionRange(ta.value.length, ta.value.length); } }, 40);
+    }
+    function saveJournalEdit(id) {
+      const ta = document.getElementById('note-edit-ta');
+      const entry = journal.find(e => e.id === id);
+      if (entry && ta) {
+        const t = ta.value.trim();
+        if (t) entry.text = t; else journal = journal.filter(e => e.id !== id);
+        saveJournal();
+      }
+      editingNoteId = null; renderJournal(); triggerHaptic(20);
+    }
+    function cancelJournalEdit() { editingNoteId = null; renderJournal(); }
+    function deleteJournalEntry(id) {
+      const idx = journal.findIndex(e => e.id === id);
+      if (idx < 0) return;
+      const removed = journal[idx];
+      journal.splice(idx, 1);
+      saveJournal(); renderJournal();
+      showUndoToast('Note deleted', () => { journal.splice(Math.min(idx, journal.length), 0, removed); saveJournal(); renderJournal(); });
+      triggerHaptic([40]);
+    }
+    function _fmtNoteDate(ts) {
+      const d = new Date(ts);
+      return { mon: d.toLocaleDateString('en-US', { month: 'short' }), day: String(d.getDate()).padStart(2, '0'), year: d.getFullYear() };
+    }
+    function renderJournal() {
+      const list = document.getElementById('note-list');
+      if (!list) return;
+      const q = (document.getElementById('note-search')?.value || '').toLowerCase().trim();
+      const items = q ? journal.filter(e => e.text.toLowerCase().includes(q)) : journal;
+      if (!items.length) {
+        list.innerHTML = `<div class="note-empty">${q ? 'No notes match your search.' : 'No notes yet.<br>Write something above — it gets stamped with today\'s date.'}</div>`;
+        return;
+      }
+      list.innerHTML = items.map(e => {
+        if (e.id === editingNoteId) {
+          return `<div class="note-edit-wrap">
+            <textarea class="note-edit-ta" id="note-edit-ta" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'">${escHtml(e.text)}</textarea>
+            <div class="note-edit-actions">
+              <button class="cancel" onclick="cancelJournalEdit()">Cancel</button>
+              <button class="save" onclick="saveJournalEdit('${e.id}')">Save</button>
+            </div>
+          </div>`;
+        }
+        const d = _fmtNoteDate(e.ts);
+        return `<div class="note-card" data-id="${e.id}">
+          <div class="note-card-inner">
+            <div class="note-card-body" onclick="editJournalEntry('${e.id}')">
+              <div class="note-date">${d.mon} ${d.day}<br><span class="note-year">${d.year}</span></div>
+              <div class="note-text">${escHtml(e.text)}</div>
+            </div>
+            <div class="note-actions">
+              <button class="note-act edit" onclick="event.stopPropagation();editJournalEntry('${e.id}')">Edit</button>
+              <button class="note-act del" onclick="event.stopPropagation();deleteJournalEntry('${e.id}')">Delete</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+      // Wire swipe (reveal Edit/Delete, or full-slide-left to delete)
+      list.querySelectorAll('.note-card[data-id]').forEach(card => {
+        const inner = card.querySelector('.note-card-inner');
+        const id = card.dataset.id;
+        attachSwipe(inner, () => deleteJournalEntry(id));
+      });
     }
     function toggleNotifications() {
       notificationsEnabled = document.getElementById('notif-toggle').checked;
@@ -2340,7 +2447,7 @@ Don't forget to…"></textarea>
     // ── Init ──
     async function init() {
       loadTheme();
-      loadNotes();
+      loadJournal();
 
       // Check if server requires auth
       try {
@@ -2750,11 +2857,19 @@ Don't forget to…"></textarea>
       scheduleNotifications();
     }
 
-    function showUndoToast(message) {
+    let _toastUndoFn = null;
+    function showUndoToast(message, undoFn) {
+      _toastUndoFn = undoFn || undoDelete;
       const toast = document.getElementById('undo-toast');
       document.getElementById('undo-message').textContent = message;
       toast.style.display = 'flex';
-      setTimeout(() => { toast.style.display = 'none'; }, 5000);
+      clearTimeout(showUndoToast._t);
+      showUndoToast._t = setTimeout(() => { toast.style.display = 'none'; }, 5000);
+    }
+    function runUndoToast() {
+      const fn = _toastUndoFn; _toastUndoFn = null;
+      document.getElementById('undo-toast').style.display = 'none';
+      if (fn) fn();
     }
 
     // ── Edit modal ──
@@ -3721,9 +3836,8 @@ Don't forget to…"></textarea>
 
       container.querySelectorAll('.ev-card[data-event-id]').forEach(card => {
         const inner = card.querySelector('.ev-card-inner');
-        inner.addEventListener('touchstart', _swipeTouchStart, { passive: true });
-        inner.addEventListener('touchmove', _swipeTouchMove, { passive: false });
-        inner.addEventListener('touchend', _swipeTouchEnd, false);
+        const id = card.dataset.eventId;
+        attachSwipe(inner, () => deleteEvent(id)); // full-slide left = quick delete
       });
     }
 
@@ -3753,18 +3867,34 @@ Don't forget to…"></textarea>
     }
 
 
-    // ── Swipe to reveal actions (smooth v2) ──
-    const SWIPE_OPEN  = 224;   // px — fully open (4 actions: Tmrw / Share / Edit / Delete)
-    const SWIPE_SNAP  = 72;    // px — position threshold to snap open on slow release
-    const SWIPE_VEL   = 0.3;   // px/ms — flick velocity to force snap
+    // ── Swipe to reveal actions + full-slide-to-delete (shared: events & notes) ──
+    // Tuned to be deliberate: a bigger commit distance and rubber-band tension
+    // past fully-open so a stray flick can't accidentally delete.
+    const SWIPE_LOCK      = 14;   // px of travel before the gesture commits to horizontal
+    const SWIPE_SNAP_FRAC = 0.5;  // fraction of the actions width needed to snap open
+    const SWIPE_VEL       = 0.5;  // px/ms flick velocity to force a snap
+    const SWIPE_RESIST    = 0.42; // tension past fully-open (rubber-band)
+    const SWIPE_ARM_GAP   = 90;   // extra finger travel past open to arm a full-slide delete
 
     let _swipeState    = null;  // active gesture state
     let _swipeOpenCard = null;  // currently open inner element
 
+    // Register a card for swipe. onDelete (optional) enables full-slide-to-delete.
+    function attachSwipe(inner, onDelete) {
+      inner._onSwipeDelete = onDelete || null;
+      inner.addEventListener('touchstart', _swipeTouchStart, { passive: true });
+      inner.addEventListener('touchmove', _swipeTouchMove, { passive: false });
+      inner.addEventListener('touchend', _swipeTouchEnd, false);
+    }
+    function _swipeActionsWidth(inner) {
+      const a = inner.querySelector('.ev-card-actions, .note-actions');
+      return a ? a.offsetWidth : 0;
+    }
     function _swipeSpring(inner, toOpen) {
-      if (toOpen) {
+      const W = _swipeActionsWidth(inner);
+      if (toOpen && W) {
         inner.style.transition = 'transform 0.32s cubic-bezier(0.34,1.15,0.64,1)';
-        inner.style.transform  = `translateX(-${SWIPE_OPEN}px)`;
+        inner.style.transform  = `translateX(-${W}px)`;
         inner.classList.add('swipe-left');
         _swipeOpenCard = inner;
         triggerHaptic(20);
@@ -3774,39 +3904,46 @@ Don't forget to…"></textarea>
         inner.classList.remove('swipe-left');
         if (_swipeOpenCard === inner) _swipeOpenCard = null;
       }
-      // Clean up inline transition once animation ends
       const cleanup = () => { inner.style.transition = ''; inner.removeEventListener('transitionend', cleanup); };
       inner.addEventListener('transitionend', cleanup);
     }
-
+    function _swipeDeleteAnim(inner) {
+      const card = inner.closest('.ev-card, .note-card') || inner.parentElement;
+      const w = card.offsetWidth;
+      inner.style.transition = 'transform 0.2s ease-in';
+      inner.style.transform  = `translateX(-${w}px)`;
+      card.style.height = card.offsetHeight + 'px';
+      card.style.overflow = 'hidden';
+      requestAnimationFrame(() => {
+        card.style.transition = 'height 0.22s ease, opacity 0.22s ease, margin 0.22s ease';
+        card.style.height = '0px'; card.style.opacity = '0'; card.style.margin = '0';
+      });
+      triggerHaptic([60, 30, 60]);
+      const cb = inner._onSwipeDelete;
+      setTimeout(() => { if (cb) cb(); }, 240);
+    }
     function _swipeTouchStart(e) {
       const inner  = this;
       const isOpen = inner.classList.contains('swipe-left');
+      const W = _swipeActionsWidth(inner);
       _swipeState  = {
-        inner,
-        startX:     e.touches[0].clientX,
-        startY:     e.touches[0].clientY,
-        lastX:      e.touches[0].clientX,
-        lastT:      Date.now(),
-        baseOffset: isOpen ? -SWIPE_OPEN : 0,
-        isOpen,
-        locked:     false,   // direction confirmed
-        cancelled:  false,   // vertical scroll — abort
+        inner, W,
+        startX: e.touches[0].clientX, startY: e.touches[0].clientY,
+        lastX:  e.touches[0].clientX, lastT: Date.now(),
+        baseOffset: isOpen ? -W : 0,
+        isOpen, locked: false, cancelled: false, armed: false,
       };
     }
-
     function _swipeTouchMove(e) {
       if (!_swipeState || _swipeState.cancelled) return;
       const s  = _swipeState;
       const dx = e.touches[0].clientX - s.startX;
       const dy = e.touches[0].clientY - s.startY;
 
-      // Directional lock: wait for 8px then decide axis
       if (!s.locked) {
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-        if (Math.abs(dy) > Math.abs(dx)) { s.cancelled = true; return; }  // vertical → pass through
+        if (Math.abs(dx) < SWIPE_LOCK && Math.abs(dy) < SWIPE_LOCK) return;
+        if (Math.abs(dy) > Math.abs(dx)) { s.cancelled = true; return; }  // vertical → let it scroll
         s.locked = true;
-        // Close any other open card instantly
         if (_swipeOpenCard && _swipeOpenCard !== s.inner) _swipeSpring(_swipeOpenCard, false);
         s.inner.style.transition = 'none';
       }
@@ -3815,36 +3952,37 @@ Don't forget to…"></textarea>
       s.lastX = e.touches[0].clientX;
       s.lastT = Date.now();
 
-      let offset = s.baseOffset + dx;
-      if (offset > 0) offset = 0;                                           // can't swipe right past closed
-      if (offset < -SWIPE_OPEN) {
-        const over = (-offset) - SWIPE_OPEN;
-        offset = -(SWIPE_OPEN + over * 0.18);                               // rubber-band past full-open
-      }
+      const W = s.W;
+      const rawPos = s.baseOffset + dx;        // finger position (no resistance)
+      let offset = rawPos;
+      if (offset > 0) offset = 0;
+      if (offset < -W) offset = -(W + ((-offset) - W) * SWIPE_RESIST);  // tension past open
+
+      // Arm full-slide delete based on raw finger travel (consistent regardless
+      // of how wide the actions bar is), not the resisted visual offset.
+      const canDelete = !!s.inner._onSwipeDelete;
+      const armed = canDelete && rawPos <= -(W + SWIPE_ARM_GAP);
+      if (armed !== s.armed) { s.armed = armed; if (armed) triggerHaptic(30); s.inner.classList.toggle('swipe-armed', armed); }
+
       s.inner.style.transform = `translateX(${offset}px)`;
     }
-
     function _swipeTouchEnd() {
       if (!_swipeState) return;
       const s = _swipeState;
       _swipeState = null;
+      s.inner.classList.remove('swipe-armed');
 
       if (s.cancelled || !s.locked) {
-        // Wasn't a horizontal swipe — restore without transition
-        s.inner.style.transform  = s.isOpen ? `translateX(-${SWIPE_OPEN}px)` : 'translateX(0)';
+        s.inner.style.transform = s.isOpen ? `translateX(-${s.W}px)` : 'translateX(0)';
         return;
       }
+      if (s.armed && s.inner._onSwipeDelete) { _swipeDeleteAnim(s.inner); return; }
 
       const dx  = s.lastX - s.startX;
-      const vel = Math.abs(dx) / Math.max(Date.now() - s.lastT, 1);  // px/ms
-
+      const vel = Math.abs(dx) / Math.max(Date.now() - s.lastT, 1);
       let shouldOpen;
-      if (vel > SWIPE_VEL) {
-        shouldOpen = dx < 0;                                                 // flick direction wins
-      } else {
-        const finalOffset = s.baseOffset + dx;
-        shouldOpen = finalOffset < -SWIPE_SNAP;                             // position threshold
-      }
+      if (vel > SWIPE_VEL) shouldOpen = dx < 0;                     // fast flick opens/closes
+      else shouldOpen = (s.baseOffset + dx) < -(s.W * SWIPE_SNAP_FRAC);
       _swipeSpring(s.inner, shouldOpen);
     }
 
