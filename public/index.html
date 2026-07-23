@@ -180,6 +180,10 @@
 
     /* ── UPCOMING EVENTS (calendar tab sidebar) ── */
     .events-container { padding: 12px 14px 16px; background: var(--bg-dark); border-top: 1px solid var(--border-color); overflow-y: auto; min-height: 0; }
+    /* The month-view upcoming list takes the remaining height and scrolls
+       internally, instead of collapsing into a clipped sliver. */
+    #calendar-bottom { flex: 1 1 0; padding-bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); }
+    body.week-mode #calendar-bottom { display: none; }
     #day-sheet-backdrop { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 450; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
     #day-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
     #day-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-radius: 22px 22px 0 0; z-index: 451; max-height: 78vh; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1); box-shadow: 0 -4px 30px rgba(0,0,0,0.35); }
@@ -529,7 +533,7 @@
           </div>
         </div>
 
-        <!-- Upcoming / month events list (month mode only) -->
+        <!-- Upcoming / month events list — fills the space below the grid -->
         <div class="events-container" id="calendar-bottom"></div>
 
         <!-- Week view bottom buffer (visible only in week mode) -->
@@ -3184,7 +3188,8 @@
       // Build an event row renderer shared by both modes
       function buildEventRow(event) {
         const timeStr = formatEventTime(event.time, event.endTime);
-        const dur = event.time && event.endTime ? ` (${calculateDuration(event.time, event.endTime)})` : '';
+        const durVal = event.time && event.endTime ? calculateDuration(event.time, event.endTime) : '';
+        const dur = durVal ? ` (${durVal})` : '';
         const dateObj = new Date(event.date + 'T00:00:00');
         const dateLabel = event.endDate
           ? `${new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
