@@ -180,10 +180,6 @@
 
     /* ── UPCOMING EVENTS (calendar tab sidebar) ── */
     .events-container { padding: 12px 14px 16px; background: var(--bg-dark); border-top: 1px solid var(--border-color); overflow-y: auto; min-height: 0; }
-    /* The month-view upcoming list takes the remaining height and scrolls
-       internally, instead of collapsing into a clipped sliver. */
-    #calendar-bottom { flex: 1 1 0; padding-bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); }
-    body.week-mode #calendar-bottom { display: none; }
     #day-sheet-backdrop { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 450; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
     #day-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
     #day-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-radius: 22px 22px 0 0; z-index: 451; max-height: 78vh; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1); box-shadow: 0 -4px 30px rgba(0,0,0,0.35); }
@@ -309,10 +305,13 @@
     /* ── Reminders ── */
     h1 { cursor: pointer; transition: color 0.2s; }
     h1 span { transition: color 0.2s; }
-    /* While the sheet is open, lift the logo above the overlay so it stays
-       tappable — re-tapping it closes the sheet. */
-    h1.reminders-active { color: var(--primary); position: relative; z-index: 1001; }
+    /* While the sheet is open, lift the whole header above it so the logo
+       stays tappable to close and reads as a real top bar, not a lone
+       floating element. The logo flips its two-tone colors as the active cue. */
+    body.reminders-open header { position: relative; z-index: 1001; }
+    h1.reminders-active { color: var(--primary); }
     h1.reminders-active span { color: var(--text-primary); }
+    #reminders-modal { overflow: hidden; } /* only the list scrolls; modal drag = dismiss */
     .rem-add-row { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
     .rem-add-row input { flex: 1; }
     .rem-add-btn { background: var(--primary); color: #fff; border: none; border-radius: 12px; width: 44px; height: 44px; font-size: 22px; font-weight: 400; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; line-height: 1; min-height: auto; }
@@ -323,7 +322,9 @@
     .rem-text::placeholder { color: var(--text-secondary); opacity: 0.7; }
     .rem-del { background: none; border: none; color: var(--text-secondary); font-size: 17px; cursor: pointer; min-width: 38px; min-height: 38px; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; flex-shrink: 0; opacity: 0.5; margin: -8px -8px -8px 0; }
     .rem-del:active { opacity: 1; color: var(--error); }
-    .rem-empty { text-align: center; color: var(--text-secondary); font-size: 14px; padding: 32px 12px; opacity: 0.7; line-height: 1.6; }
+    .rem-empty { margin: auto 0; text-align: center; color: var(--text-secondary); font-size: 14px; padding: 20px 12px; opacity: 0.75; line-height: 1.6; }
+    .rem-empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.55; }
+    .rem-count { font-size: 12px; color: var(--text-secondary); font-weight: 600; margin: 2px 0 0 2px; opacity: 0.75; }
     #update-banner { position: fixed; left: 12px; right: 12px; bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px)); z-index: 3000; background: var(--primary); color: #fff; padding: 12px 16px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); font-size: 14px; font-weight: 600; animation: slideUpToast 0.3s cubic-bezier(0.34,1.3,0.64,1); }
     #update-banner button { background: rgba(255,255,255,0.22); border: none; color: #fff; font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 10px; cursor: pointer; min-height: auto; flex-shrink: 0; }
     #update-banner button:active { background: rgba(255,255,255,0.35); }
@@ -533,9 +534,6 @@
           </div>
         </div>
 
-        <!-- Upcoming / month events list — fills the space below the grid -->
-        <div class="events-container" id="calendar-bottom"></div>
-
         <!-- Week view bottom buffer (visible only in week mode) -->
         <div id="week-spacer"></div>
 
@@ -714,13 +712,16 @@
 
   <!-- ── SETTINGS MODAL ── -->
   <div class="modal-overlay" id="reminders-overlay">
-    <div class="modal" style="height:82vh;">
+    <div class="modal" id="reminders-modal" style="height:86vh;">
       <div class="modal-handle"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;">
-        <h3 style="margin:0;">Reminders</h3>
-        <button onclick="closeReminders();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:22px;padding:2px 6px;min-height:auto;line-height:1;cursor:pointer;">✕</button>
+        <div>
+          <h3 style="margin:0;">Reminders</h3>
+          <div class="rem-count" id="rem-count"></div>
+        </div>
+        <button onclick="closeReminders();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:24px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;cursor:pointer;margin:-8px -6px -8px 0;">✕</button>
       </div>
-      <p style="font-size:12px;color:var(--text-secondary);margin:-4px 0 4px;line-height:1.4;">Quick notes & to-dos that don't need a full event.</p>
+      <p style="font-size:12px;color:var(--text-secondary);margin:2px 0 4px;line-height:1.4;">Quick notes & to-dos that don't need a full event.</p>
       <div class="rem-add-row">
         <input type="text" id="rem-input" placeholder="Add a reminder…" maxlength="200"
           onkeydown="if(event.key==='Enter')addReminder()"
@@ -1633,17 +1634,16 @@
       document.querySelectorAll('.modal-overlay').forEach(overlay => {
         const modal = overlay.querySelector('.modal');
         if (!modal) return;
-        makeSwipeHandler(
-          modal,
-          () => { overlay.style.transition = ''; overlay.style.opacity = ''; overlay.classList.remove('active', 'closing'); },
-          {
-            scrollEl: modal,
-            onStartDismiss: () => {
-              overlay.style.transition = 'opacity 0.31s ease';
-              overlay.style.opacity = '0';
-            }
-          }
-        );
+        const dismiss = () => { overlay.style.transition = ''; overlay.style.opacity = ''; overlay.classList.remove('active', 'closing'); };
+        const onStartDismiss = () => { overlay.style.transition = 'opacity 0.31s ease'; overlay.style.opacity = '0'; };
+        // Sheets with an internal scroll list must check THAT list's scrollTop,
+        // otherwise a down-drag on the list dismisses instead of scrolling.
+        const innerScroll = modal.querySelector('.rem-list') || modal.querySelector('.events-container');
+        makeSwipeHandler(modal, dismiss, {
+          scrollEl: innerScroll || modal,
+          topZone: innerScroll ? 100 : 0, // drag from the header area always dismisses
+          onStartDismiss
+        });
       });
 
       // Day sheet (top-zone + scroll-top detection)
@@ -2277,8 +2277,10 @@
     function renderReminders() {
       const list = document.getElementById('rem-list');
       if (!list) return;
+      const countEl = document.getElementById('rem-count');
+      if (countEl) countEl.textContent = reminders.length ? `${reminders.length} note${reminders.length > 1 ? 's' : ''}` : '';
       if (!reminders.length) {
-        list.innerHTML = `<div class="rem-empty">No reminders yet.<br>Jot down anything you don't want to forget.</div>`;
+        list.innerHTML = `<div class="rem-empty"><div class="rem-empty-icon">📝</div>No reminders yet.<br>Jot down anything you don't want to forget.</div>`;
         return;
       }
       // Each reminder is a plain editable note — tap the text to edit in place.
@@ -2337,7 +2339,11 @@
       const logo = document.getElementById('app-logo');
       if (!overlay || !logo) return;
       new MutationObserver(() => {
-        logo.classList.toggle('reminders-active', overlay.classList.contains('active'));
+        const open = overlay.classList.contains('active');
+        logo.classList.toggle('reminders-active', open);
+        // Lift the whole header above the sheet so the logo doesn't look like a
+        // lone bright element floating over a dimmed bar.
+        document.body.classList.toggle('reminders-open', open);
       }).observe(overlay, { attributes: true, attributeFilter: ['class'] });
     }
 
