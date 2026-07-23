@@ -2279,7 +2279,7 @@
       const countEl = document.getElementById('rem-count');
       if (countEl) countEl.textContent = reminders.length ? `${reminders.length} note${reminders.length > 1 ? 's' : ''}` : '';
       if (!reminders.length) {
-        list.innerHTML = `<div class="rem-empty"><div class="rem-empty-icon">📝</div>No reminders yet.<br>Jot down anything you don't want to forget.</div>`;
+        list.innerHTML = `<div class="rem-empty">No reminders yet.<br>Jot down anything you don't want to forget.</div>`;
         return;
       }
       // Each reminder is a plain editable note — tap the text to edit in place.
