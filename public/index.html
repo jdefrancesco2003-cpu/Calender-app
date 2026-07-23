@@ -75,6 +75,7 @@
     .fab { position: fixed; bottom: max(48px, calc(env(safe-area-inset-bottom) + 40px)); right: 20px; width: 56px; height: 56px; background: var(--primary); color: white; border: none; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(var(--primary-rgb),0.45), 0 1px 6px rgba(var(--primary-rgb),0.2); z-index: 100; transition: transform 0.12s, box-shadow 0.12s; }
     .fab:active { transform: scale(0.89); box-shadow: 0 2px 8px rgba(var(--primary-rgb),0.3); }
     body.week-mode .fab { bottom: max(96px, calc(env(safe-area-inset-bottom) + 92px)); }
+    body.on-notes .fab { display: none; }
 
     /* ── STATUS ── */
     #status-message { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 3000; pointer-events: none; }
@@ -256,8 +257,8 @@
     .ev-date-header { font-size: 12px; font-weight: 700; color: var(--text-secondary); padding: 16px 14px 6px; text-transform: uppercase; letter-spacing: 0.7px; }
     .ev-date-header.is-today { color: var(--primary); }
     .ev-card { overflow: hidden; border-radius: 12px; margin: 0 10px 8px; }
-    .ev-card-inner { display: flex; align-items: stretch; width: calc(100% + 168px); }
-    .ev-card-inner.swipe-left { transform: translateX(-168px); }
+    .ev-card-inner { display: flex; align-items: stretch; width: calc(100% + 224px); }
+    .ev-card-inner.swipe-left { transform: translateX(-224px); }
     .ev-card-body { flex: 1; display: flex; align-items: stretch; background: var(--bg-card); border-radius: 12px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.12); overflow: hidden; min-width: 0; }
     .ev-card-body:active { opacity: 0.82; }
     .ev-accent { width: 4px; flex-shrink: 0; }
@@ -266,7 +267,8 @@
     .ev-card-title.holiday { color: var(--warning); }
     .ev-card-time { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
     .ev-card-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ev-card-actions { flex: 0 0 168px; display: flex; background: var(--bg-card); }
+    .ev-card-actions { flex: 0 0 224px; display: flex; background: var(--bg-card); }
+    .ev-action-btn.tmrw { color: var(--primary); border-left-color: var(--primary); }
     .ev-action-btn { flex: 1; border: none; border-left: 1.5px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; padding: 0; min-height: auto; color: var(--primary); }
     .ev-action-btn:active { opacity: 0.65; }
     .ev-action-btn.del { color: var(--error); border-left-color: var(--error); }
@@ -302,28 +304,26 @@
     .archive-event-item { background: var(--bg-light); padding: 11px 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid rgba(var(--primary-rgb),0.4); gap: 8px; }
     .archive-event-buttons { display: flex; gap: 6px; flex-shrink: 0; }
     .archive-event-buttons button { padding: 6px 10px; font-size: 11px; min-height: auto; }
-    /* ── Reminders ── */
+    /* ── Notes tab (freeform planner) ── */
+    #notes-tab { padding: 0; }
+    .notes-head { padding: 14px 18px 6px; flex-shrink: 0; }
+    .notes-title { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; color: var(--text-primary); font-family: 'Nunito', sans-serif; }
+    .notes-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .notes-area { flex: 1; min-height: 0; width: 100%; box-sizing: border-box; border: none; outline: none; resize: none; background: var(--bg-dark); color: var(--text-primary); font-family: inherit; font-size: 16px; line-height: 1.75; padding: 8px 18px 12px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .notes-area::placeholder { color: var(--text-secondary); opacity: 0.55; }
+    .notes-status { flex-shrink: 0; height: 18px; padding: 0 18px max(6px, env(safe-area-inset-bottom)); font-size: 11px; color: var(--text-secondary); opacity: 0; transition: opacity 0.2s; }
+    .notes-status.show { opacity: 0.7; }
+    /* Live parse preview chip under the add-event input */
+    .parse-preview { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.2s ease, opacity 0.2s ease, margin 0.2s ease; }
+    .parse-preview.show { max-height: 60px; opacity: 1; margin-top: 8px; }
+    .parse-chip { display: inline-flex; align-items: center; gap: 7px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 10px; padding: 6px 11px; font-size: 12.5px; font-weight: 600; color: var(--text-primary); }
+    .parse-chip .pc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .parse-chip .pc-sub { color: var(--text-secondary); font-weight: 500; }
+    /* Logo is tappable → Notes tab; flips its two-tone colors while active */
     h1 { cursor: pointer; transition: color 0.2s; }
     h1 span { transition: color 0.2s; }
-    /* While the sheet is open, lift the whole header above it so the logo
-       stays tappable to close and reads as a real top bar, not a lone
-       floating element. The logo flips its two-tone colors as the active cue. */
-    body.reminders-open header { position: relative; z-index: 1001; }
     h1.reminders-active { color: var(--primary); }
     h1.reminders-active span { color: var(--text-primary); }
-    #reminders-modal { overflow: hidden; } /* only the list scrolls; modal drag = dismiss */
-    .rem-add-row { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-    .rem-add-row input { flex: 1; }
-    .rem-add-btn { background: var(--primary); color: #fff; border: none; border-radius: 12px; width: 44px; height: 44px; font-size: 22px; font-weight: 400; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; line-height: 1; min-height: auto; }
-    .rem-add-btn:active { transform: scale(0.92); }
-    .rem-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
-    .rem-item { display: flex; align-items: flex-start; gap: 8px; background: var(--bg-light); border-radius: 14px; padding: 12px 14px; transition: background 0.12s; }
-    .rem-text { flex: 1; font-size: 15px; color: var(--text-primary); line-height: 1.45; background: transparent; border: none; outline: none; resize: none; overflow: hidden; font-family: inherit; padding: 0; margin: 0; word-break: break-word; box-sizing: border-box; min-height: 22px; display: block; }
-    .rem-text::placeholder { color: var(--text-secondary); opacity: 0.7; }
-    .rem-del { background: none; border: none; color: var(--text-secondary); font-size: 17px; cursor: pointer; min-width: 38px; min-height: 38px; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; flex-shrink: 0; opacity: 0.5; margin: -8px -8px -8px 0; }
-    .rem-del:active { opacity: 1; color: var(--error); }
-    .rem-empty { margin: auto 0; text-align: center; color: var(--text-secondary); font-size: 14px; padding: 20px 12px; opacity: 0.75; line-height: 1.6; }
-    .rem-count { font-size: 12px; color: var(--text-secondary); font-weight: 600; margin: 2px 0 0 2px; opacity: 0.75; }
     #update-banner { position: fixed; left: 12px; right: 12px; bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px)); z-index: 3000; background: var(--primary); color: #fff; padding: 12px 16px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); font-size: 14px; font-weight: 600; animation: slideUpToast 0.3s cubic-bezier(0.34,1.3,0.64,1); }
     #update-banner button { background: rgba(255,255,255,0.22); border: none; color: #fff; font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 10px; cursor: pointer; min-height: auto; flex-shrink: 0; }
     #update-banner button:active { background: rgba(255,255,255,0.35); }
@@ -455,7 +455,7 @@
 <body>
   <div class="container">
     <header>
-      <h1 id="app-logo" onclick="toggleReminders(); triggerHaptic(20)" title="Reminders">Mark<span>ed</span></h1>
+      <h1 id="app-logo" onclick="goToNotes(); triggerHaptic(20)" title="Notes">Mark<span>ed</span></h1>
       <div class="header-right">
         <div class="weather-widget" id="weather-widget" style="display:none;">
           <span class="weather-icon" id="weather-icon"></span>
@@ -484,6 +484,7 @@
     <div class="section-tabs">
       <button class="tab-button active" id="tab-btn-calendar" onclick="showTab('calendar', this); triggerHaptic(20)">Calendar</button>
       <button class="tab-button" id="tab-btn-events" onclick="showTab('events', this); triggerHaptic(20)">Events</button>
+      <button class="tab-button" id="tab-btn-notes" onclick="showTab('notes', this); triggerHaptic(20)">Notes</button>
     </div>
 
     <div class="main-content">
@@ -557,6 +558,20 @@
           </div>
         </div>
         <div class="events-container" id="events-list" style="flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding-bottom:0;"></div>
+      </div>
+
+      <!-- ── NOTES TAB (freeform planner) ── -->
+      <div id="notes-tab" class="tab-content" style="flex-direction:column;overflow:hidden;">
+        <div class="notes-head">
+          <div class="notes-title">Notes</div>
+          <div class="notes-sub">Your planner page — lists, thoughts, plans, anything.</div>
+        </div>
+        <textarea id="notes-area" class="notes-area" oninput="onNotesInput(this)" placeholder="Start writing…
+
+Groceries — eggs, milk, bread, coffee
+Weekend ideas…
+Don't forget to…"></textarea>
+        <div class="notes-status" id="notes-status"></div>
       </div>
 
     </div><!-- .main-content -->
@@ -710,27 +725,6 @@
   </div>
 
   <!-- ── SETTINGS MODAL ── -->
-  <div class="modal-overlay" id="reminders-overlay">
-    <div class="modal" id="reminders-modal" style="height:86vh;">
-      <div class="modal-handle"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <h3 style="margin:0;">Reminders</h3>
-          <div class="rem-count" id="rem-count"></div>
-        </div>
-        <button onclick="closeReminders();triggerHaptic(20)" style="background:none;border:none;color:var(--text-secondary);font-size:24px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;cursor:pointer;margin:-8px -6px -8px 0;">✕</button>
-      </div>
-      <p style="font-size:12px;color:var(--text-secondary);margin:2px 0 4px;line-height:1.4;">Quick notes & to-dos that don't need a full event.</p>
-      <div class="rem-add-row">
-        <input type="text" id="rem-input" placeholder="Add a reminder…" maxlength="200"
-          onkeydown="if(event.key==='Enter')addReminder()"
-          style="padding:11px 14px;border-radius:12px;border:1.5px solid var(--border-color);background:var(--bg-light);color:var(--text-primary);font-size:15px;">
-        <button class="rem-add-btn" onclick="addReminder()">+</button>
-      </div>
-      <div class="rem-list" id="rem-list"></div>
-    </div>
-  </div>
-
   <div class="modal-overlay" id="settings-overlay">
     <div class="modal">
       <div class="modal-handle"></div>
@@ -853,7 +847,8 @@
 
       <!-- AI Parse -->
       <div style="background:var(--bg-light);border-radius:12px;padding:10px 12px;margin-bottom:12px;">
-        <textarea id="event-input" placeholder='e.g. "dentist Friday 2pm" or "team meeting every Monday 9–10am"' maxlength="200" style="min-height:50px;background:transparent;border:none;padding:0;resize:none;width:100%;box-sizing:border-box;font-size:14px;color:var(--text-primary);font-family:inherit;outline:none;display:block;"></textarea>
+        <textarea id="event-input" oninput="onParseInput()" placeholder='e.g. "dentist Friday 2pm" or "team meeting every Monday 9–10am"' maxlength="200" style="min-height:50px;background:transparent;border:none;padding:0;resize:none;width:100%;box-sizing:border-box;font-size:14px;color:var(--text-primary);font-family:inherit;outline:none;display:block;"></textarea>
+        <div id="parse-preview" class="parse-preview"></div>
         <button class="btn-primary" id="parse-btn" onclick="parseEvent(); triggerHaptic([50,30,50])" style="width:100%;margin-top:8px;">Mark Your Calendar</button>
       </div>
 
@@ -1637,7 +1632,7 @@
         const onStartDismiss = () => { overlay.style.transition = 'opacity 0.31s ease'; overlay.style.opacity = '0'; };
         // Sheets with an internal scroll list must check THAT list's scrollTop,
         // otherwise a down-drag on the list dismisses instead of scrolling.
-        const innerScroll = modal.querySelector('.rem-list') || modal.querySelector('.events-container');
+        const innerScroll = modal.querySelector('.events-container');
         makeSwipeHandler(modal, dismiss, {
           scrollEl: innerScroll || modal,
           topZone: innerScroll ? 100 : 0, // drag from the header area always dismisses
@@ -1863,7 +1858,13 @@
       if (tabEl) tabEl.classList.add('active');
       if (btn) btn.classList.add('active');
       closeMenuOnTab();
+      // Logo flips its two-tone colors while the Notes tab is active; the
+      // add-event FAB is irrelevant on the Notes page, so hide it there.
+      const logo = document.getElementById('app-logo');
+      if (logo) logo.classList.toggle('reminders-active', tab === 'notes');
+      document.body.classList.toggle('on-notes', tab === 'notes');
       if (tab === 'events') renderEventsPage();
+      if (tab === 'notes') loadNotes();
       if (tab === 'calendar') { if (isWeekView) renderWeekView(); else { renderCalendar(); renderUpcomingEvents(); } }
     }
     function toggleMenu() {
@@ -1892,6 +1893,7 @@
     }
     function closeAddModal() {
       _closeModal('add-event-overlay');
+      clearParsePreview();
       // Clear the day tapped in the day-sheet so it doesn't linger as the
       // selected cell or leak into the next parse as a stale contextDate.
       if (selectedDate) { selectedDate = null; if (!isWeekView) { renderCalendar(); renderUpcomingEvents(); } }
@@ -2112,6 +2114,48 @@
       if (isWeekView) renderWeekView();
     }
 
+    // ── Quick event actions: push to tomorrow / duplicate ──
+    function _shiftDateStr(dateStr, n) {
+      const d = new Date(dateStr + 'T00:00:00'); d.setDate(d.getDate() + n);
+      return getLocalDateString(d);
+    }
+    function pushEventToTomorrow(eventId) {
+      const src = resolveEventInstance(eventId);
+      if (!src) return;
+      const newDate = _shiftDateStr(src.date, 1);
+      const m = eventId.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
+      if (m) {
+        // A recurring occurrence: skip this date on the series, drop a one-off
+        // copy on the next day so only that instance moves.
+        const master = allEvents.find(e => e.id === m[1]);
+        if (master) {
+          master.recurrenceExceptions = master.recurrenceExceptions || [];
+          if (!master.recurrenceExceptions.includes(m[2])) master.recurrenceExceptions.push(m[2]);
+          apiUpdateEvent(m[1], master);
+        }
+        const copy = { ...src, id: generateId(), date: newDate, endDate: src.endDate ? _shiftDateStr(src.endDate, 1) : null, isVirtual: false, masterId: undefined, recurrence: 'none', isRecurring: false, recurrenceExceptions: [] };
+        allEvents.push(copy); saveEvents(); apiSaveEvent(copy);
+      } else {
+        const idx = allEvents.findIndex(e => e.id === eventId);
+        if (idx < 0) return;
+        allEvents[idx].date = newDate;
+        if (allEvents[idx].endDate) allEvents[idx].endDate = _shiftDateStr(allEvents[idx].endDate, 1);
+        saveEvents(); apiUpdateEvent(eventId, allEvents[idx]);
+      }
+      renderAll(); scheduleNotifications();
+      showStatus(`Moved to ${new Date(newDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`, 'success');
+      showSyncIndicator(); triggerHaptic([40]);
+    }
+    function duplicateEvent(eventId) {
+      const src = resolveEventInstance(eventId);
+      if (!src) return;
+      const copy = { ...src, id: generateId(), isVirtual: false, masterId: undefined, recurrence: 'none', isRecurring: false, recurrenceExceptions: [] };
+      allEvents.push(copy); saveEvents(); apiSaveEvent(copy);
+      renderAll(); scheduleNotifications();
+      showStatus(`Duplicated "${src.title}"`, 'success');
+      showSyncIndicator(); triggerHaptic([40]);
+    }
+
     // ── Load events (with fetch timeout + auth + decryption) ──
     async function loadEvents() {
       const controller = new AbortController();
@@ -2227,69 +2271,31 @@
       _closeModal('settings-overlay');
     }
 
-    // ── Reminders (lightweight notes / to-dos) ──
-    let reminders = [];
-    function loadReminders() {
-      try { reminders = JSON.parse(localStorage.getItem('markedReminders') || '[]'); }
-      catch { reminders = []; }
-    }
-    function saveReminders() {
-      localStorage.setItem('markedReminders', JSON.stringify(reminders));
-    }
-    function toggleReminders() {
-      const isOpen = document.getElementById('reminders-overlay').classList.contains('active');
-      if (isOpen) closeReminders(); else openReminders();
-    }
-    function openReminders() {
-      document.getElementById('reminders-overlay').classList.add('active');
-      renderReminders(); // after the sheet is visible so textarea sizing is correct
-      setTimeout(() => document.getElementById('rem-input').focus(), 200);
-    }
-    function closeReminders() {
-      _closeModal('reminders-overlay');
-    }
-    function addReminder() {
-      const input = document.getElementById('rem-input');
-      const text = input.value.trim();
-      if (!text) return;
-      reminders.unshift({ id: generateId(), text, createdAt: Date.now() });
-      saveReminders();
-      input.value = '';
-      renderReminders();
-      triggerHaptic(20);
-    }
-    function editReminder(id, el) {
-      const r = reminders.find(x => x.id === id);
-      if (r) { r.text = el.value; saveReminders(); }
-      autoGrowReminder(el);
-    }
-    function deleteReminder(id) {
-      reminders = reminders.filter(x => x.id !== id);
-      saveReminders();
-      renderReminders();
-      triggerHaptic(20);
-    }
-    function autoGrowReminder(el) {
-      el.style.height = 'auto';
-      el.style.height = el.scrollHeight + 'px';
-    }
-    function renderReminders() {
-      const list = document.getElementById('rem-list');
-      if (!list) return;
-      const countEl = document.getElementById('rem-count');
-      if (countEl) countEl.textContent = reminders.length ? `${reminders.length} note${reminders.length > 1 ? 's' : ''}` : '';
-      if (!reminders.length) {
-        list.innerHTML = `<div class="rem-empty">No reminders yet.<br>Jot down anything you don't want to forget.</div>`;
-        return;
+    // ── Notes (freeform planner page — one continuous writing surface) ──
+    let notesSaveTimer = null;
+    function loadNotes() {
+      let notes = localStorage.getItem('markedNotes');
+      if (notes === null) {
+        // One-time migration: fold the old per-item reminders into one page
+        try {
+          const old = JSON.parse(localStorage.getItem('markedReminders') || '[]');
+          notes = old.map(r => (r.text || '').trim()).filter(Boolean).join('\n');
+        } catch { notes = ''; }
+        localStorage.setItem('markedNotes', notes);
       }
-      // Each reminder is a plain editable note — tap the text to edit in place.
-      list.innerHTML = reminders.map(r => `
-        <div class="rem-item">
-          <textarea class="rem-text" rows="1" oninput="editReminder('${r.id}', this)" placeholder="Reminder">${escHtml(r.text)}</textarea>
-          <button class="rem-del" onclick="deleteReminder('${r.id}')" title="Delete">✕</button>
-        </div>`).join('');
-      // Size textareas after layout so scrollHeight is accurate
-      requestAnimationFrame(() => list.querySelectorAll('.rem-text').forEach(autoGrowReminder));
+      const area = document.getElementById('notes-area');
+      if (area && area.value !== notes) area.value = notes;
+    }
+    function onNotesInput(el) {
+      clearTimeout(notesSaveTimer);
+      notesSaveTimer = setTimeout(() => {
+        localStorage.setItem('markedNotes', el.value);
+        const s = document.getElementById('notes-status');
+        if (s) { s.textContent = 'Saved'; s.classList.add('show'); clearTimeout(s._t); s._t = setTimeout(() => s.classList.remove('show'), 1200); }
+      }, 400);
+    }
+    function goToNotes() {
+      showTab('notes', document.getElementById('tab-btn-notes'));
     }
     function toggleNotifications() {
       notificationsEnabled = document.getElementById('notif-toggle').checked;
@@ -2331,26 +2337,10 @@
       }, msUntilMidnight);
     }
 
-    // Keep the logo's flipped-color state in sync with the reminders sheet,
-    // no matter how it's closed (✕ button, swipe-down, or logo re-tap).
-    function watchRemindersState() {
-      const overlay = document.getElementById('reminders-overlay');
-      const logo = document.getElementById('app-logo');
-      if (!overlay || !logo) return;
-      new MutationObserver(() => {
-        const open = overlay.classList.contains('active');
-        logo.classList.toggle('reminders-active', open);
-        // Lift the whole header above the sheet so the logo doesn't look like a
-        // lone bright element floating over a dimmed bar.
-        document.body.classList.toggle('reminders-open', open);
-      }).observe(overlay, { attributes: true, attributeFilter: ['class'] });
-    }
-
     // ── Init ──
     async function init() {
       loadTheme();
-      loadReminders();
-      watchRemindersState();
+      loadNotes();
 
       // Check if server requires auth
       try {
@@ -2474,6 +2464,48 @@
     function cancelOverlapSave() {
       pendingOverlapConfirmation = null;
       _closeModal('overlap-modal-overlay');
+    }
+
+    // ── Live parse preview (local-only, debounced, free) ──
+    let parsePreviewTimer = null;
+    let parsePreviewSeq = 0;
+    function onParseInput() {
+      clearTimeout(parsePreviewTimer);
+      const text = document.getElementById('event-input').value.trim();
+      const box = document.getElementById('parse-preview');
+      if (!box) return;
+      if (!text) { box.classList.remove('show'); box.innerHTML = ''; return; }
+      parsePreviewTimer = setTimeout(() => renderParsePreview(text), 300);
+    }
+    async function renderParsePreview(text) {
+      const box = document.getElementById('parse-preview');
+      if (!box) return;
+      const seq = ++parsePreviewSeq;
+      try {
+        const estInfo = getCurrentESTInfo();
+        const res = await fetch('/api/events/parse-preview', {
+          method: 'POST', headers: getAuthHeaders(),
+          body: JSON.stringify({ text, currentESTDate: estInfo.date, contextDate: selectedDate || undefined })
+        });
+        if (seq !== parsePreviewSeq) return; // a newer keystroke superseded this
+        const data = await res.json();
+        if (!data.confident) { box.classList.remove('show'); box.innerHTML = ''; return; }
+        const r = data.result;
+        const color = getCategoryColor(r.category || 'work');
+        const dObj = new Date(r.date + 'T00:00:00');
+        let when = dObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        if (r.endDate) when += ` – ${new Date(r.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+        const timeStr = r.isAllDay || !r.time ? 'All day' : formatEventTime(r.time, r.endTime);
+        const cat = (r.category || 'work');
+        const catLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
+        box.innerHTML = `<span class="parse-chip"><span class="pc-dot" style="background:${color};"></span>${escHtml(r.title)}<span class="pc-sub">· ${when} · ${timeStr} · ${catLabel}</span></span>`;
+        box.classList.add('show');
+      } catch { if (seq === parsePreviewSeq) { box.classList.remove('show'); box.innerHTML = ''; } }
+    }
+    function clearParsePreview() {
+      const box = document.getElementById('parse-preview');
+      if (box) { box.classList.remove('show'); box.innerHTML = ''; }
+      parsePreviewSeq++;
     }
 
     // ── Parse event (AI) with fetch timeout ──
@@ -2636,6 +2668,7 @@
     }
 
     function clearAddForm() {
+      clearParsePreview();
       document.getElementById('title-input').value = '';
       document.getElementById('date-input').value = '';
       document.getElementById('end-date-input').value = '';
@@ -3135,17 +3168,27 @@
         <div style="font-size:20px;font-weight:700;color:var(--text-primary);margin-bottom:6px;line-height:1.2;">${escHtml(ev.title)}</div>
         <div style="font-size:14px;color:var(--text-secondary);margin-bottom:${ev.description ? '10px' : '20px'};">${dateLabel}${timeStr ? ' · ' + timeStr : ''}</div>
         ${ev.description ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.5;">${escHtml(ev.description)}</div>` : ''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <button class="btn-secondary" style="flex-direction:column;gap:4px;padding:12px 8px;align-items:center;" onclick="closeEventPeek();pushEventToTomorrow('${eventId}')">
+            <span style="font-size:18px;line-height:1;">→</span>
+            <span style="font-size:12px;font-weight:700;">Tomorrow</span>
+          </button>
+          <button class="btn-secondary" style="flex-direction:column;gap:4px;padding:12px 8px;align-items:center;" onclick="closeEventPeek();duplicateEvent('${eventId}')">
+            <span style="font-size:18px;line-height:1;">⧉</span>
+            <span style="font-size:12px;font-weight:700;">Duplicate</span>
+          </button>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-          <button class="btn-secondary" style="flex-direction:column;gap:4px;padding:14px 8px;align-items:center;" onclick="closeEventPeek();openEditModal('${eventId}');triggerHaptic([40])">
-            <span style="font-size:19px;line-height:1;">✎</span>
+          <button class="btn-secondary" style="flex-direction:column;gap:4px;padding:12px 8px;align-items:center;" onclick="closeEventPeek();openEditModal('${eventId}');triggerHaptic([40])">
+            <span style="font-size:18px;line-height:1;">✎</span>
             <span style="font-size:12px;font-weight:700;">Edit</span>
           </button>
-          <button class="btn-share" style="flex-direction:column;gap:4px;padding:14px 8px;align-items:center;" onclick="closeEventPeek();shareEvent(allEvents.find(e=>e.id==='${eventId}'));triggerHaptic([20])">
-            <span style="font-size:19px;line-height:1;">↗</span>
+          <button class="btn-share" style="flex-direction:column;gap:4px;padding:12px 8px;align-items:center;" onclick="closeEventPeek();shareEvent(allEvents.find(e=>e.id==='${eventId}'));triggerHaptic([20])">
+            <span style="font-size:18px;line-height:1;">↗</span>
             <span style="font-size:12px;font-weight:700;">Share</span>
           </button>
-          <button class="btn-danger" style="flex-direction:column;gap:4px;padding:14px 8px;align-items:center;" onclick="closeEventPeek();deleteEvent('${eventId}');triggerHaptic([100,50,100])">
-            <span style="font-size:19px;line-height:1;">✕</span>
+          <button class="btn-danger" style="flex-direction:column;gap:4px;padding:12px 8px;align-items:center;" onclick="closeEventPeek();deleteEvent('${eventId}');triggerHaptic([100,50,100])">
+            <span style="font-size:18px;line-height:1;">✕</span>
             <span style="font-size:12px;font-weight:700;">Delete</span>
           </button>
         </div>
@@ -3661,6 +3704,7 @@
                 </div>
               </div>
               <div class="ev-card-actions">
+                <button class="ev-action-btn tmrw" onclick="event.stopPropagation(); pushEventToTomorrow('${ev.id}')">Tmrw</button>
                 <button class="ev-action-btn shr" onclick="event.stopPropagation(); shareEvent(allEvents.find(e=>e.id==='${ev.id}')); triggerHaptic([20])">Share</button>
                 <button class="ev-action-btn" onclick="event.stopPropagation(); openEditModal('${ev.id}'); triggerHaptic([40])">Edit</button>
                 <button class="ev-action-btn del" onclick="event.stopPropagation(); deleteEvent('${ev.id}'); triggerHaptic([100,50,100])">Delete</button>
@@ -3710,7 +3754,7 @@
 
 
     // ── Swipe to reveal actions (smooth v2) ──
-    const SWIPE_OPEN  = 168;   // px — fully open
+    const SWIPE_OPEN  = 224;   // px — fully open (4 actions: Tmrw / Share / Edit / Delete)
     const SWIPE_SNAP  = 72;    // px — position threshold to snap open on slow release
     const SWIPE_VEL   = 0.3;   // px/ms — flick velocity to force snap
 
