@@ -180,6 +180,12 @@ function checkParseQuota(key, isGuest) {
   entry.count++;
   return true;
 }
+// Give back a consumed AI credit when the call itself failed (outage, bad JSON)
+// so a user isn't charged for nothing.
+function refundParseQuota(key) {
+  const entry = parseQuotas.get(key);
+  if (entry && entry.count > 0) entry.count--;
+}
 
 // ── Parse result cache (6-hour TTL, max 500 entries) ──
 const parseCache = new Map();
@@ -382,8 +388,8 @@ function requireAuth(req, res, next) {
 }
 
 // ── Validation ──
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE = /^\d{2}:\d{2}$/;
+const DATE_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateEventFields({ date, endDate, time, endTime }) {
@@ -535,7 +541,7 @@ Return ONLY this JSON:
   "time": "HH:mm" or null,
   "endTime": "HH:mm" or null,
   "isAllDay": true/false,
-  "category": "work" | "health" | "social"
+  "category": "work" | "health" | "social" | "personal" | "other"
 }`
     }]
   });
@@ -866,6 +872,7 @@ app.post('/api/events/parse', requireAuth, async (req, res) => {
     setCachedParse(text, today, defaultDate, parsed);
     res.json(parsed);
   } catch (err) {
+    refundParseQuota(quotaKey); // the call failed — don't charge the credit
     console.error('✗ Parse error:', err.message);
     res.status(400).json({ error: err.message || 'Failed to parse event' });
   }

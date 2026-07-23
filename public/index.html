@@ -25,6 +25,8 @@
       --primary-rgb: 74,157,111;
       --share: #5ac8fa;
       --handle: rgba(255,255,255,0.18);
+      --hairline: rgba(66,66,69,0.5);
+      --hairline-faint: rgba(66,66,69,0.25);
       --bg-dark: #1c1c1e;
       --bg-card: #2c2c2e;
       --bg-light: #3a3a3c;
@@ -65,7 +67,7 @@
     .sync-indicator.visible { opacity: 1; animation: pulse 0.6s ease; }
     .dropdown-menu { position: fixed; top: max(58px, env(safe-area-inset-top)); right: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; z-index: 2000; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: none; overflow: hidden; }
     .dropdown-menu.active { display: flex; flex-direction: column; animation: slideDown 0.2s ease; }
-    .dropdown-item { padding: 13px 18px; background: none; border: none; border-bottom: 1px solid rgba(66,66,69,0.5); color: var(--text-primary); text-align: left; cursor: pointer; font-size: 15px; transition: background 0.15s; }
+    .dropdown-item { padding: 13px 18px; background: none; border: none; border-bottom: 1px solid var(--hairline); color: var(--text-primary); text-align: left; cursor: pointer; font-size: 15px; transition: background 0.15s; }
     .dropdown-item:last-child { border-bottom: none; }
     .dropdown-item:active { background: rgba(var(--primary-rgb),0.18); }
 
@@ -96,9 +98,6 @@
     }
 
     /* ── SECTION / FORM ── */
-    .section { background: var(--bg-card); padding: 16px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--border-color); }
-    .section-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
-    .section-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: -6px; }
     .input-group { display: flex; flex-direction: column; gap: 6px; }
     .input-group label { font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.2px; }
     input, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--bg-light); color: var(--text-primary); appearance: none; min-height: 44px; transition: border-color 0.2s, box-shadow 0.2s; color-scheme: dark; }
@@ -118,7 +117,6 @@
     .btn-danger:active { background: var(--error); color: white; transform: scale(0.97); }
     button:disabled { opacity: 0.45; pointer-events: none; }
     .divider { height: 1px; background: var(--border-color); margin: 4px 0; }
-    .time-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .toggle-switch { display: flex; align-items: center; gap: 12px; }
     .switch { position: relative; display: inline-block; width: 48px; height: 28px; }
     .switch input { opacity: 0; width: 0; height: 0; min-height: 0; padding: 0; }
@@ -179,14 +177,6 @@
     .recurrence-badge { font-size: 9px; color: var(--primary); font-weight: 700; margin-left: 4px; opacity: 0.8; }
     select.form-select { background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--text-primary); width: 100%; appearance: none; -webkit-appearance: none; outline: none; font-family: inherit; color-scheme: dark; }
     select.form-select:focus { border-color: var(--primary); }
-    .day-dot.holiday { background: var(--warning); }
-    .week-holiday-pill {
-      font-size: 8px; font-weight: 700; color: white;
-      background: rgba(255,149,0,0.75);
-      border-radius: 3px; padding: 1px 4px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      max-width: 76px; margin-top: 1px; cursor: default;
-    }
 
     /* ── UPCOMING EVENTS (calendar tab sidebar) ── */
     .events-container { padding: 12px 14px 16px; background: var(--bg-dark); border-top: 1px solid var(--border-color); overflow-y: auto; min-height: 0; }
@@ -231,18 +221,19 @@
     .week-allday-dot { width: 26px; height: 26px; border-radius: 7px; cursor: pointer; flex-shrink: 0; transition: transform 0.1s, opacity 0.1s; }
     .week-allday-dot:active { opacity: 0.7; transform: scale(0.88); }
     .week-allday-stripe { position: absolute; left: 0; right: 0; height: 4px; z-index: 2; cursor: pointer; opacity: 0.85; transition: opacity 0.1s; }
+    .week-allday-stripe::after { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; } /* finger-sized hit area for the 4px stripe */
     .week-allday-stripe:active { opacity: 0.5; }
     /* Scrollable time area */
     .week-scroll-area { flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-gutter: stable; display: flex; align-items: stretch; }
-    .week-scroll-inner { flex: 0 0 auto; min-width: max-content; display: flex; flex-direction: column; height: 100%; }
+    .week-scroll-inner { flex: 0 0 auto; min-width: max-content; display: flex; flex-direction: column; height: 100%; position: relative; }
     /* Hour header */
     .week-hour-header { display: flex; height: 28px; position: relative; border-bottom: 1px solid var(--border-color); background: var(--bg-dark); flex-shrink: 0; }
-    .week-hour-cell { width: var(--hour-w); flex-shrink: 0; font-size: 9px; color: var(--text-secondary); text-align: center; border-right: 1px solid rgba(66,66,69,0.4); display: flex; align-items: center; justify-content: center; font-weight: 500; }
+    .week-hour-cell { width: var(--hour-w); flex-shrink: 0; font-size: 9px; color: var(--text-secondary); text-align: center; border-right: 1px solid var(--hairline); display: flex; align-items: center; justify-content: center; font-weight: 500; }
     /* Day rows */
     .week-day-row { display: flex; flex: 1; min-height: 54px; border-bottom: 1px solid var(--border-color); position: relative; background: var(--bg-card); overflow: hidden; }
     .week-day-row.today { background: rgba(var(--primary-rgb),0.05); }
     .week-day-row:last-child { border-bottom: none; }
-    .week-hour-slot { width: var(--hour-w); flex-shrink: 0; border-right: 1px solid rgba(66,66,69,0.25); }
+    .week-hour-slot { width: var(--hour-w); flex-shrink: 0; border-right: 1px solid var(--hairline-faint); }
     .week-hour-slot.current-hour { background: rgba(var(--primary-rgb),0.04); }
     /* Event bars */
     .week-event-bar { position: absolute; top: 4px; border-radius: 5px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); padding: 3px 7px; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; display: flex; align-items: center; box-shadow: 0 2px 8px rgba(var(--primary-rgb),0.3); transition: opacity 0.15s, transform 0.1s; z-index: 1; }
@@ -255,11 +246,6 @@
     .event-item { background: var(--bg-card); padding: 11px 14px; border-radius: 14px; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: flex-start; border-left: 3px solid var(--primary); cursor: pointer; transition: transform 0.12s, opacity 0.12s; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
     .event-item:active { transform: scale(0.97); opacity: 0.85; }
     body.light-mode .event-item { box-shadow: 0 1px 8px rgba(0,0,0,0.07); }
-    .event-item.swipe-left { transform: translateX(-100px); }
-    .event-swipe-actions { position: absolute; right: 0; top: 0; height: 100%; display: flex; }
-    .swipe-action { background: var(--bg-card); border: none; border-left: 1.5px solid currentColor; padding: 12px 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; cursor: pointer; min-width: 52px; min-height: auto; transition: opacity 0.15s; }
-    .swipe-action:active { opacity: 0.7; }
-    .swipe-action.delete { color: var(--error); border-left-color: var(--error); }
     .event-details { flex: 1; min-width: 0; }
     .event-title { font-weight: 700; font-size: 15px; color: var(--text-primary); margin-bottom: 3px; }
     .event-meta { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
@@ -311,7 +297,6 @@
     .confirmation-buttons button { flex: 1; }
     .edit-button-modal { padding: 12px; border-radius: 10px; background: var(--bg-light); border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; transition: background 0.15s; font-size: 14px; }
     .edit-button-modal:active { background: rgba(var(--primary-rgb),0.25); }
-    .day-events-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
     /* Archive */
     .archive-modal { max-height: 70vh; }
     .archive-event-item { background: var(--bg-light); padding: 11px 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid rgba(var(--primary-rgb),0.4); gap: 8px; }
@@ -332,7 +317,7 @@
     .rem-item { display: flex; align-items: flex-start; gap: 8px; background: var(--bg-light); border-radius: 14px; padding: 12px 14px; transition: background 0.12s; }
     .rem-text { flex: 1; font-size: 15px; color: var(--text-primary); line-height: 1.45; background: transparent; border: none; outline: none; resize: none; overflow: hidden; font-family: inherit; padding: 0; margin: 0; word-break: break-word; box-sizing: border-box; min-height: 22px; display: block; }
     .rem-text::placeholder { color: var(--text-secondary); opacity: 0.7; }
-    .rem-del { background: none; border: none; color: var(--text-secondary); font-size: 17px; cursor: pointer; padding: 0 2px; min-height: auto; line-height: 1; flex-shrink: 0; opacity: 0.5; margin-top: 1px; }
+    .rem-del { background: none; border: none; color: var(--text-secondary); font-size: 17px; cursor: pointer; min-width: 38px; min-height: 38px; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; flex-shrink: 0; opacity: 0.5; margin: -8px -8px -8px 0; }
     .rem-del:active { opacity: 1; color: var(--error); }
     .rem-empty { text-align: center; color: var(--text-secondary); font-size: 14px; padding: 32px 12px; opacity: 0.7; line-height: 1.6; }
     #update-banner { position: fixed; left: 12px; right: 12px; bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px)); z-index: 3000; background: var(--primary); color: #fff; padding: 12px 16px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); font-size: 14px; font-weight: 600; animation: slideUpToast 0.3s cubic-bezier(0.34,1.3,0.64,1); }
@@ -346,7 +331,6 @@
 
     /* ── ANIMATIONS ── */
     @keyframes slideDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes slideUpModal { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUpToast { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideOutToLeft { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(-28px); } }
@@ -445,6 +429,8 @@
       --error: #d70015;
       --share: #0071e3;
       --handle: rgba(0,0,0,0.22);
+      --hairline: rgba(0,0,0,0.10);
+      --hairline-faint: rgba(0,0,0,0.06);
     }
     /* Native date/time/select pickers must follow the theme */
     body.light-mode input, body.light-mode textarea, body.light-mode select.form-select { color-scheme: light; }
@@ -1830,11 +1816,17 @@
       return instances;
     }
 
-    function getMasterEvent(virtualOrRegularId) {
-      // If it's a virtual id like "abc123_2026-05-27", extract masterId
-      const m = virtualOrRegularId.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
-      if (m) return allEvents.find(e => e.id === m[1]) || null;
-      return allEvents.find(e => e.id === virtualOrRegularId) || null;
+    // Resolve an id (real or virtual "master_YYYY-MM-DD") to a concrete event
+    // object — reconstructing the recurring occurrence when needed.
+    function resolveEventInstance(id) {
+      const direct = allEvents.find(e => e.id === id);
+      if (direct) return direct;
+      const m = id.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
+      if (m) {
+        const master = allEvents.find(e => e.id === m[1]);
+        if (master) return makeVirtualInstance(master, m[2]);
+      }
+      return null;
     }
     // Resolve an id (real or virtual "master_YYYY-MM-DD") to a concrete event
     // object — reconstructing the recurring occurrence when needed.
@@ -1901,7 +1893,6 @@
       // selected cell or leak into the next parse as a stale contextDate.
       if (selectedDate) { selectedDate = null; if (!isWeekView) { renderCalendar(); renderUpcomingEvents(); } }
     }
-    function openAddEventTab() { openAddModal(); }
 
     // ── Auth + Encryption helpers ──
     function getAuthHeaders() {
@@ -2759,17 +2750,6 @@
       editingEventId = null;
       lastEditedEvent = null;
     }
-    async function undoEditedEvent() {
-      if (!lastEditedEvent) return;
-      const idx = allEvents.findIndex(e => e.id === editingEventId);
-      if (idx >= 0) allEvents[idx] = lastEditedEvent;
-      saveEvents();
-      showStatus(`✓ ${lastEditedEvent.title} restored`, 'success');
-      showSyncIndicator();
-      closeModal();
-      renderAll();
-      scheduleNotifications();
-    }
     async function saveEditedEvent() {
       const title = capitalizeTitle(document.getElementById('modal-title-input').value.trim());
       const date = document.getElementById('modal-date-input').value;
@@ -2988,6 +2968,7 @@
               el.style.transform = ''; el.style.transition = '';
             }
             wrap.style.height = '';
+            updateCurrentTimeLine(); // now that isWeekView is true, reveal the "now" line
           }, ANIM + 30);
         });
 
@@ -3126,7 +3107,8 @@
       selectedDate = null;
       document.getElementById('day-sheet').classList.remove('open');
       document.getElementById('day-sheet-backdrop').classList.remove('open');
-      renderCalendar();
+      if (isWeekView) renderWeekView();
+      else { renderCalendar(); renderUpcomingEvents(); }
     }
 
     function openEventPeek(eventId) {
@@ -3304,8 +3286,6 @@
       for (let h = 0; h < 24; h++) {
         hourHeaderHtml += `<div class="week-hour-cell">${formatTimeEastern(String(h).padStart(2,'0') + ':00')}</div>`;
       }
-      // Current time line placeholder
-      hourHeaderHtml += `<div class="week-current-time" id="week-time-line" style="display:none;"></div>`;
 
       // Build label column and day rows
       let labelsHtml = '<div class="week-label-header">Day</div>';
@@ -3342,7 +3322,7 @@
           labelIndicatorHtml = `<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:4px;">${squares}</div>`;
         }
 
-        labelsHtml += `<div class="week-day-label ${isToday ? 'today' : ''}">
+        labelsHtml += `<div class="week-day-label ${isToday ? 'today' : ''}" onclick="openDayModal('${dateStr}');triggerHaptic([40])">
           <div class="week-day-name-text ${isToday ? 'today' : ''}">${dayNames[date.getDay()]}</div>
           <div class="week-day-date-text ${isToday ? 'today' : ''}">${date.getDate()}</div>
           ${labelIndicatorHtml}
@@ -3394,7 +3374,10 @@
         </div>`;
       }
 
-      // Write to DOM — rows are direct children of week-scroll-inner (no wrapper div)
+      // Write to DOM — rows are direct children of week-scroll-inner (no wrapper div).
+      // The current-time line is a direct child of the (position:relative) scroll
+      // inner so it spans all 7 day rows, not just the 28px hour header.
+      rowsHtml += `<div class="week-current-time" id="week-time-line" style="display:none;"></div>`;
       document.getElementById('week-labels').innerHTML = labelsHtml;
       document.getElementById('week-scroll-inner').innerHTML = rowsHtml;
 
@@ -3715,17 +3698,6 @@
       }
     }
 
-    function exportEvents() {
-      const dataStr = JSON.stringify(allEvents, null, 2);
-      const url = URL.createObjectURL(new Blob([dataStr], { type: 'application/json' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `marked-backup-${new Date().toISOString().split('T')[0]}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-      showStatus('Events exported ✓', 'success');
-      closeMenuOnTab();
-    }
 
     // ── Swipe to reveal actions (smooth v2) ──
     const SWIPE_OPEN  = 168;   // px — fully open
