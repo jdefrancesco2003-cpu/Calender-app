@@ -278,6 +278,8 @@
 
     /* ── MODALS ── */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); z-index: 1000; display: none; align-items: flex-end; justify-content: center; transition: opacity 0.2s; }
+    /* Confirmations must always sit above the add/edit modal they interrupt */
+    #overlap-modal-overlay, #duplicate-overlay { z-index: 1100; }
     .modal-overlay.active { display: flex; animation: fadeIn 0.18s ease both; }
     .modal-overlay.active .modal { animation: slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1) both; }
     @keyframes slideUp {
@@ -344,6 +346,7 @@
     .parse-chip { display: inline-flex; align-items: center; gap: 7px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 10px; padding: 6px 11px; font-size: 12.5px; font-weight: 600; color: var(--text-primary); }
     .parse-chip .pc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .parse-chip .pc-sub { color: var(--text-secondary); font-weight: 500; }
+    .parse-chip .pc-rec { color: var(--primary); font-weight: 700; }
     /* Logo is tappable → Notes tab; flips its two-tone colors while active */
     h1 { cursor: pointer; transition: color 0.2s; }
     h1 span { transition: color 0.2s; }
@@ -919,7 +922,7 @@
       <!-- Repeat inline -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
         <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.6px;flex-shrink:0;min-width:48px;">Repeat</label>
-        <select class="form-select" id="recurrence-select" onchange="toggleRecurrenceEnd('recurrence-end-row')" style="flex:1;">
+        <select class="form-select" id="recurrence-select" onchange="toggleRecurrenceEnd('recurrence-end-row'); onParseInput()" style="flex:1;">
           <option value="none">Never</option>
           <option value="daily">Daily</option>
           <option value="weekly">Weekly</option>
@@ -2605,7 +2608,11 @@
         const timeStr = r.isAllDay || !r.time ? 'All day' : formatEventTime(r.time, r.endTime);
         const cat = (r.category || 'work');
         const catLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
-        box.innerHTML = `<span class="parse-chip"><span class="pc-dot" style="background:${color};"></span>${escHtml(r.title)}<span class="pc-sub">· ${when} · ${timeStr} · ${catLabel}</span></span>`;
+        // Effective recurrence = manual Repeat dropdown if set, else what parsed
+        const manualRec = document.getElementById('recurrence-select')?.value || 'none';
+        const rec = manualRec !== 'none' ? manualRec : (r.recurrence || 'none');
+        const recLabel = rec !== 'none' ? ` · <span class="pc-rec">↻ ${rec.charAt(0).toUpperCase() + rec.slice(1)}</span>` : '';
+        box.innerHTML = `<span class="parse-chip"><span class="pc-dot" style="background:${color};"></span>${escHtml(r.title)}<span class="pc-sub">· ${when} · ${timeStr} · ${catLabel}${recLabel}</span></span>`;
         box.classList.add('show');
       } catch { if (seq === parsePreviewSeq) { box.classList.remove('show'); box.innerHTML = ''; } }
     }
@@ -2638,6 +2645,15 @@
         } else {
           data.title = capitalizeTitle(data.title);
           if (data.category) selectCategory('add', data.category);
+          // Respect the manual Repeat dropdown even on the "Mark Your Calendar"
+          // path — if the user set it, it wins over what the text parsed to.
+          const manualRec = document.getElementById('recurrence-select')?.value || 'none';
+          if (manualRec !== 'none') {
+            data.recurrence = manualRec;
+            data.recurrenceEnd = document.getElementById('recurrence-end-input')?.value || null;
+          }
+          data.isRecurring = (data.recurrence && data.recurrence !== 'none');
+          if (!data.recurrenceExceptions) data.recurrenceExceptions = [];
           if (checkDuplicateEvent(data)) { showDuplicateModal(data.title); return; }
           const doSave = () => {
             const newEvent = { id: generateId(), ...data, category: data.category || addEventCategory };

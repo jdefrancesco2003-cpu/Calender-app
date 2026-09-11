@@ -353,6 +353,13 @@ function parseEventLocal(text, todayStr, defaultDateStr) {
   spans.sort((a, b) => b[0] - a[0]).forEach(([a, b]) => {
     title = title.slice(0, a) + ' ' + title.slice(b);
   });
+  // Strip recurrence phrases ("every monday", "weekly", …) so they don't linger
+  // in the title (e.g. "gym every monday" → "Gym", not "Gym Every").
+  const recurrence = detectRecurrence(text);
+  title = title.replace(/\b(?:every\s+(?:day|week|month|year|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|weekday)s?|daily|weekly|monthly|yearly|annually)\b/gi, ' ');
+  // The weekday may already have been eaten by the date parse, leaving a bare
+  // "every"/"each" — drop it too when we know the event repeats.
+  if (recurrence !== 'none') title = title.replace(/\b(?:every|each)\b/gi, ' ');
   title = title.replace(/[,;]/g, ' ').replace(/\s+/g, ' ').trim()
     .replace(/^(?:on|at|from|the|this|next|by|@|for)\s+/i, '')
     .replace(/\s+(?:on|at|from|by|@|for)$/i, '')
@@ -360,7 +367,6 @@ function parseEventLocal(text, todayStr, defaultDateStr) {
   title = toTitleCase(title || text.trim());
 
   const hasTime = !!timeStr;
-  const recurrence = detectRecurrence(text);
   return {
     confident: true,
     result: { title, date: dateStr, endDate: endDateStr, time: timeStr, endTime: endTimeStr, isAllDay: !hasTime, category: detectCategory(text), recurrence, recurrenceEnd: null, isRecurring: recurrence !== 'none' }
