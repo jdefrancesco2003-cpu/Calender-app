@@ -383,6 +383,7 @@
     .cat-health  { background:#ff6b6b; }
     .cat-social  { background:#5b8dee; }
     .cat-other   { background:#b39ddb; }
+    .cat-class   { background:#f2d06b; }
     .cat-select { display:flex;gap:10px;align-items:center;margin:8px 0; }
     .cat-btn { width:32px;height:32px;border-radius:8px;border:3px solid transparent;cursor:pointer;transition:border 0.15s,transform 0.12s; }
     .cat-btn.selected { border-color:var(--text-primary);transform:scale(1.1); }
@@ -654,6 +655,7 @@
           <button type="button" class="cat-btn cat-health" data-cat="health" onclick="selectCategory('edit','health')" title="Appointment"></button>
           <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('edit','other')" title="Birthday"></button>
           <button type="button" class="cat-btn cat-personal" data-cat="personal" onclick="selectCategory('edit','personal')" title="Holiday"></button>
+          <button type="button" class="cat-btn cat-class" data-cat="class" onclick="selectCategory('edit','class')" title="Class"></button>
         </div>
       </div>
       <div class="toggle-switch">
@@ -825,7 +827,15 @@
             <button onclick="toggleColorPicker('other');triggerHaptic(12)" style="font-size:12px;font-weight:600;color:var(--text-secondary);background:var(--bg-light);border:1px solid var(--border-color);padding:5px 12px;border-radius:8px;min-height:auto;cursor:pointer;">Change</button>
           </div>
         </div>
-        <div id="swatch-row-other" style="display:none;padding:10px 0;gap:10px;flex-wrap:nowrap;"></div>
+        <div id="swatch-row-other" style="display:none;padding:10px 0;gap:10px;flex-wrap:nowrap;border-bottom:1px solid var(--border-color);"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;">
+          <span style="font-size:14px;color:var(--text-primary);">Class / School</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div id="color-preview-class" style="width:24px;height:24px;border-radius:7px;flex-shrink:0;"></div>
+            <button onclick="toggleColorPicker('class');triggerHaptic(12)" style="font-size:12px;font-weight:600;color:var(--text-secondary);background:var(--bg-light);border:1px solid var(--border-color);padding:5px 12px;border-radius:8px;min-height:auto;cursor:pointer;">Change</button>
+          </div>
+        </div>
+        <div id="swatch-row-class" style="display:none;padding:10px 0;gap:10px;flex-wrap:nowrap;"></div>
       </div>
 
       <div style="height:1px;background:var(--border-color);margin:16px 0;"></div>
@@ -905,6 +915,7 @@
             <button type="button" class="cat-btn cat-health" data-cat="health" onclick="selectCategory('add','health')" title="Appointment"></button>
             <button type="button" class="cat-btn cat-other" data-cat="other" onclick="selectCategory('add','other')" title="Birthday"></button>
             <button type="button" class="cat-btn cat-personal" data-cat="personal" onclick="selectCategory('add','personal')" title="Holiday"></button>
+            <button type="button" class="cat-btn cat-class" data-cat="class" onclick="selectCategory('add','class')" title="Class"></button>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding-bottom:2px;">
@@ -1139,7 +1150,7 @@
       localStorage.setItem('catColorVersion', CAT_COLOR_VERSION);
     }
     let catColorPrefs = JSON.parse(localStorage.getItem('catColorPrefs') || '{}');
-    const CAT_DEFAULTS = { work:'#4a9d6f', health:'#ff6b6b', social:'#5b8dee', personal:'#ff9500', other:'#b39ddb' };
+    const CAT_DEFAULTS = { work:'#4a9d6f', health:'#ff6b6b', social:'#5b8dee', personal:'#ff9500', other:'#b39ddb', class:'#f2d06b' };
     function getCategoryColor(cat) {
       return catColorPrefs[cat] || CAT_DEFAULTS[cat] || '#4a9d6f';
     }
@@ -1157,9 +1168,9 @@
         btn.style.background = getCategoryColor(btn.dataset.cat);
       });
     }
-    const SWATCH_COLORS = ['#4a9d6f','#5b8dee','#ff6b6b','#b39ddb','#ff9500'];
+    const SWATCH_COLORS = ['#4a9d6f','#5b8dee','#ff6b6b','#b39ddb','#ff9500','#f2d06b'];
     function syncCatColorPickers() {
-      ['work','health','social','other'].forEach(cat => {
+      ['work','health','social','other','class'].forEach(cat => {
         const current = (catColorPrefs[cat] || CAT_DEFAULTS[cat] || '').toLowerCase();
         const preview = document.getElementById(`color-preview-${cat}`);
         if (preview) preview.style.background = current;
@@ -1176,7 +1187,7 @@
       const row = document.getElementById(`swatch-row-${cat}`);
       if (!row) return;
       const isOpen = row.style.display === 'flex';
-      ['work','health','social','other'].forEach(c => {
+      ['work','health','social','other','class'].forEach(c => {
         const r = document.getElementById(`swatch-row-${c}`);
         if (r) r.style.display = 'none';
       });

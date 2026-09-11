@@ -206,11 +206,13 @@ function setCachedParse(text, today, defaultDate, result) {
 
 // ── Local natural-language parser (no API cost) ──
 const CAT_KEYWORDS = {
+  class:  /\b(class|classes|lecture|seminar|lab|course|exam|midterm|finals|quiz|homework|assignment|study|studying|professor|semester|thesis|dissertation|english|math|maths|mathematics|algebra|calculus|geometry|trigonometry|science|biology|chemistry|physics|anatomy|physiology|anthropology|sociology|psychology|economics|history|geography|geology|literature|philosophy|statistics|tutorial)\b/i,
   health: /\b(doctor|dr\.?|dentist|dental|medical|appointment|appt|therapy|therapist|physio|gym|workout|exercise|pharmacy|hospital|clinic|checkup|check.?up|surgery|physical|prescription|optometrist|eye exam|blood)\b/i,
   work:   /\b(meeting|call|conference|standup|stand.?up|sprint|presentation|interview|review|deadline|client|office|team|zoom|teams|slack|1:?1|one.?on.?one|sync|demo|training|webinar|all.?hands|project)\b/i,
   social: /\b(lunch|dinner|breakfast|brunch|party|birthday|wedding|hangout|date|concert|show|game|trip|travel|vacation|flight|hotel|coffee|drinks|bar|restaurant|movie|movies|festival|family|friends?)\b/i,
 };
 function detectCategory(text) {
+  if (CAT_KEYWORDS.class.test(text))  return 'class';
   if (CAT_KEYWORDS.health.test(text)) return 'health';
   if (CAT_KEYWORDS.work.test(text))   return 'work';
   if (CAT_KEYWORDS.social.test(text)) return 'social';
@@ -515,11 +517,12 @@ Extract:
 4. time: Start time in HH:mm 24-hour format, or null
 5. endTime: End time in HH:mm format, or null
 6. isAllDay: true if no specific times mentioned, false otherwise
-7. category: one of "work", "health", "social", "personal", or "other"
+7. category: one of "work", "health", "social", "personal", "class", or "other"
    - "work": meetings, calls, deadlines, tasks, office, business, job, interview, conference
    - "health": doctor, dentist, medical, appointment, therapy, gym, workout, pharmacy, hospital, checkup
    - "social": dinner, lunch, breakfast, hangout, party, travel, vacation, friend, family, date, concert
    - "personal": personal errands, bills, home tasks, hobbies, self-care
+   - "class": school/college — lectures, exams, quizzes, homework, labs, and subjects like english, math, science, biology, chemistry, physics, anatomy, anthropology, history, psychology
    - "other": anything that doesn't fit the above
 
 Date rules (TODAY = ${today}, DEFAULT DATE = ${defaultDate}):
@@ -547,7 +550,7 @@ Return ONLY this JSON:
   "time": "HH:mm" or null,
   "endTime": "HH:mm" or null,
   "isAllDay": true/false,
-  "category": "work" | "health" | "social" | "personal" | "other"
+  "category": "work" | "health" | "social" | "personal" | "class" | "other"
 }`
     }]
   });
@@ -565,7 +568,7 @@ Return ONLY this JSON:
   }
 
   if (!parsed.title || !parsed.date) throw new Error('Missing title or date');
-  if (!['work','health','social','personal','other'].includes(parsed.category)) parsed.category = 'work';
+  if (!['work','health','social','personal','other','class'].includes(parsed.category)) parsed.category = 'work';
   parsed.title = toTitleCase(parsed.title.trim());
   if (!DATE_RE.test(parsed.date)) throw new Error(`Invalid date format: ${parsed.date}`);
   if (parsed.endDate && !DATE_RE.test(parsed.endDate)) parsed.endDate = null;
