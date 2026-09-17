@@ -308,13 +308,16 @@
     .archive-event-buttons button { padding: 6px 10px; font-size: 11px; min-height: auto; }
     /* ── Notes tab (dated planner entries) ── */
     #notes-tab { padding: 0; }
-    .notes-head { padding: 12px 16px 8px; flex-shrink: 0; }
-    .notes-title { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; color: var(--text-primary); font-family: 'Nunito', sans-serif; margin-bottom: 8px; }
-    .note-search { width: 100%; box-sizing: border-box; padding: 9px 13px; border-radius: 10px; border: 1.5px solid var(--border-color); background: var(--bg-light); color: var(--text-primary); font-size: 14px; font-family: inherit; }
-    .note-compose { flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; padding: 4px 16px 8px; }
-    #note-compose { flex: 1; box-sizing: border-box; padding: 10px 13px; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--bg-light); color: var(--text-primary); font-size: 15px; font-family: inherit; line-height: 1.4; resize: none; overflow-y: auto; max-height: 120px; min-height: 44px; }
+    .notes-head { padding: 10px 16px 6px; flex-shrink: 0; }
+    .notes-title { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; color: var(--text-primary); font-family: 'Nunito', sans-serif; margin-bottom: 10px; }
+    .note-search { width: 100%; box-sizing: border-box; padding: 11px 14px; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--bg-light); color: var(--text-primary); font-size: 15px; font-family: inherit; }
+    .note-search:focus { outline: none; border-color: var(--primary); }
+    .note-compose { flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; padding: 8px 16px 10px; }
+    #note-compose { flex: 1; box-sizing: border-box; padding: 11px 14px; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--bg-light); color: var(--text-primary); font-size: 15px; font-family: inherit; line-height: 1.4; resize: none; overflow-y: auto; max-height: 120px; min-height: 46px; scrollbar-width: none; }
+    #note-compose::-webkit-scrollbar { display: none; }
+    #note-compose:focus { outline: none; border-color: var(--primary); }
     #note-compose::placeholder { color: var(--text-secondary); opacity: 0.65; }
-    .note-add-btn { flex-shrink: 0; background: var(--primary); color: #fff; border: none; border-radius: 12px; height: 44px; padding: 0 16px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .note-add-btn { flex-shrink: 0; background: var(--primary); color: #fff; border: none; border-radius: 12px; height: 46px; padding: 0 18px; font-size: 15px; font-weight: 700; cursor: pointer; }
     .note-add-btn:active { transform: scale(0.94); }
     .note-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 12px max(16px, env(safe-area-inset-bottom)); }
     .note-empty { text-align: center; color: var(--text-secondary); font-size: 14px; padding: 40px 16px; opacity: 0.7; line-height: 1.6; }
@@ -596,7 +599,7 @@
           <input type="search" id="note-search" class="note-search" placeholder="Search notes…" oninput="renderJournal()">
         </div>
         <div class="note-compose">
-          <textarea id="note-compose" rows="1" placeholder="Write a note — groceries, thoughts, plans…" oninput="autoGrowCompose(this)" onkeydown="noteComposeKey(event)"></textarea>
+          <textarea id="note-compose" rows="1" placeholder="Write a note…" oninput="autoGrowCompose(this)" onkeydown="noteComposeKey(event)"></textarea>
           <button class="note-add-btn" onclick="addJournalEntry()">Add</button>
         </div>
         <div class="note-list" id="note-list"></div>
@@ -4277,7 +4280,7 @@
     });
 
     // ── PWA Service Worker + auto-update ──
-    const APP_VERSION = 'v31';
+    const APP_VERSION = 'v32';
     (function () { const l = document.getElementById('app-version-label'); if (l) l.textContent = APP_VERSION; })();
     // Nuclear "get me the latest build": drop every service worker + cache, reload
     // fresh from the network. Fixes an app stuck on an old cached version.
